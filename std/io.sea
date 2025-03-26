@@ -1,0 +1,5 @@
+mod io
+
+@{ #include <stdio.h> }
+
+fun println(line: string) -> @{ puts(line); }

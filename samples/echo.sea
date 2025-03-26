@@ -1,0 +1,6 @@
+use std\io
+
+fun main(args: string[]): int {
+	each arg of args -> io\println(arg)
+	ret 0
+}

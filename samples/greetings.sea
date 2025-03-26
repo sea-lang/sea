@@ -1,0 +1,16 @@
+use std\io
+
+rec User(name: string, age: u32)
+
+fun greet(user: User) -> io\printf("Hello, %!", user.name)
+
+fun main(args: string[]): int {
+	var users = [
+		User("Frodo", 50),
+		User("Gandalf", 50000),
+	]
+
+	each user of users -> greet()
+
+	ret 0
+}

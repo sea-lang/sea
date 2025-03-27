@@ -47,6 +47,8 @@ FOR: 'for';
 EACH: 'each';
 OF: 'of';
 NEW: 'new';
+REF: 'ref';
+AS: 'as';
 
 TRUE: 'true';
 FALSE: 'false';

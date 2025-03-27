@@ -206,6 +206,19 @@ class Backend_C(Backend):
 				self.write(',', False)
 			self.write('}', False)
 
+	def ref(self, id: str):
+		self.write(f'(&{id})', False)
+
+	def deref(self, value: Callable):
+		self.write(f'(*', False)
+		value()
+		self.write(')', False)
+
+	def cast(self, type: SeaType, value: Callable):
+		self.write(f'(({self.type(type)})', False)
+		value()
+		self.write(')', False)
+
 
 	def raw(self, code: str):
 		self.write(code.strip(' '))

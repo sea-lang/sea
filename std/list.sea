@@ -1,0 +1,18 @@
+rec ListNode(value: Any, next: ^ListNode)
+
+rec List(len: size_t, head: Any)
+
+fun listGet(list: ^List, index: size_t): Any {
+	var head = (list^).head
+}
+
+fun listInsert(list: ^List, index: size_t, value: Any): void {
+
+}
+
+fun listFromArray(len: size_t, head: Any): List {
+	let list: List = new List(len, head);
+	for var i = 0; i < len; i++ {
+
+	}
+}

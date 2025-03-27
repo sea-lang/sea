@@ -1,6 +1,15 @@
 // Common includes
-raw[ #include <stdbool.h> ]
+raw[
+#include <stdlib.h>
+#include <stdbool.h>
+]
 
 // Common modules
 use std\builtin\str
 use std\builtin\io
+
+// Globals
+val nil: ^void = NULL
+
+// Types
+raw[ #define void *Any ]

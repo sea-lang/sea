@@ -81,6 +81,8 @@ class Visitor(ParserListener):
 					continue
 				items.append(self._writer(e, i))
 			self.backend.invoke(self._writer(expr, 0), items)
+		# elif expr.AS() is not None:
+		# 	self.backend.cast()
 		# Operators
 		elif expr.OP_DOT() is not None: self.backend.dot(_writer(0), _writer(2))
 		elif expr.OP_NOT() is not None: self.backend.not_(_writer(1))

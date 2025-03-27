@@ -1,6 +1,7 @@
-use std\io
+use std\arg
 
-fun main(args: string[]): int {
-	each arg of args -> io\println(arg)
+fun main(argc: int, argv: ^char[]): int {
+
+	each arg of args -> println(arg)
 	ret 0
 }

@@ -83,6 +83,9 @@ expr_new: 'new' ID '(' (expr (',' expr)* ','?)? ')';
 expr_var: 'var' ID ':' typedesc '=' expr;
 expr_let: 'let' ID ':' typedesc '=' expr;
 expr_assign: ID '=' expr;
+expr_ref: 'ref' ID;
+expr_deref: ID '^';
+expr_cast: expr 'as' typedesc;
 
 // "Parts" Allow me to break things up into smaller parts for ease-of-use
 part_invoke: '(' (expr (',' expr)*)? ')';

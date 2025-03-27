@@ -9,7 +9,7 @@ use std\builtin\str
 use std\builtin\io
 
 // Globals
-val nil: ^void = NULL
+let nil: ^void = NULL
 
 // Types
-raw[ #define void *Any ]
+raw[ typedef void *Any; ]

@@ -9,6 +9,12 @@ fun greet(user: User): void {
 fun main(argc: int, argv: ^char[]): int {
 	println("Hello, World!")
 
+	var number: int = 1000
+	var pNumber: ^int = ref number
+	printf(c"%d\n", number)
+	pNumber^ = 10
+	printf(c"%d\n", number)
+
 	var users: User[] = [
 		new User("Frodo", 50),
 		new User("Gandalf", 50000),

@@ -81,8 +81,12 @@ class Visitor(ParserListener):
 					continue
 				items.append(self._writer(e, i))
 			self.backend.invoke(self._writer(expr, 0), items)
-		# elif expr.AS() is not None:
-		# 	self.backend.cast()
+		elif expr.expr_ref() is not None:
+			self.backend.ref(expr.expr_ref().ID().symbol.text)
+		elif expr.PTR() is not None and expr.expr() is not None:
+			self.backend.deref(lambda: self.write_expr(expr.getChild(0)))
+		elif expr.AS() is not None:
+			self.backend.cast(SeaType.from_str(expr.typedesc()), self._writer(expr.expr()))
 		# Operators
 		elif expr.OP_DOT() is not None: self.backend.dot(_writer(0), _writer(2))
 		elif expr.OP_NOT() is not None: self.backend.not_(_writer(1))
@@ -149,9 +153,8 @@ class Visitor(ParserListener):
 				SeaType.from_str(e.typedesc().getText()),
 				self._writer(e.expr())
 			)
-		elif expr.expr_assign() is not None:
-			e = expr.expr_assign()
-			self.backend.assign(e.ID().symbol.text, self._writer(e.expr()))
+		elif expr.EQ() is not None:
+			self.backend.assign(self._writer(expr, 0), self._writer(expr, 2))
 
 	def enterStat(self, ctx:Parser.StatContext):
 		if ctx.expr() is not None:

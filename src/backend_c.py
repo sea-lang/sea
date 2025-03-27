@@ -53,8 +53,8 @@ class Backend_C(Backend):
 		value()
 		self.compiler.add_variable(name, type)
 
-	def assign(self, name: str, value: Callable):
-		self.write(name, False)
+	def assign(self, name: Callable, value: Callable):
+		name()
 		self.write(' = ', False)
 		value()
 

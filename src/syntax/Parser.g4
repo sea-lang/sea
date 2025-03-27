@@ -10,8 +10,8 @@ program: top_level_stat* EOF;
 comment: COMMENT | MULTILINE_COMMENT;
 
 top_level_stat:
-	stat_var
-	| stat_let
+	expr_var
+	| expr_let
 	| fun
 	| rec
 	| raw_block
@@ -22,19 +22,13 @@ raw_block: RAW_BLOCK RAW_TEXT END_RAW_BLOCK;
 rec: 'rec' ID part_params;
 
 stat:
-	stat_var
-	| stat_let
-	| stat_assign
-	| stat_ret
+	stat_ret
 	| stat_for
 	| stat_each
 	| raw_block
 	| comment
 	| expr;
 
-stat_var: 'var' ID ':' typedesc '=' expr;
-stat_let: 'let' ID ':' typedesc '=' expr;
-stat_assign: ID '=' expr;
 stat_ret: 'ret' expr;
 stat_for: 'for' expr ';' expr ';' expr expr_block;
 stat_each: 'each' ID 'of' ID expr_block;
@@ -50,7 +44,7 @@ expr:
 	| ID
 	| expr_new
 	// Operators
-	| expr '.' ID
+	| expr '.' expr
 	| 'not' expr
 	| expr 'and' expr
 	| expr 'or' expr
@@ -74,6 +68,9 @@ expr:
 	| raw_block
 	| expr_if
 	| expr_list
+	| expr_var
+	| expr_let
+	| expr_assign
 	// Comments
 	| comment;
 
@@ -81,6 +78,9 @@ expr_if: 'if' expr expr_block ('else' expr_block)?;
 expr_block: ('{' stat* '}') | ('->' stat);
 expr_list: LBRACKET (expr ','?)* RBRACKET;
 expr_new: 'new' ID '(' (expr ','?)* ')';
+expr_var: 'var' ID ':' typedesc '=' expr;
+expr_let: 'let' ID ':' typedesc '=' expr;
+expr_assign: ID '=' expr;
 
 // "Parts" Allow me to break things up into smaller parts for ease-of-use
 part_invoke: '(' (expr ','?)* ')';

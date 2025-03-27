@@ -10,6 +10,7 @@ class Backend:
 		self.depth = 0
 		self.indent = '\t'
 		self.block_needs_line_ending = False
+		self.force_indent_next = False
 
 	def __enter__(self):
 		self.file = open(self.output_file, 'w')
@@ -25,13 +26,17 @@ class Backend:
 		)
 
 	def write(self, text: str, indent: bool = True):
-		if indent:
+		if indent or self.force_indent_next:
 			self.file.write(self.indent * self.depth)
+			if self.force_indent_next:
+				self.force_indent_next = False
 		self.file.write(text)
 
 	def writeln(self, text: str, indent: bool = True):
-		if indent:
+		if indent or self.force_indent_next:
 			self.file.write(self.indent * self.depth)
+			if self.force_indent_next:
+				self.force_indent_next = False
 		self.file.write(text)
 		self.file.write('\n')
 

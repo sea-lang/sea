@@ -38,20 +38,20 @@ class Backend_C(Backend):
 		self.writeln(f')', False) # writeln for allman-esque indents
 
 	def var(self, name: str, type: SeaType, value: Callable):
-		self.write(self.typed_id(type, name))
+		self.write(self.typed_id(type, name), False)
 		self.write(' = ', False)
 		value()
 		self.compiler.add_variable(name, type)
 
 	def let(self, name: str, type: SeaType, value: Callable):
-		self.write('const ')
+		self.write('const ', False)
 		self.write(self.typed_id(type, name), False)
 		self.write(' = ', False)
 		value()
 		self.compiler.add_variable(name, type)
 
 	def assign(self, name: str, value: Callable):
-		self.write(name)
+		self.write(name, False)
 		self.write(' = ', False)
 		value()
 
@@ -61,7 +61,7 @@ class Backend_C(Backend):
 
 
 	def block_start(self):
-		self.writeln('{')
+		self.writeln('{', False)
 		self.depth += 1
 
 	def block_end(self):
@@ -87,7 +87,13 @@ class Backend_C(Backend):
 		self.writeln(f'else ')
 
 	def for_(self, define: Callable, cond: Callable, inc: Callable):
-		self.writeln(f'for ({define}; {cond}; {inc}) ')
+		self.write('for (')
+		define()
+		self.write('; ', False)
+		cond()
+		self.write('; ', False)
+		inc()
+		self.write(') ', False)
 
 	def each_begin(self, var: str, of: str):
 		typ = self.compiler.find_type_of(of)
@@ -101,7 +107,7 @@ class Backend_C(Backend):
 		self.write(self.typed_id(typ, var))
 		self.writeln(';', False)
 		self.writeln(f'const size_t _l = sizeof({of}) / sizeof({self.type(typ)});')
-		self.writeln('for (int _i = 0; _i > _l; _i++)')
+		self.write('for (int _i = 0; _i > _l; _i++) ')
 
 	def each_end(self):
 		self.depth -= 1
@@ -116,15 +122,15 @@ class Backend_C(Backend):
 
 	def _op(self, op: str, left: Callable, right: Callable):
 		left()
-		self.write(op)
+		self.write(op, False)
 		right()
 
 	def _prefix_unary_op(self, op: str, value: Callable):
-		self.write(op)
+		self.write(op, False)
 		value()
 
 	def _postfix_unary_op(self, op: str, value: Callable):
-		self.write(op)
+		self.write(op, False)
 		value()
 
 	def dot(self, left: Callable, right: Callable): self._op('.', left, right)

@@ -19,6 +19,10 @@ fun main(argc: int, argv: ^char[]): int {
 		new User("Gandalf", 50000),
 	]
 
+	for var i: int = 0 ; i > 10 ; i++ {
+		printf("%d\n", i)
+	}
+
 	each user of users {
 		greet(user)
 	}

@@ -1,5 +1,5 @@
 mod io
 
-@{ #include <stdio.h> }
+raw { #include <stdio.h> }
 
-fun println(line: string) -> @{ puts(line); }
+fun println(line: string) -> raw { puts(line); }

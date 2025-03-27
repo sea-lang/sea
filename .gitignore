@@ -1,3 +1,14 @@
+# Ignore Python stuffs
 /env
-
 *.pyc
+
+# Ignore transpiled C and compiled files
+/*.out
+/*.o
+/*.c
+/*.h
+
+# Ignore ANTLR generated files
+src/syntax/*.interp
+src/syntax/*.py
+src/syntax/*.tokens

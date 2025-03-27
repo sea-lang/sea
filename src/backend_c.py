@@ -1,6 +1,6 @@
 from typing import Callable
-from backend import Backend
-from compiler import Compiler, SeaFunction, SeaRecord, SeaType
+from .backend import Backend
+from .compiler import Compiler, SeaFunction, SeaRecord, SeaType
 
 class Backend_C(Backend):
 	def __init__(self, compiler: Compiler, output_file: str):
@@ -8,16 +8,22 @@ class Backend_C(Backend):
 		self.line_ending = ';\n'
 
 	def type(self, type: SeaType) -> str:
-		return ('*' * type.pointers) + type.name + ('[]' * type.arrays)
+		return type.name + ('*' * type.pointers) + ('[]' * type.arrays)
+
+	def typed_id(self, type: SeaType, id: str) -> str:
+		return type.name + ' ' + ('*' * type.pointers) + id + ('[]' * type.arrays)
 
 	def use(self, module: str):
 		pass
 
 	def rec(self, name: str, record: SeaRecord):
-		self.writeln('typedef struct {\n')
-		for name, typedesc in record.fields.items():
-			self.writeln(f'\t{self.type(typedesc)} {name};')
-		self.writeln(f'}} {name};\n')
+		self.writeln('typedef struct {')
+		self.depth += 1
+		for fieldname, typedesc in record.fields.items():
+			self.write(self.typed_id(typedesc, fieldname))
+			self.write(';\n', False)
+		self.depth -= 1
+		self.writeln(f'}} {name};\n') # newline for spacing
 		self.compiler.add_record(name, record)
 
 	def fun(self, name: str, func: SeaFunction):
@@ -25,49 +31,61 @@ class Backend_C(Backend):
 
 		end = len(func.params) - 1
 		for index, (name, typedesc) in enumerate(func.params.items()):
-			self.write(f'{self.type(typedesc)} {name}')
+			self.write(self.typed_id(typedesc, name))
 			if index != end:
-				self.write(', ')
+				self.write(', ', False)
 
-		self.writeln(f')')
+		self.writeln(f')', False) # writeln for allman-esque indents
 
 	def var(self, name: str, type: SeaType, value: Callable):
-		self.writeln(f'{self.type(type)} {name} = ')
+		self.write(self.typed_id(type, name))
+		self.write(' = ', False)
 		value()
 		self.compiler.add_variable(name, type)
 
 	def let(self, name: str, type: SeaType, value: Callable):
-		self.writeln(f'const {self.type(type)} {name} = ')
+		self.write('const ')
+		self.write(self.typed_id(type, name), False)
+		self.write(' = ', False)
 		value()
 		self.compiler.add_variable(name, type)
 
+	def assign(self, name: str, value: Callable):
+		self.write(name)
+		self.write(' = ', False)
+		value()
+
 	def ret(self, value: Callable):
-		self.writeln(f'return ')
+		self.write('return ')
 		value()
 
 
 	def block_start(self):
 		self.writeln('{')
+		self.depth += 1
 
 	def block_end(self):
+		self.depth -= 1
 		self.writeln('}')
 
 	def invoke(self, it: str, args: str):
-		self.writeln(f'{it}({args})')
+		self.write(f'{it}({args})')
 
-	def if_(self, cond: str):
-		self.writeln(f'if ({cond}) ')
+	def if_(self, cond: Callable):
+		self.write('if (')
+		cond()
+		self.write(')')
 
 	def else_(self):
 		self.writeln(f'else ')
 
-	def for_(self, define: str, cond: str, inc: str):
+	def for_(self, define: Callable, cond: Callable, inc: Callable):
 		self.writeln(f'for ({define}; {cond}; {inc}) ')
 
 	def each(self, var: str, of: str):
-		typ = self.compiler.find_type_of(var)
+		typ = self.compiler.find_type_of(of)
 		if typ == None:
-			self.compiler.panic(f'no such variable: {var}')
+			self.compiler.panic(f'no such variable: {of}')
 		typ = self.type(typ)
 		self.writeln(
 			'for (\n'
@@ -79,9 +97,10 @@ class Backend_C(Backend):
 
 
 	def true(self):
-		self.write('true')
+		self.write('true', False)
+
 	def false(self):
-		self.write('false')
+		self.write('false', False)
 
 	def _op(self, op: str, left: Callable, right: Callable):
 		left()
@@ -118,14 +137,56 @@ class Backend_C(Backend):
 
 
 	def number(self, it: str):
-		self.write(it)
+		self.write(it, False)
 
 	def id(self, it: str):
-		self.write(it)
+		self.write(it, False)
 
 	def string(self, it: str):
-		self.write(f'"{it}"')
+		self.write(f'"{it}"', False)
+
+	def array(self, items: list[Callable]):
+		print(items)
+		# if len(items) > 4: # Write on multiple lines
+		# 	self.writeln('{', False)
+		# 	self.depth += 1
+		# 	for item in items:
+		# 		item()
+		# 		self.writeln(',', False)
+		# 	self.write('}')
+		# 	self.depth -= 1
+		# else: # Write on one line
+		self.write('{', False)
+		for item in items:
+			item()
+			self.write(',', False)
+		self.write('}', False)
+
+	def new(self, rec: str, items: list[Callable]):
+		if len(items) > 4: # Write on multiple lines
+			self.writeln(f'({rec}){{', False)
+			self.depth += 1
+			for item in items:
+				item()
+				self.writeln(',', False)
+			self.write('}')
+			self.depth -= 1
+		else: # Write on one line
+			self.write(f'({rec}){{', False)
+			for item in items:
+				item()
+				self.write(',', False)
+			self.write('}', False)
 
 
-	def raw(self, code: Callable):
-		code()
+	def raw(self, code: str):
+		self.write(code.strip(' '))
+		if self.depth == 0:
+			self.write('\n', False)
+
+
+	def comment(self, text: str):
+		self.writeln('//' + text)
+
+	def multiline_comment(self, text: str):
+		self.writeln('/*' + text + '*/')

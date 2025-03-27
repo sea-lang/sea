@@ -6,6 +6,12 @@ class SeaType(NamedTuple):
 	name: str
 	arrays: int # Amount of arrays
 
+	@staticmethod
+	def from_str(s: str) -> 'SeaType':
+		return SeaType(s.count('^'), s.strip('^[]'), s.count('[]'))
+
+SEA_VOID = SeaType(0, 'void', 0)
+
 class SeaFunction(NamedTuple):
 	returns: SeaType
 	params: dict[str, SeaType]

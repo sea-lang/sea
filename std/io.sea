@@ -1,5 +1,0 @@
-mod io
-
-raw { #include <stdio.h> }
-
-fun println(line: string) -> raw { puts(line); }

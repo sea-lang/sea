@@ -1,3 +1,4 @@
+import os
 from typing import Optional
 import antlr4
 from antlr4.tree.Tree import TerminalNodeImpl
@@ -21,11 +22,51 @@ class Visitor(ParserListener):
 	def _simple_writer(self, expr: Parser.ExprContext):
 		return lambda: self.write_expr(expr)
 
+	def enterProgram(self, ctx:Parser.ProgramContext):
+		self.backend.file_begin()
+
+	def exitProgram(self, ctx:Parser.ProgramContext):
+		self.backend.file_end()
+
 	def enterComment(self, ctx:Parser.CommentContext):
 		if ctx.COMMENT() is not None:
 			self.backend.comment(ctx.COMMENT().getText().removeprefix('//'))
 		else:
 			self.backend.multiline_comment(ctx.MULTILINE_COMMENT().getText().removeprefix('/*').removesuffix('*/'))
+
+	def enterUse(self, ctx:Parser.UseContext):
+		module = ctx.part_path().getText()
+		# We can assume that if module is already imported, module_lib is also already imported, so we won't even check for it here.
+		if module in self.backend.using:
+			return
+
+		# Use the automagically imported `lib.sea` module, if it exists
+		module_lib = module[:module.rfind('\\')] + '\\lib.sea'
+		if not module_lib in self.backend.using:
+			path = module_lib.replace('\\', '/') + '.sea'
+			# We won't throw an error if `lib.sea`` doesn't exist, since it's optional
+			if os.path.exists(path):
+				self.backend.using.append(module_lib)
+				self.backend.use(module_lib)
+				self.backend.module_stack.append(module_lib)
+				visit(path, self.backend)
+				self.backend.module_stack.pop()
+
+		# Use the module
+		possible_paths = [
+			module.replace('\\', '/') + '.sea',
+			module.replace('\\', '/') + '/lib.sea'
+		]
+		for path in possible_paths:
+			if os.path.exists(path):
+				self.backend.using.append(module)
+				self.backend.use(module)
+				self.backend.module_stack.append(module)
+				visit(path, self.backend)
+				self.backend.module_stack.pop()
+				return
+		print(f'error: module `{module}` does not exists (searched for `{possible_paths}`)')
+		exit(1)
 
 	def write_expr(self, expr: Parser.ExprContext):
 		def _writer(index: int):
@@ -63,7 +104,11 @@ class Visitor(ParserListener):
 		elif expr.NUMBER() is not None:
 			self.backend.number(expr.NUMBER().getText())
 		elif expr.STRING() is not None:
-			self.backend.number(expr.STRING().getText())
+			text = expr.STRING().getText()
+			if text[0] == 'c':
+				self.backend.string(text[2:-1], True)
+			else:
+				self.backend.string(text[1:-1], False)
 		elif expr.TRUE() is not None:
 			self.backend.true()
 		elif expr.FALSE() is not None:
@@ -96,14 +141,14 @@ class Visitor(ParserListener):
 				self._writer(e.expr())
 			)
 		elif expr.expr_let() is not None:
-			e = expr.expr_var()
+			e = expr.expr_let()
 			self.backend.let(
 				e.ID().symbol.text,
 				SeaType.from_str(e.typedesc().getText()),
 				self._writer(e.expr())
 			)
 		elif expr.expr_assign() is not None:
-			e = expr.expr_var()
+			e = expr.expr_assign()
 			self.backend.assign(e.ID().symbol.text, self._writer(e.expr()))
 
 	def enterStat(self, ctx:Parser.StatContext):
@@ -153,7 +198,7 @@ class Visitor(ParserListener):
 		self.backend.rec(name, SeaRecord(fields))
 
 	def enterExpr_block(self, ctx:Parser.Expr_blockContext):
-		self.backend.block_start()
+		self.backend.block_begin()
 
 	def exitExpr_block(self, ctx:Parser.Expr_blockContext):
 		self.backend.block_end()
@@ -178,15 +223,18 @@ class Visitor(ParserListener):
 		self.backend.each_end()
 
 
-def visit(file_path: str):
+def visit(file_path: str, backend: Optional[Backend] = None):
 	input_stream = antlr4.FileStream(file_path)
 	lexer = Lexer(input_stream)
 	stream = antlr4.CommonTokenStream(lexer)
 	parser = Parser(stream)
 
 	tree = parser.program()
-	print(tree.toStringTree(recog = parser))
+	# print(tree.toStringTree(recog = parser))
 
 	walker = antlr4.ParseTreeWalker()
-	with Backend_C(Compiler(), "output.c") as backend:
+	if backend is None:
+		with Backend_C(Compiler(), "output.c") as backend:
+			walker.walk(Visitor(backend), tree)
+	else:
 		walker.walk(Visitor(backend), tree)

@@ -1,0 +1,6 @@
+// Common includes
+raw[ #include <stdbool.h> ]
+
+// Common modules
+use std\builtin\str
+use std\builtin\io

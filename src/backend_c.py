@@ -13,8 +13,11 @@ class Backend_C(Backend):
 	def typed_id(self, type: SeaType, id: str) -> str:
 		return type.name + ' ' + ('*' * type.pointers) + id + ('[]' * type.arrays)
 
-	def use(self, module: str):
-		pass
+	def file_begin(self):
+		self.writeln(f'#pragma region mod: {self.module_stack[-1]}')
+
+	def file_end(self):
+		self.writeln(f'#pragma endregion mod: {self.module_stack[-1]}')
 
 	def rec(self, name: str, record: SeaRecord):
 		self.writeln('typedef struct {')
@@ -60,7 +63,7 @@ class Backend_C(Backend):
 		value()
 
 
-	def block_start(self):
+	def block_begin(self):
 		self.writeln('{', False)
 		self.depth += 1
 
@@ -107,9 +110,14 @@ class Backend_C(Backend):
 		self.write(self.typed_id(typ, var))
 		self.writeln(';', False)
 		self.writeln(f'const size_t _l = sizeof({of}) / sizeof({self.type(typ)});')
-		self.write('for (int _i = 0; _i > _l; _i++) ')
+		self.writeln('for (int _i = 0; _i < _l; _i++) {')
+		self.depth += 1
+		self.writeln(f'user = {of}[_i];')
+		self.force_indent_next = True
 
 	def each_end(self):
+		self.depth -= 1
+		self.writeln('}')
 		self.depth -= 1
 		self.writeln('}')
 
@@ -160,8 +168,11 @@ class Backend_C(Backend):
 	def id(self, it: str):
 		self.write(it, False)
 
-	def string(self, it: str):
-		self.write(f'"{it}"', False)
+	def string(self, it: str, c: bool):
+		if c:
+			self.write(f'"{it}"', False)
+		else:
+			self.write(f'stringView({len(it)}, "{it}")', False)
 
 	def array(self, items: list[Callable]):
 		if len(items) > 4: # Write on multiple lines

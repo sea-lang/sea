@@ -1,26 +1,21 @@
-raw[ // Includes :3
-#include <stdio.h>
-#include <stdbool.h>
-]
+use std
 
-/// Represents a given user :3
-rec User(name: ^char, age: int)
+rec User(name: String, age: int)
 
 fun greet(user: User): void {
-	printf("Hello, %s!\n", user.name)
+	printf(c"Hello, %.*s!\n", user.name.len, user.name.str)
 }
 
-/**
- * Main function that does main things
- */
 fun main(argc: int, argv: ^char[]): int {
+	println("Hello, World!")
+
 	var users: User[] = [
 		new User("Frodo", 50),
 		new User("Gandalf", 50000),
 	]
 
-	for var i: int = 0 ; i > 10 ; i++ {
-		printf("%d\n", i)
+	for var i: int = 0 ; i < 10 ; i++ {
+		printf(c"%d\n", i)
 	}
 
 	each user of users {

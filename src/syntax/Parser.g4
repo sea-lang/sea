@@ -10,13 +10,15 @@ program: top_level_stat* EOF;
 comment: COMMENT | MULTILINE_COMMENT;
 
 top_level_stat:
-	expr_var
-	| expr_let
+	use
 	| fun
 	| rec
 	| raw_block
+	| expr_var
+	| expr_let
 	| comment;
 
+use: 'use' part_path;
 fun: 'fun' ID part_params (':' typedesc)? expr;
 raw_block: RAW_BLOCK RAW_TEXT END_RAW_BLOCK;
 rec: 'rec' ID part_params;
@@ -76,13 +78,14 @@ expr:
 
 expr_if: 'if' expr expr_block ('else' expr_block)?;
 expr_block: ('{' stat* '}') | ('->' stat);
-expr_list: LBRACKET (expr ','?)* RBRACKET;
-expr_new: 'new' ID '(' (expr ','?)* ')';
+expr_list: LBRACKET (expr (',' expr)* ','?)? RBRACKET;
+expr_new: 'new' ID '(' (expr (',' expr)* ','?)? ')';
 expr_var: 'var' ID ':' typedesc '=' expr;
 expr_let: 'let' ID ':' typedesc '=' expr;
 expr_assign: ID '=' expr;
 
 // "Parts" Allow me to break things up into smaller parts for ease-of-use
-part_invoke: '(' (expr ','?)* ')';
-part_params: '(' (part_param ','?)* ')';
+part_invoke: '(' (expr (',' expr)*)? ')';
+part_params: '(' (part_param (',' part_param)*)? ')';
 part_param: ID ':' typedesc;
+part_path: ID ('\\' ID)*;

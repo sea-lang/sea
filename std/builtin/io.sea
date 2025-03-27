@@ -1,0 +1,9 @@
+raw[ #include <stdio.h> // printf ]
+
+/**
+ * Prints an unformatted line.
+ *
+ * Arguments:
+ *  line: String - The string to print.
+**/
+fun println(line: String): void -> printf(c"%.*s\n", line.len, line.str)

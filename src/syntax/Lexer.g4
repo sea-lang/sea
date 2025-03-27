@@ -12,6 +12,7 @@ LBRACKET: '[';
 RBRACKET: ']';
 LCURLY: '{';
 RCURLY: '}';
+BACKSLASH: '\\';
 
 OP_DOT: '.';
 OP_NOT: 'not';
@@ -58,7 +59,7 @@ COMMENT: '//' ~[\r\n]*;
 MULTILINE_COMMENT: '/*' .*? '*/';
 // https://stackoverflow.com/a/24559773
 UNTERMINATED_STRING: '"' (~["\\] | '\\' ( . | EOF))*;
-STRING: UNTERMINATED_STRING '"';
+STRING: 'c'? UNTERMINATED_STRING '"';
 
 RAW_BLOCK: 'raw[' -> pushMode(RAW_MODE);
 

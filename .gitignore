@@ -9,6 +9,7 @@
 /*.h
 
 # Ignore ANTLR generated files
+src/syntax/.antlr
 src/syntax/*.interp
 src/syntax/*.py
 src/syntax/*.tokens

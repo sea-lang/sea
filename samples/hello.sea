@@ -6,16 +6,20 @@ raw[ // Includes :3
 /// Represents a given user :3
 rec User(name: ^char, age: int)
 
+fun greet(user: User): void {
+	printf("Hello, %s!\n", user.name)
+}
+
 /**
  * Main function that does main things
  */
 fun main(argc: int, argv: ^char[]): int {
-	let name: bool = true
-
 	var users: User[] = [
-		new User("Frodo" 50)
-		new User("Gandalf" 50000)
+		new User("Frodo", 50),
+		new User("Gandalf", 50000),
 	]
 
-	raw[ puts("Hello, World!") ]
+	each user of users {
+		greet(user)
+	}
 }

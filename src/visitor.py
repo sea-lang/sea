@@ -33,26 +33,16 @@ class Visitor(ParserListener):
 				self.write_expr(expr.getChild(index))
 			return it
 
-		# Literals
-		if expr.NUMBER() is not None:
-			self.backend.number(expr.NUMBER().getText())
-		elif expr.STRING() is not None:
-			self.backend.number(expr.STRING().getText())
-		elif expr.TRUE() is not None:
-			self.backend.true()
-		elif expr.FALSE() is not None:
-			self.backend.false()
-		elif expr.ID() is not None:
-			self.backend.id(expr.ID().getText())
-		elif expr.expr_new() is not None:
-			e = expr.expr_new()
+		if expr.expr() is not None and expr.part_invoke() is not None:
+			e = expr.part_invoke()
+			print(e)
 			items = []
 			for i in range(1, e.getChildCount() - 1):
 				item = e.children[i]
 				if isinstance(item, TerminalNodeImpl):
 					continue
 				items.append(self._writer(e, i))
-			self.backend.new(e.ID().symbol.text, items)
+			self.backend.invoke(self._writer(expr, 0), items)
 		# Operators
 		elif expr.OP_DOT() is not None: self.backend.dot(_writer(0), _writer(2))
 		elif expr.OP_NOT() is not None: self.backend.not_(_writer(1))
@@ -72,9 +62,48 @@ class Visitor(ParserListener):
 		elif expr.MUL() is not None: self.backend.mul(_writer(0), _writer(1))
 		elif expr.DIV() is not None: self.backend.div(_writer(0), _writer(1))
 		elif expr.MOD() is not None: self.backend.mod(_writer(0), _writer(1))
+		# Literals
+		elif expr.NUMBER() is not None:
+			self.backend.number(expr.NUMBER().getText())
+		elif expr.STRING() is not None:
+			self.backend.number(expr.STRING().getText())
+		elif expr.TRUE() is not None:
+			self.backend.true()
+		elif expr.FALSE() is not None:
+			self.backend.false()
+		elif expr.ID() is not None:
+			self.backend.id(expr.ID().getText())
+		elif expr.expr_list() is not None:
+			e = expr.expr_list()
+			items = []
+			for i in range(1, e.getChildCount() - 1):
+				item = e.children[i]
+				if isinstance(item, TerminalNodeImpl):
+					continue
+				items.append(self._writer(e, i))
+			self.backend.array(items)
+		elif expr.expr_new() is not None:
+			e = expr.expr_new()
+			items = []
+			for i in range(1, e.getChildCount() - 1):
+				item = e.children[i]
+				if isinstance(item, TerminalNodeImpl):
+					continue
+				items.append(self._writer(e, i))
+			self.backend.new(e.ID().symbol.text, items)
+
+	def enterStat(self, ctx:Parser.StatContext):
+		print("asdf")
+		if ctx.expr() is not None:
+			print("fdsa")
+			print(ctx.expr().getText())
+			self.write_expr(ctx.expr())
 
 	def exitStat(self, ctx:Parser.StatContext):
-		self.backend.write(self.backend.line_ending, False)
+		if self.backend.needs_line_ending(ctx):
+			self.backend.write(self.backend.line_ending, False)
+		else:
+			self.backend.writeln('', False)
 
 	def enterStat_var(self, ctx:Parser.Stat_varContext):
 		self.backend.var(
@@ -135,15 +164,6 @@ class Visitor(ParserListener):
 	def exitExpr_block(self, ctx:Parser.Expr_blockContext):
 		self.backend.block_end()
 
-	def enterExpr_list(self, ctx:Parser.Expr_listContext):
-		items = []
-		for i in range(1, ctx.getChildCount() - 1):
-			item = ctx.children[i]
-			if isinstance(item, TerminalNodeImpl):
-				continue
-			items.append(self._writer(ctx, i))
-		self.backend.array(items)
-
 	def enterExpr_if(self, ctx:Parser.Expr_ifContext):
 		self.backend.if_(self._writer(ctx.expr()))
 		# ctx.expr_block()
@@ -154,7 +174,10 @@ class Visitor(ParserListener):
 		self.backend.for_(self._writer(ctx.expr(0)), self._writer(ctx.expr(1)), self._writer(ctx.expr(2)))
 
 	def enterStat_each(self, ctx:Parser.Stat_eachContext):
-		self.backend.each(ctx.ID(0).symbol.text, ctx.ID(1).symbol.text)
+		self.backend.each_begin(ctx.ID(0).symbol.text, ctx.ID(1).symbol.text)
+
+	def exitStat_each(self, ctx:Parser.Stat_eachContext):
+		self.backend.each_end()
 
 
 def visit(file_path: str):

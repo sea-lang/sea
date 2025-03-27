@@ -56,7 +56,8 @@ class Compiler:
 
 	def find_type_of(self, variable: str) -> Optional[SeaType]:
 		keys = list(self.variables.keys())
-		for i in range(len(self.variables) - 1, 0, -1):
+		# Iterate backwards so that we look at the most recent scope first
+		for i in range(len(self.variables) - 1, -1, -1):
 			if keys[i] == variable:
 				return self.variables[keys[i]].type
 		return None

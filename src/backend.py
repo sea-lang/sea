@@ -1,5 +1,6 @@
 from typing import Callable, NamedTuple
 from .compiler import Compiler, SeaFunction, SeaRecord, SeaType
+from .syntax.Parser import Parser
 
 class Backend:
 	def __init__(self, compiler: Compiler, output_file: str):
@@ -8,6 +9,7 @@ class Backend:
 		self.line_ending = '\n'
 		self.depth = 0
 		self.indent = '\t'
+		self.block_needs_line_ending = False
 
 	def __enter__(self):
 		self.file = open(self.output_file, 'w')
@@ -15,6 +17,12 @@ class Backend:
 
 	def __exit__(self, _a, _b, _c):
 		self.file.close()
+
+	def needs_line_ending(self, stat: Parser.StatContext):
+		return not (
+			stat.stat_for() is not None or
+			stat.stat_each() is not None
+		)
 
 	def write(self, text: str, indent: bool = True):
 		if indent:
@@ -40,11 +48,12 @@ class Backend:
 
 	def block_start(self): ...
 	def block_end(self): ...
-	def invoke(self, it: str, args: str): ...
+	def invoke(self, it: Callable, args: list[Callable]): ...
 	def if_(self, cond: Callable): ...
 	def else_(self): ...
 	def for_(self, define: Callable, cond: Callable, inc: Callable): ...
-	def each(self, var: str, of: str): ...
+	def each_begin(self, var: str, of: str): ...
+	def each_end(self): ...
 
 	def true(self): ...
 	def false(self): ...

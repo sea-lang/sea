@@ -68,8 +68,15 @@ class Backend_C(Backend):
 		self.depth -= 1
 		self.writeln('}')
 
-	def invoke(self, it: str, args: str):
-		self.write(f'{it}({args})')
+	def invoke(self, it: Callable, args: list[Callable]):
+		self.write('')
+		it()
+		self.write('(', False)
+		for arg in args:
+			arg()
+			if arg != args[-1]:
+				self.write(', ', False)
+		self.write(')', False)
 
 	def if_(self, cond: Callable):
 		self.write('if (')
@@ -82,18 +89,23 @@ class Backend_C(Backend):
 	def for_(self, define: Callable, cond: Callable, inc: Callable):
 		self.writeln(f'for ({define}; {cond}; {inc}) ')
 
-	def each(self, var: str, of: str):
+	def each_begin(self, var: str, of: str):
 		typ = self.compiler.find_type_of(of)
 		if typ == None:
 			self.compiler.panic(f'no such variable: {of}')
-		typ = self.type(typ)
-		self.writeln(
-			'for (\n'
-			f'\t({typ} {var}, int i = 0, size_t length = sizeof({of}) / sizeof({typ}));\n'
-			'\ti < length;\n'
-			'\ti++\n'
-			')'
-		)
+		typ = SeaType(typ.pointers, typ.name, typ.arrays - 1)
+
+		self.writeln('{')
+		self.depth += 1
+
+		self.write(self.typed_id(typ, var))
+		self.writeln(';', False)
+		self.writeln(f'const size_t _l = sizeof({of}) / sizeof({self.type(typ)});')
+		self.writeln('for (int _i = 0; _i > _l; _i++)')
+
+	def each_end(self):
+		self.depth -= 1
+		self.writeln('}')
 
 
 	def true(self):
@@ -146,21 +158,20 @@ class Backend_C(Backend):
 		self.write(f'"{it}"', False)
 
 	def array(self, items: list[Callable]):
-		print(items)
-		# if len(items) > 4: # Write on multiple lines
-		# 	self.writeln('{', False)
-		# 	self.depth += 1
-		# 	for item in items:
-		# 		item()
-		# 		self.writeln(',', False)
-		# 	self.write('}')
-		# 	self.depth -= 1
-		# else: # Write on one line
-		self.write('{', False)
-		for item in items:
-			item()
-			self.write(',', False)
-		self.write('}', False)
+		if len(items) > 4: # Write on multiple lines
+			self.writeln('{', False)
+			self.depth += 1
+			for item in items:
+				item()
+				self.writeln(',', False)
+			self.write('}')
+			self.depth -= 1
+		else: # Write on one line
+			self.write('{', False)
+			for item in items:
+				item()
+				self.write(',', False)
+			self.write('}', False)
 
 	def new(self, rec: str, items: list[Callable]):
 		if len(items) > 4: # Write on multiple lines

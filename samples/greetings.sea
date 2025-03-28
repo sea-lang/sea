@@ -1,16 +1,16 @@
-use std\io
+use std
 
-rec User(name: string, age: u32)
+rec User(name: String, age: int)
 
-fun greet(user: User) -> io\printf("Hello, %!", user.name)
+fun greet(user: User) -> printf(c"Hello, %.*s!\n", user.name.len, user.name.str)
 
-fun main(args: string[]): int {
-	var users = [
-		User("Frodo", 50),
-		User("Gandalf", 50000),
+fun main(): int {
+	let users: User[] = [
+		new User("Frodo", 50),
+		new User("Gandalf", 50000),
 	]
 
-	each user of users -> greet()
+	each user of users -> greet(user)
 
 	ret 0
 }

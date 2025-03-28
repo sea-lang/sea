@@ -21,6 +21,7 @@ class SeaRecord(NamedTuple):
 
 class SeaVariable(NamedTuple):
 	type: SeaType
+	constant: bool
 	depth: int
 
 class Compiler:
@@ -51,8 +52,8 @@ class Compiler:
 			self.panic(f'record {name} already exists.')
 		self.records[name] = record
 
-	def add_variable(self, name: str, type: SeaType):
-		self.variables[name] = SeaVariable(type, self.scope_depth)
+	def add_variable(self, name: str, type: SeaType, constant: bool = False):
+		self.variables[name] = SeaVariable(type, constant, self.scope_depth)
 
 	def find_type_of(self, variable: str) -> Optional[SeaType]:
 		keys = list(self.variables.keys())

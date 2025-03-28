@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Optional
 from .backend import Backend
 from .compiler import Compiler, SeaFunction, SeaRecord, SeaType
 
@@ -29,16 +29,22 @@ class Backend_C(Backend):
 		self.writeln(f'}} {name};\n') # newline for spacing
 		self.compiler.add_record(name, record)
 
-	def fun(self, name: str, func: SeaFunction):
+	def fun_begin(self, name: str, func: SeaFunction):
 		self.write(f'{self.type(func.returns)} {name}(')
+		self.compiler.push_scope()
+		self.compiler.add_function(name, func)
 
 		end = len(func.params) - 1
 		for index, (name, typedesc) in enumerate(func.params.items()):
 			self.write(self.typed_id(typedesc, name))
 			if index != end:
 				self.write(', ', False)
+			self.compiler.add_variable(name, typedesc)
 
-		self.writeln(f')', False) # writeln for allman-esque indents
+		self.writeln(f')', False) # writeln for allman-esque braces
+
+	def fun_end(self):
+		self.compiler.pop_scope()
 
 	def var(self, name: str, type: SeaType, value: Callable):
 		self.write(self.typed_id(type, name), False)
@@ -51,7 +57,7 @@ class Backend_C(Backend):
 		self.write(self.typed_id(type, name), False)
 		self.write(' = ', False)
 		value()
-		self.compiler.add_variable(name, type)
+		self.compiler.add_variable(name, type, True)
 
 	def assign(self, name: Callable, value: Callable):
 		name()
@@ -72,7 +78,7 @@ class Backend_C(Backend):
 		self.writeln('}')
 
 	def invoke(self, it: Callable, args: list[Callable]):
-		self.write('')
+		self.write('', False)
 		it()
 		self.write('(', False)
 		for arg in args:
@@ -98,6 +104,15 @@ class Backend_C(Backend):
 		inc()
 		self.write(') ', False)
 
+	def for_to(self, var: Optional[str], from_: Callable, to: Callable):
+		if var is None:
+			var = '_i'
+		self.write(f'for (int _to = ')
+		to()
+		self.write(f', {var} = ', False)
+		from_()
+		self.write(f'; {var} < _to; i++) ', False)
+
 	def each_begin(self, var: str, of: str):
 		typ = self.compiler.find_type_of(of)
 		if typ == None:
@@ -112,7 +127,7 @@ class Backend_C(Backend):
 		self.writeln(f'const size_t _l = sizeof({of}) / sizeof({self.type(typ)});')
 		self.writeln('for (int _i = 0; _i < _l; _i++) {')
 		self.depth += 1
-		self.writeln(f'user = {of}[_i];')
+		self.writeln(f'{var} = {of}[_i];')
 		self.force_indent_next = True
 
 	def each_end(self):
@@ -218,6 +233,12 @@ class Backend_C(Backend):
 		self.write(f'(({self.type(type)})', False)
 		value()
 		self.write(')', False)
+
+	def index(self, expr: Callable, index: Callable):
+		expr()
+		self.write('[', False)
+		index()
+		self.write(']', False)
 
 
 	def raw(self, code: str):

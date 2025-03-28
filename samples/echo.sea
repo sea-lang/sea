@@ -1,7 +1,10 @@
-use std\arg
+use std
 
 fun main(argc: int, argv: ^char[]): int {
-
-	each arg of args -> println(arg)
+	var arg: ^char = NULL
+	for i in 0 to argc {
+		arg = argv[i]
+		println(stringView(strlen(arg), arg))
+	}
 	ret 0
 }

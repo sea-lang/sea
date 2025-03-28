@@ -32,7 +32,11 @@ stat:
 	| expr;
 
 stat_ret: 'ret' expr;
-stat_for: 'for' expr ';' expr ';' expr expr_block;
+stat_for:
+	'for' (
+		(expr ';' expr ';' expr)
+		| ((ID 'in')? expr 'to' expr)
+	) expr_block;
 stat_each: 'each' ID 'of' ID expr_block;
 
 typedesc: '^'* ID (LBRACKET NUMBER? RBRACKET)*;
@@ -65,6 +69,7 @@ expr:
 	| expr '++'
 	| expr '--'
 	// Control flow and friends
+	| expr part_index
 	| expr part_invoke
 	| expr_block
 	| raw_block
@@ -92,3 +97,4 @@ part_invoke: '(' (expr (',' expr)*)? ')';
 part_params: '(' (part_param (',' part_param)*)? ')';
 part_param: ID ':' typedesc;
 part_path: ID ('\\' ID)*;
+part_index: LBRACKET expr RBRACKET;

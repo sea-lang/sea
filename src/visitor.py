@@ -22,19 +22,19 @@ class Visitor(ParserListener):
 	def _simple_writer(self, expr: Parser.ExprContext):
 		return lambda: self.write_expr(expr)
 
-	def enterProgram(self, ctx:Parser.ProgramContext):
+	def enterProgram(self, ctx: Parser.ProgramContext):
 		self.backend.file_begin()
 
-	def exitProgram(self, ctx:Parser.ProgramContext):
+	def exitProgram(self, ctx: Parser.ProgramContext):
 		self.backend.file_end()
 
-	def enterComment(self, ctx:Parser.CommentContext):
+	def enterComment(self, ctx: Parser.CommentContext):
 		if ctx.COMMENT() is not None:
 			self.backend.comment(ctx.COMMENT().getText().removeprefix('//'))
 		else:
 			self.backend.multiline_comment(ctx.MULTILINE_COMMENT().getText().removeprefix('/*').removesuffix('*/'))
 
-	def enterUse(self, ctx:Parser.UseContext):
+	def enterUse(self, ctx: Parser.UseContext):
 		module = ctx.part_path().getText()
 		# We can assume that if module is already imported, module_lib is also already imported, so we won't even check for it here.
 		if module in self.backend.using:
@@ -87,6 +87,9 @@ class Visitor(ParserListener):
 			self.backend.deref(lambda: self.write_expr(expr.getChild(0)))
 		elif expr.AS() is not None:
 			self.backend.cast(SeaType.from_str(expr.typedesc()), self._writer(expr.expr()))
+		elif expr.part_index() is not None:
+			e = expr.part_index()
+			self.backend.index(self._writer(expr, 0), self._writer(e, 1))
 		# Operators
 		elif expr.OP_DOT() is not None: self.backend.dot(_writer(0), _writer(2))
 		elif expr.OP_NOT() is not None: self.backend.not_(_writer(1))
@@ -156,21 +159,21 @@ class Visitor(ParserListener):
 		elif expr.EQ() is not None:
 			self.backend.assign(self._writer(expr, 0), self._writer(expr, 2))
 
-	def enterStat(self, ctx:Parser.StatContext):
+	def enterStat(self, ctx: Parser.StatContext):
 		if ctx.expr() is not None:
 			self.backend.force_indent_next = True
 			self.write_expr(ctx.expr())
 
-	def exitStat(self, ctx:Parser.StatContext):
+	def exitStat(self, ctx: Parser.StatContext):
 		if self.backend.needs_line_ending(ctx):
 			self.backend.write(self.backend.line_ending, False)
 		else:
 			self.backend.writeln('', False)
 
-	def enterStat_ret(self, ctx:Parser.Stat_retContext):
+	def enterStat_ret(self, ctx: Parser.Stat_retContext):
 		self.backend.ret(self._writer(ctx.expr()))
 
-	def enterFun(self, ctx:Parser.FunContext):
+	def enterFun(self, ctx: Parser.FunContext):
 		params = {}
 		part = ctx.part_params()
 		for i in range(1, part.getChildCount() - 1):
@@ -185,12 +188,15 @@ class Visitor(ParserListener):
 		else:
 			returns = SEA_VOID
 
-		self.backend.fun(ctx.ID().symbol.text, SeaFunction(returns, params))
+		self.backend.fun_begin(ctx.ID().symbol.text, SeaFunction(returns, params))
 
-	def enterRaw_block(self, ctx:Parser.Raw_blockContext):
+	def exitFun(self, ctx: Parser.FunContext):
+		self.backend.fun_end()
+
+	def enterRaw_block(self, ctx: Parser.Raw_blockContext):
 		self.backend.raw(ctx.getChild(1).getText())
 
-	def enterRec(self, ctx:Parser.RecContext):
+	def enterRec(self, ctx: Parser.RecContext):
 		name = ctx.ID().symbol.text
 		fields = {}
 		part = ctx.part_params()
@@ -202,29 +208,36 @@ class Visitor(ParserListener):
 		del part
 		self.backend.rec(name, SeaRecord(fields))
 
-	def enterExpr_block(self, ctx:Parser.Expr_blockContext):
+	def enterExpr_block(self, ctx: Parser.Expr_blockContext):
 		self.backend.block_begin()
 
-	def exitExpr_block(self, ctx:Parser.Expr_blockContext):
+	def exitExpr_block(self, ctx: Parser.Expr_blockContext):
 		self.backend.block_end()
 
-	def enterExpr_if(self, ctx:Parser.Expr_ifContext):
+	def enterExpr_if(self, ctx: Parser.Expr_ifContext):
 		self.backend.if_(self._writer(ctx.expr()))
 		# ctx.expr_block()
 		if ctx.ELSE() is not None:
 			self.backend.else_()
 
-	def enterStat_for(self, ctx:Parser.Stat_forContext):
-		self.backend.for_(
-			lambda: self.write_expr(ctx.expr(0)),
-			lambda: self.write_expr(ctx.expr(1)),
-			lambda: self.write_expr(ctx.expr(2))
-		)
+	def enterStat_for(self, ctx: Parser.Stat_forContext):
+		if ctx.TO() is not None:
+			self.backend.for_to(
+				None if ctx.IN() is None else ctx.ID(),
+				lambda: self.write_expr(ctx.expr(0)),
+				lambda: self.write_expr(ctx.expr(1)),
+			)
+		else:
+			self.backend.for_(
+				lambda: self.write_expr(ctx.expr(0)),
+				lambda: self.write_expr(ctx.expr(1)),
+				lambda: self.write_expr(ctx.expr(2))
+			)
 
-	def enterStat_each(self, ctx:Parser.Stat_eachContext):
+	def enterStat_each(self, ctx: Parser.Stat_eachContext):
 		self.backend.each_begin(ctx.ID(0).symbol.text, ctx.ID(1).symbol.text)
 
-	def exitStat_each(self, ctx:Parser.Stat_eachContext):
+	def exitStat_each(self, ctx: Parser.Stat_eachContext):
 		self.backend.each_end()
 
 

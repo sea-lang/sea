@@ -49,6 +49,8 @@ OF: 'of';
 NEW: 'new';
 REF: 'ref';
 AS: 'as';
+TO: 'to';
+IN: 'in';
 
 TRUE: 'true';
 FALSE: 'false';

@@ -6,6 +6,7 @@
 /.sea
 
 # Ignore transpiled C and compiled files
+/main
 /*.out
 /*.o
 /*.c

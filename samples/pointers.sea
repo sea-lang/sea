@@ -3,7 +3,7 @@ use std
 fun main(): int {
 	var number: int = 1000
 	var pNumber: ^int = ref number
-	printf(c"%d", number)
+	printf(c"%d\n", number)
 	pNumber^ = 10
-	printf(c"%d", number)
+	printf(c"%d\n", number)
 }

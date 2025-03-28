@@ -1,7 +1,9 @@
 import os
+import io
 from typing import Optional
 import antlr4
 from antlr4.tree.Tree import TerminalNodeImpl
+from antlr4.error.ErrorListener import ErrorListener
 from .backend import Backend
 from .backend_c import Backend_C
 from .compiler import SEA_VOID, Compiler, SeaFunction, SeaRecord, SeaType
@@ -13,7 +15,7 @@ class Visitor(ParserListener):
 	def __init__(self, backend: Backend):
 		self.backend = backend
 
-	def _writer(self, expr: Parser.ExprContext, index: Optional[int] = None):
+	def _writer(self, expr, index: Optional[int] = None):
 		if index is None:
 			return lambda: self.write_expr(expr)
 		else:
@@ -41,7 +43,7 @@ class Visitor(ParserListener):
 			return
 
 		# Use the automagically imported `lib.sea` module, if it exists
-		module_lib = module[:module.rfind('\\')] + '\\lib.sea'
+		module_lib = module[:module.rfind('\\')] + '\\lib'
 		if not module_lib in self.backend.using:
 			path = module_lib.replace('\\', '/') + '.sea'
 			# We won't throw an error if `lib.sea`` doesn't exist, since it's optional
@@ -72,7 +74,10 @@ class Visitor(ParserListener):
 		def _writer(index: int):
 			return lambda: self.write_expr(expr.getChild(index))
 
-		if expr.expr() is not None and expr.part_invoke() is not None:
+		# TODO: Organize
+		if expr.expr() is not None and expr.getChild(0).getText() == '(':
+			self.backend.group_expr(_writer(1))
+		elif expr.expr() is not None and expr.part_invoke() is not None:
 			e = expr.part_invoke()
 			items = []
 			for i in range(1, e.getChildCount() - 1):
@@ -86,7 +91,7 @@ class Visitor(ParserListener):
 		elif expr.PTR() is not None and expr.expr() is not None:
 			self.backend.deref(lambda: self.write_expr(expr.getChild(0)))
 		elif expr.AS() is not None:
-			self.backend.cast(SeaType.from_str(expr.typedesc()), self._writer(expr.expr()))
+			self.backend.cast(SeaType.from_str(expr.typedesc().getText()), lambda: self.write_expr(expr.getChild(0)))
 		elif expr.part_index() is not None:
 			e = expr.part_index()
 			self.backend.index(self._writer(expr, 0), self._writer(e, 1))
@@ -159,8 +164,27 @@ class Visitor(ParserListener):
 		elif expr.EQ() is not None:
 			self.backend.assign(self._writer(expr, 0), self._writer(expr, 2))
 
+	def enterTop_level_stat(self, ctx: Parser.Top_level_statContext):
+		if ctx.expr_var() is not None:
+			e = ctx.expr_var()
+			self.backend.var(
+				e.ID().symbol.text,
+				SeaType.from_str(e.typedesc().getText()),
+				self._writer(e.expr())
+			)
+			self.backend.write(self.backend.line_ending, False)
+		elif ctx.expr_let() is not None:
+			e = ctx.expr_let()
+			self.backend.let(
+				e.ID().symbol.text,
+				SeaType.from_str(e.typedesc().getText()),
+				self._writer(e.expr())
+			)
+			self.backend.write(self.backend.line_ending, False)
+
 	def enterStat(self, ctx: Parser.StatContext):
 		if ctx.expr() is not None:
+			print(f'stat expr: {ctx.expr().getText()}')
 			self.backend.force_indent_next = True
 			self.write_expr(ctx.expr())
 
@@ -208,17 +232,20 @@ class Visitor(ParserListener):
 		del part
 		self.backend.rec(name, SeaRecord(fields))
 
+	def enterDef(self, ctx: Parser.DefContext):
+		self.backend.def_(ctx.ID().symbol.text, SeaType.from_str(ctx.typedesc().getText()))
+
 	def enterExpr_block(self, ctx: Parser.Expr_blockContext):
 		self.backend.block_begin()
 
 	def exitExpr_block(self, ctx: Parser.Expr_blockContext):
 		self.backend.block_end()
 
-	def enterExpr_if(self, ctx: Parser.Expr_ifContext):
-		self.backend.if_(self._writer(ctx.expr()))
-		# ctx.expr_block()
-		if ctx.ELSE() is not None:
-			self.backend.else_()
+	def enterStat_if(self, ctx: Parser.Stat_ifContext):
+		self.backend.if_(self._writer(ctx, 1))
+
+	def enterStat_else(self, ctx: Parser.Stat_elseContext):
+		self.backend.else_()
 
 	def enterStat_for(self, ctx: Parser.Stat_forContext):
 		if ctx.TO() is not None:
@@ -240,12 +267,28 @@ class Visitor(ParserListener):
 	def exitStat_each(self, ctx: Parser.Stat_eachContext):
 		self.backend.each_end()
 
+class SeaErrorListener(ErrorListener):
+	def __init__(self, file_path):
+		self.file_path = file_path
+		self._symbol = ''
+
+	def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e) -> None:
+		self._symbol = offendingSymbol
+		print(f'\033[31m{self.file_path}:{line}:{column}\033[0m: {msg}')
+		exit(1)
+
+	@property
+	def symbol(self):
+		return self._symbol
+
 
 def visit(file_path: str, output_path: Optional[str] = None, backend: Optional[Backend] = None):
-	input_stream = antlr4.FileStream(file_path)
-	lexer = Lexer(input_stream)
+	lexer = Lexer(antlr4.FileStream(file_path))
 	stream = antlr4.CommonTokenStream(lexer)
 	parser = Parser(stream)
+	parser.removeErrorListeners()
+	error_listener = SeaErrorListener(file_path)
+	parser.addErrorListener(error_listener)
 
 	tree = parser.program()
 	# print(tree.toStringTree(recog = parser))

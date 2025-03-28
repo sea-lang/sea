@@ -51,6 +51,7 @@ REF: 'ref';
 AS: 'as';
 TO: 'to';
 IN: 'in';
+DEF: 'def';
 
 TRUE: 'true';
 FALSE: 'false';

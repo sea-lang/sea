@@ -1,18 +1,71 @@
 rec ListNode(value: Any, next: ^ListNode)
+rec List(len: size_t, head: ^ListNode)
 
-rec List(len: size_t, head: Any)
-
-fun listGet(list: ^List, index: size_t): Any {
-	var head = (list^).head
+fun listGet(list: ^List, index: size_t): ^ListNode {
+	var i: int = 0
+	for var node: ^ListNode = list^.head ; node != nil ; node = node^.next {
+		if i == index {
+			ret node
+		}
+		i++
+	}
+	ret nil as ^ListNode
 }
 
 fun listInsert(list: ^List, index: size_t, value: Any): void {
-
+	var node: ^ListNode = listGet(list, index)
+	var toInsert: ^ListNode = malloc(sizeof(ListNode))
+	toInsert^.value = value
+	toInsert^.next = node^.next
+	node^.next = ref toInsert
+	list^.len++
 }
 
-fun listFromArray(len: size_t, head: Any): List {
-	let list: List = new List(len, head);
-	for var i = 0; i < len; i++ {
+fun listAppend(list: ^List, value: Any): void {
+	var end: ^ListNode = listGet(list, list^.len - 1)
+	var toAppend: ^ListNode = malloc(sizeof(ListNode))
+	toAppend^.value = value
+	toAppend^.next = nil
+	end^.next = toAppend
+}
 
+fun listRemove(list: ^List, index: size_t): void {
+	var node: ^ListNode = listGet(list, index)
+	if index == 0 {
+		if list^.len == 1 {
+			list^.head = nil
+			free(node)
+		}
+		var next: ^ListNode = listGet(list, index + 1)
+		free(list^.head)
+		list^.head = next^.next
+	} else {
+		var prev: ^ListNode = listGet(list, index - 1)
+		prev^.next = node^.next
+		free(node)
 	}
+	list^.len--
+}
+
+fun newList(): ^List {
+	var list: ^List = malloc(sizeof(List))
+	list^.len = 0
+	var node: ^ListNode = malloc(sizeof(ListNode))
+	node^.value = nil
+	node^.next = nil
+	list^.head = node
+	ret list
+}
+
+fun delList(list: ^List): void {
+	for var node: ^ListNode = list^.head ; node != nil ; node = node^.next {
+		free(node)
+	}
+	free(list)
+}
+
+fun listFromArray(len: size_t, array: Any): List {
+	var list: List = new List(len, nil)
+	for var i: int = 0; i < len; i++ -> listAppend(ref list, ref array[i])
+	ret list
 }

@@ -4,12 +4,12 @@ raw[
 #include <stdbool.h>
 ]
 
-// Common modules
-use std\builtin\str
-use std\builtin\io
-
 // Globals
 let nil: ^void = NULL
 
 // Types
-raw[ typedef void *Any; ]
+def Any = ^void
+
+// Common modules
+use std\builtin\str
+use std\builtin\io

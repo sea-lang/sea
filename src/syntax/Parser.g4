@@ -13,44 +13,58 @@ top_level_stat:
 	use
 	| fun
 	| rec
+	| def
 	| raw_block
 	| expr_var
 	| expr_let
 	| comment;
 
 use: 'use' part_path;
-fun: 'fun' ID part_params (':' typedesc)? expr;
+fun: 'fun' ID part_params (':' typedesc)? expr_block;
 raw_block: RAW_BLOCK RAW_TEXT END_RAW_BLOCK;
 rec: 'rec' ID part_params;
+def: 'def' ID '=' typedesc;
 
 stat:
 	stat_ret
+	| stat_if
+	| stat_else
 	| stat_for
 	| stat_each
 	| raw_block
+	| expr_block
 	| comment
 	| expr;
 
+stat_if: 'if' expr stat;
+stat_else: 'else' stat;
 stat_ret: 'ret' expr;
 stat_for:
 	'for' (
 		(expr ';' expr ';' expr)
 		| ((ID 'in')? expr 'to' expr)
-	) expr_block;
-stat_each: 'each' ID 'of' ID expr_block;
+	) stat;
+stat_each: 'each' ID 'of' ID stat;
 
 typedesc: '^'* ID (LBRACKET NUMBER? RBRACKET)*;
 
 expr:
+	'(' expr ')'
 	// Literals
-	NUMBER
+	| NUMBER
 	| STRING
 	| TRUE
 	| FALSE
 	| ID
 	| expr_new
-	// Operators
+	// The almighty... DOT
 	| expr '.' expr
+	// Pointers
+	| expr_ref
+	| expr '^'
+	// Assignment
+	| expr '=' expr
+	// Operators
 	| 'not' expr
 	| expr 'and' expr
 	| expr 'or' expr
@@ -71,20 +85,15 @@ expr:
 	// Control flow and friends
 	| expr part_index
 	| expr part_invoke
-	| expr_block
+	// | expr_block
 	| raw_block
-	| expr_if
 	| expr_list
 	| expr_var
 	| expr_let
-	| expr '=' expr
-	| expr_ref
-	| expr '^'
 	| expr 'as' typedesc
 	// Comments
 	| comment;
 
-expr_if: 'if' expr expr_block ('else' expr_block)?;
 expr_block: ('{' stat* '}') | ('->' stat);
 expr_list: LBRACKET (expr (',' expr)* ','?)? RBRACKET;
 expr_new: 'new' ID '(' (expr (',' expr)* ','?)? ')';

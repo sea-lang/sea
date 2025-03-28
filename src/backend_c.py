@@ -14,19 +14,22 @@ class Backend_C(Backend):
 		return type.name + ' ' + ('*' * type.pointers) + id + ('[]' * type.arrays)
 
 	def file_begin(self):
-		self.writeln(f'#pragma region mod: {self.module_stack[-1]}')
+		self.writeln(f'#pragma region "mod: {self.module_stack[-1]}"')
 
 	def file_end(self):
-		self.writeln(f'#pragma endregion mod: {self.module_stack[-1]}')
+		self.writeln(f'#pragma endregion "mod: {self.module_stack[-1]}"')
 
 	def rec(self, name: str, record: SeaRecord):
-		self.writeln('typedef struct {')
+		self.writeln(f'struct {name};')
+		self.writeln(f'typedef struct {name} {name};')
+		self.writeln(f'struct {name} {{')
 		self.depth += 1
 		for fieldname, typedesc in record.fields.items():
 			self.write(self.typed_id(typedesc, fieldname))
 			self.write(';\n', False)
 		self.depth -= 1
-		self.writeln(f'}} {name};\n') # newline for spacing
+		# self.writeln(f'}} {name};\n') # newline for spacing
+		self.writeln('};\n') # newline for spacing
 		self.compiler.add_record(name, record)
 
 	def fun_begin(self, name: str, func: SeaFunction):
@@ -44,7 +47,11 @@ class Backend_C(Backend):
 		self.writeln(f')', False) # writeln for allman-esque braces
 
 	def fun_end(self):
+		self.writeln('', False) # writeln for spacing
 		self.compiler.pop_scope()
+
+	def def_(self, name: str, type: SeaType):
+		self.writeln(f'typedef {self.typed_id(type, name)};\n')
 
 	def var(self, name: str, type: SeaType, value: Callable):
 		self.write(self.typed_id(type, name), False)
@@ -53,6 +60,7 @@ class Backend_C(Backend):
 		self.compiler.add_variable(name, type)
 
 	def let(self, name: str, type: SeaType, value: Callable):
+		print(f'let: {name}')
 		self.write('const ', False)
 		self.write(self.typed_id(type, name), False)
 		self.write(' = ', False)
@@ -90,10 +98,10 @@ class Backend_C(Backend):
 	def if_(self, cond: Callable):
 		self.write('if (')
 		cond()
-		self.write(')')
+		self.write(')', False)
 
 	def else_(self):
-		self.writeln(f'else ')
+		self.write('else ', False)
 
 	def for_(self, define: Callable, cond: Callable, inc: Callable):
 		self.write('for (')
@@ -176,6 +184,11 @@ class Backend_C(Backend):
 	def div(self, left: Callable, right: Callable): self._op('/', left, right)
 	def mod(self, left: Callable, right: Callable): self._op('%', left, right)
 
+
+	def group_expr(self, it: Callable):
+		self.write('(', False)
+		it()
+		self.write(')', False)
 
 	def number(self, it: str):
 		self.write(it, False)

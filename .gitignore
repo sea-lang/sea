@@ -2,6 +2,9 @@
 /env
 *.pyc
 
+# Ignore Sea caches and builds
+/.sea
+
 # Ignore transpiled C and compiled files
 /*.out
 /*.o

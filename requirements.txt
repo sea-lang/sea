@@ -1,3 +1,4 @@
 antlr4-python3-runtime==4.13.2
 antlr4-tools==0.2.1
+click==8.1.8
 install-jdk==1.1.0

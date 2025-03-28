@@ -49,7 +49,7 @@ class Visitor(ParserListener):
 				self.backend.using.append(module_lib)
 				self.backend.use(module_lib)
 				self.backend.module_stack.append(module_lib)
-				visit(path, self.backend)
+				visit(path, backend = self.backend)
 				self.backend.module_stack.pop()
 
 		# Use the module
@@ -62,7 +62,7 @@ class Visitor(ParserListener):
 				self.backend.using.append(module)
 				self.backend.use(module)
 				self.backend.module_stack.append(module)
-				visit(path, self.backend)
+				visit(path, backend = self.backend)
 				self.backend.module_stack.pop()
 				return
 		print(f'error: module `{module}` does not exists (searched for `{possible_paths}`)')
@@ -228,7 +228,7 @@ class Visitor(ParserListener):
 		self.backend.each_end()
 
 
-def visit(file_path: str, backend: Optional[Backend] = None):
+def visit(file_path: str, output_path: Optional[str] = None, backend: Optional[Backend] = None):
 	input_stream = antlr4.FileStream(file_path)
 	lexer = Lexer(input_stream)
 	stream = antlr4.CommonTokenStream(lexer)
@@ -239,7 +239,10 @@ def visit(file_path: str, backend: Optional[Backend] = None):
 
 	walker = antlr4.ParseTreeWalker()
 	if backend is None:
-		with Backend_C(Compiler(), "output.c") as backend:
+		if output_path is None:
+			print('error: visit() requires an output path when no backend is specified')
+			exit(1)
+		with Backend_C(Compiler(), output_path) as backend:
 			walker.walk(Visitor(backend), tree)
 	else:
 		walker.walk(Visitor(backend), tree)

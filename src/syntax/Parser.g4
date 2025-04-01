@@ -46,6 +46,7 @@ stat_ret: 'ret' expr;
 stat_for:
 	'for' (
 		(expr ';' expr ';' expr)
+		| expr
 		| ((ID 'in')? expr 'to' expr)
 	) stat;
 stat_each: 'each' ID 'of' ID stat;
@@ -89,8 +90,7 @@ expr:
 	| expr '--'
 	// Control flow and friends
 	| expr part_index
-	| ID ('{' (template_def_param (',' template_def_param)*)? '}')? part_invoke
-	// | expr_block
+	| ID template_descriptor? part_invoke
 	| raw_block
 	| expr_list
 	| expr_var

@@ -40,11 +40,11 @@ class SeaType(NamedTuple):
 
 			return SeaType(s.count('^'), name, [], arrays)
 		else:
-			name = s.strip('^[]')[:s.find('{')]
+			name = s[:s.find('{')].strip('^[]')
 
 			if template is not None and template.has_field(name):
 				name = template.get(name)
-			tem = [it.strip() for it in s[s.find('{')+1:s.find('}')].split(', ')]
+			tem = [it.strip() for it in s[s.find('{')+1:s.find('}')].split(',')]
 			if template is not None:
 				for i, t in enumerate(tem):
 					if template.has_field(t):
@@ -112,6 +112,7 @@ class SeaFunctionTemplate(NamedTuple):
 		fun_params = self.function.params.copy()
 		for name, type in fun_params.items():
 			fun_params[name] = type.apply(params)
+		print(fun_params)
 		return SeaFunction(fun_returns, fun_params)
 
 class Compiler:

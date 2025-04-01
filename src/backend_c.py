@@ -17,7 +17,6 @@ class Backend_C(Backend):
 		name = type.name
 		for param in type.params:
 			name += f'_{param}'
-		print('typed_id: ' + name)
 		return name + ' ' + ('*' * type.pointers) + id + ''.join([f'[{it}]' for it in type.arrays])
 
 
@@ -34,7 +33,6 @@ class Backend_C(Backend):
 		self.writeln(f'struct {name} {{')
 		self.depth += 1
 		for fieldname, typedesc in record.fields.items():
-			print('rec field: ' + self.typed_id(typedesc, fieldname))
 			self.write(self.typed_id(typedesc, fieldname))
 			self.write(';\n', False)
 		self.depth -= 1
@@ -114,7 +112,7 @@ class Backend_C(Backend):
 	def else_(self):
 		self.write('else ', False)
 
-	def for_(self, define: Callable, cond: Callable, inc: Callable):
+	def for_c_style(self, define: Callable, cond: Callable, inc: Callable):
 		self.write('for (')
 		define()
 		self.write('; ', False)
@@ -123,14 +121,19 @@ class Backend_C(Backend):
 		inc()
 		self.write(') ', False)
 
+	def for_single_expr(self, cond: Callable):
+		self.write('while (')
+		cond()
+		self.write(') ', False)
+
 	def for_to(self, var: Optional[str], from_: Callable, to: Callable):
 		if var is None:
 			var = '_i'
-		self.write(f'for (int _to = ')
+		self.write(f'for (int _to = 1+')
 		to()
 		self.write(f', {var} = ', False)
 		from_()
-		self.write(f'; {var} < _to; i++) ', False)
+		self.write(f'; {var} < _to; {var}++) ', False)
 
 	# TODO: Use a trait for this
 	def each_begin(self, var: str, of: str):

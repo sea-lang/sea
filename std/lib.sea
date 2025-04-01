@@ -1,6 +1,7 @@
 // Common includes
 raw[
 #include <stdlib.h>
+#include <stdint.h>
 #include <stdbool.h>
 ]
 
@@ -9,6 +10,19 @@ let nil: ^void = NULL
 
 // Types
 def Any = ^void
+
+def u8 = uint8_t
+def u16 = uint16_t
+def u32 = uint32_t
+def u64 = uint64_t
+
+def i8 = int8_t
+def i16 = int16_t
+def i32 = int32_t
+def i64 = int64_t
+
+def f32 = float
+def f64 = double
 
 // Common modules
 use std\builtin\str

@@ -39,6 +39,7 @@ class Visitor(ParserListener):
 			if isinstance(param, TerminalNodeImpl):
 				continue
 			params[param.ID().symbol.text] = SeaType.from_str(param.typedesc().getText())
+		print('_get_fun: ' + str(params))
 		del part
 
 		if ctx.COLON() is not None:
@@ -127,7 +128,15 @@ class Visitor(ParserListener):
 				if isinstance(item, TerminalNodeImpl):
 					continue
 				items.append(self._writer(e, i))
-			self.backend.invoke(expr.ID().symbol.text, items)
+
+			name = expr.ID().symbol.text
+			if expr.template_descriptor() is not None:
+				tem = expr.template_descriptor()
+				children = tem.getChildren(predicate = lambda it: isinstance(it, Parser.Template_descriptor_valueContext))
+				for child in children:
+					name += '_' + child.getText()
+
+			self.backend.invoke(name, items)
 		elif expr.expr_ref() is not None:
 			self.backend.ref(expr.expr_ref().ID().symbol.text)
 		elif expr.PTR() is not None and expr.expr() is not None:
@@ -186,7 +195,6 @@ class Visitor(ParserListener):
 
 			start = 1
 			if e.template_descriptor() is not None:
-				print('hai')
 				tem = e.template_descriptor()
 				i = 0
 				it = tem.template_descriptor_value(i)
@@ -198,9 +206,6 @@ class Visitor(ParserListener):
 				# Ready to see a cursed one-liner?
 				name += ''.join('_' + (p if self.template is None or not self.template.has_field(p) else self.template.get(p)) for p in params)
 				start = 3
-
-			print(start)
-			print(name)
 
 			items = []
 			for i in range(start, e.getChildCount() - 1):
@@ -319,7 +324,7 @@ class Visitor(ParserListener):
 			elif it.rec() is not None:
 				rec = it.rec()
 				self.backend.compiler.add_record_template(rec.ID().symbol.text, self._get_rec(rec), template)
-			elif isinstance(it, Parser.CommentContext):
+			elif it.comment() is not None:
 				pass
 			else:
 				print('error: templates can only contain functions and records, got: ' + str(type(it).__name__))
@@ -364,7 +369,6 @@ class Visitor(ParserListener):
 			end_offset = 1 if template.code.LCURLY() is not None else 0 # Check if we are a {} or a ->
 			for i in range(1, template.code.getChildCount() - end_offset):
 				it = template.code.getChild(i)
-				print(it.getText())
 				walker = antlr4.ParseTreeWalker()
 				walker.walk(self, it)
 
@@ -398,14 +402,16 @@ class Visitor(ParserListener):
 	def enterStat_for(self, ctx: Parser.Stat_forContext):
 		if self._should_skip(): return
 
-		if ctx.TO() is not None:
+		if ctx.TO() is not None: # for/in?/to
 			self.backend.for_to(
 				None if ctx.IN() is None else ctx.ID(),
 				lambda: self.write_expr(ctx.expr(0)),
 				lambda: self.write_expr(ctx.expr(1)),
 			)
-		else:
-			self.backend.for_(
+		elif ctx.expr(1) is None: # Single-expr for loop
+			self.backend.for_single_expr(lambda: self.write_expr(ctx.expr(0)))
+		else: # C-style for loops
+			self.backend.for_c_style(
 				lambda: self.write_expr(ctx.expr(0)),
 				lambda: self.write_expr(ctx.expr(1)),
 				lambda: self.write_expr(ctx.expr(2))

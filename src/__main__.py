@@ -11,7 +11,7 @@ def init_dirs():
 @click.command()
 @click.option('-o', '--output', default='main', help='Output file', type=click.Path(file_okay=True))
 @click.option('-p', '--prod', is_flag=True, help='Toggle production optimizations (-O3 on GCC/Clang)')
-@click.option('-c', '--cc', default=None, type=Optional[str], help='The compiler to use by default')
+@click.option('-c', '--cc', default=None, type=str, help='The compiler to use by default')
 @click.option('-f', '--ccflags', default='', help='Options to pass to the C compiler')
 @click.option('-n', '--nobuild', is_flag=True, help='Makes Sea only skip building and only transpile')
 @click.option('-l', '--libpaths', default='.:~/.sea/lib/', help='Paths to each directory that should be searched for libraries, the first path is searched first')

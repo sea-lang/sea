@@ -52,6 +52,8 @@ AS: 'as';
 TO: 'to';
 IN: 'in';
 DEF: 'def';
+TEM: 'tem';
+GEN: 'gen';
 
 TRUE: 'true';
 FALSE: 'false';

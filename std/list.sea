@@ -12,7 +12,7 @@ fun listGet(list: ^List, index: size_t): ^ListNode {
 	ret nil as ^ListNode
 }
 
-fun listInsert(list: ^List, index: size_t, value: Any): void {
+fun listInsert(list: ^List, index: size_t, value: Any) {
 	var node: ^ListNode = listGet(list, index)
 	var toInsert: ^ListNode = malloc(sizeof(ListNode))
 	toInsert^.value = value
@@ -21,7 +21,7 @@ fun listInsert(list: ^List, index: size_t, value: Any): void {
 	list^.len++
 }
 
-fun listAppend(list: ^List, value: Any): void {
+fun listAppend(list: ^List, value: Any) {
 	var end: ^ListNode = listGet(list, list^.len - 1)
 	var toAppend: ^ListNode = malloc(sizeof(ListNode))
 	toAppend^.value = value
@@ -29,7 +29,7 @@ fun listAppend(list: ^List, value: Any): void {
 	end^.next = toAppend
 }
 
-fun listRemove(list: ^List, index: size_t): void {
+fun listRemove(list: ^List, index: size_t) {
 	var node: ^ListNode = listGet(list, index)
 	if index == 0 {
 		if list^.len == 1 {
@@ -57,7 +57,7 @@ fun newList(): ^List {
 	ret list
 }
 
-fun delList(list: ^List): void {
+fun delList(list: ^List) {
 	for var node: ^ListNode = list^.head ; node != nil ; node = node^.next {
 		free(node)
 	}

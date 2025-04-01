@@ -14,6 +14,8 @@ top_level_stat:
 	| fun
 	| rec
 	| def
+	| tem
+	| gen
 	| raw_block
 	| expr_var
 	| expr_let
@@ -24,6 +26,8 @@ fun: 'fun' ID part_params (':' typedesc)? expr_block;
 raw_block: RAW_BLOCK RAW_TEXT END_RAW_BLOCK;
 rec: 'rec' ID part_params;
 def: 'def' ID '=' typedesc;
+tem: 'tem' '(' template_def_param (',' template_def_param)* ')' (('{' top_level_stat* '}') | ('->' top_level_stat));
+gen: 'gen' ID template_descriptor;
 
 stat:
 	stat_ret
@@ -46,7 +50,9 @@ stat_for:
 	) stat;
 stat_each: 'each' ID 'of' ID stat;
 
-typedesc: '^'* ID (LBRACKET NUMBER? RBRACKET)*;
+template_descriptor_value: typedesc | ID | NUMBER | TRUE | FALSE;
+template_descriptor: '{' (template_descriptor_value (',' template_descriptor_value)*)? '}';
+typedesc: '^'* ID template_descriptor? (LBRACKET (NUMBER | ID)? RBRACKET)*;
 
 expr:
 	'(' expr ')'
@@ -55,7 +61,6 @@ expr:
 	| STRING
 	| TRUE
 	| FALSE
-	| ID
 	| expr_new
 	// The almighty... DOT
 	| expr '.' expr
@@ -84,7 +89,7 @@ expr:
 	| expr '--'
 	// Control flow and friends
 	| expr part_index
-	| expr part_invoke
+	| ID ('{' (template_def_param (',' template_def_param)*)? '}')? part_invoke
 	// | expr_block
 	| raw_block
 	| expr_list
@@ -92,11 +97,13 @@ expr:
 	| expr_let
 	| expr 'as' typedesc
 	// Comments
-	| comment;
+	| comment
+	// IDs
+	| ID;
 
 expr_block: ('{' stat* '}') | ('->' stat);
 expr_list: LBRACKET (expr (',' expr)* ','?)? RBRACKET;
-expr_new: 'new' ID '(' (expr (',' expr)* ','?)? ')';
+expr_new: 'new' ID template_descriptor? '(' (expr (',' expr)* ','?)? ')';
 expr_var: 'var' ID ':' typedesc '=' expr;
 expr_let: 'let' ID ':' typedesc '=' expr;
 expr_ref: 'ref' ID;
@@ -107,3 +114,4 @@ part_params: '(' (part_param (',' part_param)*)? ')';
 part_param: ID ':' typedesc;
 part_path: ID ('\\' ID)*;
 part_index: LBRACKET expr RBRACKET;
+template_def_param: ID ':' ID;

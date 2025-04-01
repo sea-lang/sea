@@ -1,7 +1,7 @@
-raw[ #include <string.h> // memcpy ]
+raw[ #include <string.h> /* memcpy */ ]
 
 /**
- * A generic non-null-terminated string type.
+ * A generic string type, null-termination is not guaranteed.
  *
  * Fields:
  *  len: int   - Length of the string.
@@ -31,4 +31,9 @@ fun copyString(len: int, chars: ^char): String {
 	let str: String = new String(len, NULL)
 	memcpy(str.str, chars, len)
 	ret str
+}
+
+fun freeString(string: ^String) {
+	free(string^.str)
+	free(string)
 }

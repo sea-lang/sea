@@ -8,10 +8,18 @@ class Backend_C(Backend):
 		self.line_ending = ';\n'
 
 	def type(self, type: SeaType) -> str:
-		return type.name + ('*' * type.pointers) + ('[]' * type.arrays)
+		name = type.name
+		for param in type.params:
+			name += f'_{param}'
+		return name + ('*' * type.pointers) + ''.join([f'[{it}]' for it in type.arrays])
 
 	def typed_id(self, type: SeaType, id: str) -> str:
-		return type.name + ' ' + ('*' * type.pointers) + id + ('[]' * type.arrays)
+		name = type.name
+		for param in type.params:
+			name += f'_{param}'
+		print('typed_id: ' + name)
+		return name + ' ' + ('*' * type.pointers) + id + ''.join([f'[{it}]' for it in type.arrays])
+
 
 	def file_begin(self):
 		self.writeln(f'#pragma region "mod: {self.module_stack[-1]}"')
@@ -19,12 +27,14 @@ class Backend_C(Backend):
 	def file_end(self):
 		self.writeln(f'#pragma endregion "mod: {self.module_stack[-1]}"')
 
+
 	def rec(self, name: str, record: SeaRecord):
 		self.writeln(f'struct {name};')
 		self.writeln(f'typedef struct {name} {name};')
 		self.writeln(f'struct {name} {{')
 		self.depth += 1
 		for fieldname, typedesc in record.fields.items():
+			print('rec field: ' + self.typed_id(typedesc, fieldname))
 			self.write(self.typed_id(typedesc, fieldname))
 			self.write(';\n', False)
 		self.depth -= 1
@@ -47,6 +57,9 @@ class Backend_C(Backend):
 		self.writeln(f')', False) # writeln for allman-esque braces
 
 	def fun_end(self):
+		if self.compiler.current_template is not None:
+			return
+
 		self.writeln('', False) # writeln for spacing
 		self.compiler.pop_scope()
 
@@ -60,7 +73,6 @@ class Backend_C(Backend):
 		self.compiler.add_variable(name, type)
 
 	def let(self, name: str, type: SeaType, value: Callable):
-		print(f'let: {name}')
 		self.write('const ', False)
 		self.write(self.typed_id(type, name), False)
 		self.write(' = ', False)
@@ -85,9 +97,8 @@ class Backend_C(Backend):
 		self.depth -= 1
 		self.writeln('}')
 
-	def invoke(self, it: Callable, args: list[Callable]):
-		self.write('', False)
-		it()
+	def invoke(self, id: str, args: list[Callable]):
+		self.write(id, False)
 		self.write('(', False)
 		for arg in args:
 			arg()
@@ -121,11 +132,12 @@ class Backend_C(Backend):
 		from_()
 		self.write(f'; {var} < _to; i++) ', False)
 
+	# TODO: Use a trait for this
 	def each_begin(self, var: str, of: str):
 		typ = self.compiler.find_type_of(of)
 		if typ == None:
 			self.compiler.panic(f'no such variable: {of}')
-		typ = SeaType(typ.pointers, typ.name, typ.arrays - 1)
+		typ = SeaType(typ.pointers, typ.name, typ.params, typ.arrays)
 
 		self.writeln('{')
 		self.depth += 1

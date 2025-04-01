@@ -1,0 +1,27 @@
+use std
+
+tem (T: type, size: int) {
+	rec SizedArray(elements: T[size])
+}
+
+gen SizedArray{int, 10}
+gen SizedArray{String, 2}
+
+tem (T: type) {
+	rec Holder(it: T)
+
+	fun consume(it: Holder{T}) { }
+
+	fun hold(it: T): Holder{T} {
+		ret new Holder{T}(it)
+	}
+}
+
+gen Holder{String}
+gen Holder{int}
+
+gen consume{String}
+gen consume{int}
+
+gen hold{String}
+gen hold{int}

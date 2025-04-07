@@ -1,0 +1,13 @@
+use std/fs
+use parser/parser
+use parser/lexer
+
+rec Compiler(P: ^Parser, output_file: File)
+
+fun make_compiler(P: ^Parser, output_file: File): Compiler
+
+fun compile_string(code: String, output_file: File) {
+	let lexer = make_lexer(code)
+	let parser = make_parser(ref lexer)
+	let compiler = make_compiler(ref parser, output_file)
+}

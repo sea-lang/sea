@@ -1,0 +1,78 @@
+use parser/lexer
+
+rec Parser(L: ^Lexer, cur: Token, prev: Token, errored: bool)
+
+fun make_parser(L: ^Lexer): Parser -> ret new Parser(L, new Token(), new Token(), false)
+
+#static
+fun error_at(P: ^Parser, token: Token, message: String) {
+	fprintf(stderr, c"[line %d] error", token.line)
+
+	switch token.kind {
+		case TOKEN_EOF -> eprint("at eof")
+		case TOKEN_ERR -> break
+		else -> fprintf(stderr, c" at '%.*s'", token.len, token.start)
+	}
+
+	eprint(": ")
+	eprintln(message)
+
+	P^.errored = true
+}
+
+#(static, inline) fun error_at_prev(P: ^Parser, message: String) -> error_at(P, P^.prev, message)
+#(static, inline) fun error_at_cur(P: ^Parser, message: String) -> error_at(P, P^.cur, message)
+
+#(static, inline)
+fun advance(P: ^Parser) {
+	P^.prev = P^.cur
+
+	// We loop here so that we can print multiple lexer errors at the same
+	// time. Hopefully this makes debugging errors a bit easier
+	for true {
+		P^.cur = get_next_token(P^.L)
+
+		//TODO: When Sea gets compile-time code, replace this
+		raw[
+			#if SEA_PRINT_TOKENS
+			printf("Token: ")
+			print_token(P^.cur)
+			#endif
+		]
+
+		if P^.cur.type != TOKEN_ERR -> break
+
+		error_at_cur(P, stringView(P^.cur.len, P^.cur.start))
+	}
+}
+
+#static
+fun accept(P: ^Parser, kind: TokenKind): bool {
+	if P^.cur.type == kind {
+		advance(P)
+		ret true
+	}
+	ret false
+}
+
+#static
+fun expect(P: ^Parser, kind: TokenKind, message: String): bool {
+	if accept(P, kind) -> ret true
+	error_at_cur(message)
+	ret false
+}
+
+#static
+fun parse_top_level_statement(P: ^Parser) {
+	if accept(P, TOKEN_K_USE) {
+		// use ID ('/' ID)*
+		expect(P, TOKEN_K_ID, "expected identifier after `use`")
+		for accept(P, TOKEN_K_DIV) {
+			expect(P, TOKEN_K_ID, "expected identifier after `/` in a `use` path")
+		}
+	}
+}
+
+fun parse_next(P: ^Parser) {
+	parse_top_level_statement()
+}

@@ -1,16 +1,17 @@
-use std
-
 rec User(name: String, age: int)
 
 fun greet(user: User) -> printf(c"Hello, %.*s!\n", user.name.len, user.name.str)
 
 fun main(): int {
-	let users: User[] = [
+	let users = [
 		new User("Frodo", 50),
 		new User("Gandalf", 50000),
 	]
 
-	each user of users -> greet(user)
+	let end: int = sizeof(users) / sizeof(User)
+	for var i = 0; i < end; i++ {
+		greet(users[i])
+	}
 
 	ret 0
 }

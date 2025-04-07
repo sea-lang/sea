@@ -1,0 +1,236 @@
+use std/result
+use parser/keywords
+
+gen Maybe{TokenKind}
+
+rec Lexer(start: ^char, cur: ^char, line: int)
+
+// Helpers
+#(static, inline) fun is_alpha(c: char): bool -> ret (c >= `a` and c <= `z`) or (c >= `A` and c <= `Z`) or c == `_` or c == `$`
+#(static, inline) fun is_digit(c: char): bool -> ret c >= `0` and c <= `9`
+#(static, inline) fun is_alnum(c: char): bool -> ret is_alpha(c) or is_digit(c)
+
+#(static, inline) fun token(L: ^Lexer, kind: TokenKind): Token -> ret new Token(kind, L^.start, L^.cur - L^.start, L^.line)
+#(static, inline) fun error_token(L: ^Lexer, msg: String): Token -> ret new Token(TOKEN_ERR, msg.str, msg.len, L^.line)
+
+#(static, inline) fun is_done(L: ^Lexer): bool -> ret L^.cur^ == `\0`
+#(static, inline) fun peek(L: ^Lexer): char -> ret L^.cur^
+#(static, inline) fun peek_next(L: ^Lexer): char { if is_done(L) -> ret `\0` else -> ret L^.cur[1] }
+#(static, inline) fun peek_n(L: ^Lexer, offset: int): char -> ret L^.cur[offset]
+#(static, inline) fun skip(L: ^Lexer) -> L^.cur++
+#(static, inline) fun advance(L: ^Lexer): char { L^.cur++ ret L^.cur[-1] }
+
+#static
+fun skip_whitespace(L: ^Lexer) {
+	for true {
+		switch peek(L) {
+			fall case ` ` { }
+			fall case `\r` { }
+			case `\t` {
+				skip(L)
+			}
+			case `\n` {
+				L^.line++
+				skip(L)
+			}
+			else -> ret
+		}
+	}
+}
+
+#static
+fun lex_number(L: ^Lexer): Token {
+	var floating = false
+
+	for is_digit(peek(L)) -> skip(L)
+
+	// Look for a decimal
+	if peek(L) == `.` and is_digit(peek_next(L)) {
+		floating = true
+		skip(L) // Consume the `.`
+		for is_digit(peek(L)) -> skip(L)
+	}
+
+	if floating -> ret token(L, TOKEN_FLOAT)
+	else -> ret token(L, TOKEN_INT)
+}
+
+#static
+fun lex_string(L: ^Lexer, cstr: bool): Token {
+	skip(L) // skip the `"` (or the `c`)
+	if cstr -> skip(L) // skip the `"` if a c-string
+
+	for peek(L) != `"` and not is_done(L) {
+		if peek(L) == `\n` -> L^.line++
+
+		skip(L)
+	}
+
+	if is_done(L) -> ret error_token(L, "unterminated string")
+
+	var tok = new Token()
+	if cstr {
+		tok = token(L, TOKEN_C_STRING)
+		tok.start++ // ignore the `c`
+		tok.len-- // ignore the closing quote
+	} else {
+		tok = token(L, TOKEN_STRING)
+	}
+
+	tok.start++ // ignore the first `"`
+	tok.len-- // ignore the closing quote
+	skip(L) // skip the closing `"`
+
+	ret tok
+}
+
+#static
+fun lex_id_or_keyword(L: ^Lexer): Token {
+	for is_alnum(peek(L)) -> skip(L)
+
+	ret token(L, check_keyword(L^.start, L^.cur - L^.start))
+}
+
+#static
+fun lex_char(L: ^Lexer): Token {
+	var esc = false
+
+	// if the first character is a backslash then we'll need to parse a second character.
+	if peek(L) == `\\` {
+		skip(L)
+		esc = true
+	}
+
+	skip(L) // read the character
+	skip(L) // skip the closing `
+
+	var tok = token(L, TOKEN_CHAR)
+
+	// exclude the opening and closing backticks
+	tok.start++
+	tok.len = tok.len - 2
+
+	ret tok
+}
+
+#static
+fun lex_raw_block(L: ^Lexer): Token {
+	var depth = 0
+
+	skip(L) // skip the opening [
+
+	for depth != 0 {
+		let ch = advance(L)
+
+		switch ch {
+			case `[` -> depth++
+			case `]` -> depth--
+		}
+	}
+
+	ret token(L, TOKEN_RAW)
+}
+
+
+fun get_next_token(L: ^Lexer): Token {
+	skip_whitespace(L)
+	L^.start = L^.cur
+
+	if is_done(L) -> ret token(L, TOKEN_EOF)
+
+	let ch = advance(L)
+	let next = peek(L)
+
+	if is_digit(ch) -> ret lex_number(L)
+	else if ch == `c` and peek(L) == `"` -> ret lex_string(L, true) // C strings
+	else if is_alpha(ch) {
+		if ch == `r` and next == `a` and peek_n(L, 2) == `w` {
+			L^.start = L^.start + 2
+			ret lex_raw_block(L)
+		} else {
+			ret lex_id_or_keyword(L)
+		}
+	}
+	else {
+		switch ch {
+			// Single-character tokens
+			case `"` -> ret lex_string(L, false)
+			case `\`` -> ret lex_char(L)
+			case `,` -> ret token(L, TOKEN_COMMA)
+			case `:` -> ret token(L, TOKEN_COLON)
+			case `;` -> ret token(L, TOKEN_SEMI)
+			case `^` -> ret token(L, TOKEN_PTR)
+			case `(` -> ret token(L, TOKEN_OPEN_PAREN)
+			case `)` -> ret token(L, TOKEN_CLOSE_PAREN)
+			case `[` -> ret token(L, TOKEN_OPEN_BRACKET)
+			case `]` -> ret token(L, TOKEN_CLOSE_BRACKET)
+			case `{` -> ret token(L, TOKEN_OPEN_BRACE)
+			case `}` -> ret token(L, TOKEN_CLOSE_BRACE)
+			case `#` -> ret token(L, TOKEN_HASH)
+			// Operators (these get funky since some are two characters)
+			case `.` -> ret token(L, TOKEN_OP_DOT)
+			case `-` {
+				// ->
+				if next == `>` {
+					skip(L)
+					ret token(L, TOKEN_PIPE)
+				}
+				// --
+				else if next == `-` {
+					skip(L)
+					ret token(L, TOKEN_OP_DEC)
+				}
+				// -
+				ret token(L, TOKEN_OP_SUB)
+			}
+			case `=` {
+				// ==
+				if next == `=` {
+					skip(L)
+					ret token(L, TOKEN_OP_EQ)
+				}
+				// =
+				ret token(L, TOKEN_EQ)
+			}
+			case `!` {
+				// !=
+				if next == `=` {
+					skip(L)
+					ret token(L, TOKEN_OP_NEQ)
+				}
+			}
+			case `>` {
+				// >=
+				if next == `=` {
+					skip(L)
+					ret token(L, TOKEN_OP_GTEQ)
+				}
+				// >
+				ret token(L, TOKEN_OP_GT)
+			}
+			case `<` {
+				// <=
+				if next == `=` {
+					skip(L)
+					ret token(L, TOKEN_OP_LTEQ)
+				}
+				// <
+				ret token(L, TOKEN_OP_LT)
+			}
+			case `+` {
+				// ++
+				if next == `+` {
+					skip(L)
+					ret token(L, TOKEN_OP_INC)
+				}
+				// +
+				ret token(L, TOKEN_OP_ADD)
+			}
+			case `*` -> ret token(L, TOKEN_OP_MUL)
+			case `/` -> ret token(L, TOKEN_OP_DIV)
+			case `%` -> ret token(L, TOKEN_OP_MOD)
+		}
+	}
+
+	ret error_token(L, "unexpected character")
+}

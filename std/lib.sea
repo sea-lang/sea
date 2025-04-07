@@ -1,8 +1,11 @@
 // Common includes
 raw[
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
+#include <stdnoreturn.h>
 ]
 
 // Globals
@@ -24,6 +27,14 @@ def i64 = int64_t
 def f32 = float
 def f64 = double
 
-// Common modules
-use std\builtin\str
-use std\builtin\io
+// Records
+/**
+ * A generic string type, null-termination is not guaranteed.
+ *
+ * Fields:
+ *  own: bool  - Whether or not the string object owns its characters or if it's
+ *               just a view to characters.
+ *  len: int   - Length of the string.
+ *  str: ^char - The pointer to the string.
+**/
+rec String(own: bool, len: int, str: ^char)

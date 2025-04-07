@@ -1,0 +1,6 @@
+use std
+
+fun main(): int {
+	println("Spongebob Squarepants!")
+	ret 0
+}

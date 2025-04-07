@@ -1,0 +1,11 @@
+def IntConsumer = fun (int)
+def IntSupplier = fun (): int
+
+fun life(): int -> ret 42
+fun print_int(it: int) -> printf(c"%d\n", it)
+
+fun pipe(supplier: IntSupplier, consumer: IntConsumer) -> consumer(supplier())
+
+fun main(): int {
+	pipe(ref life, ref print_int)
+}

@@ -1,4 +1,10 @@
-raw[ #include <stdio.h> /* printf */ ]
+/**
+ * Prints unformatted text.
+ *
+ * Arguments:
+ *  text: String - The string to print.
+**/
+fun print(text: String) -> printf(c"%.*s", text.len, text.str)
 
 /**
  * Prints an unformatted line.

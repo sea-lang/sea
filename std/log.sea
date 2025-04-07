@@ -1,0 +1,37 @@
+use std/io
+
+rec Log(log_to_stdout: bool, file: ^FILE)
+
+tag LogLevel(Debug, Info, Warn, Error)
+
+fun _log(log: ^Log, level: LogLevel, text: String) {
+	if log^.file != nil {
+		fprintf(log^.file, c"[")
+		switch level {
+			case Debug -> fprintf(log^.file, c"D")
+			case Info -> fprintf(log^.file, c"I")
+			case Warn -> fprintf(log^.file, c"W")
+			case Error -> fprintf(log^.file, c"E")
+		}
+		fprintf(log^.file, c"] ")
+		fprintf(log^.file, text.str, text.len)
+		fprintf(log^.file, c"\n")
+	}
+
+	if log^.log_to_stdout {
+		print("[")
+		switch level {
+			case Debug -> print("D")
+			case Info -> print("I")
+			case Warn -> print("W")
+			case Error -> print("E")
+		}
+		print("] ")
+		println(text)
+	}
+}
+
+fun debug(log: ^Log, text: String) -> _log(log, Debug, text)
+fun info(log: ^Log, text: String) -> _log(log, Info, text)
+fun warn(log: ^Log, text: String) -> _log(log, Warn, text)
+fun error(log: ^Log, text: String) -> _log(log, Error, text)

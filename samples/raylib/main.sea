@@ -1,5 +1,3 @@
-use std
-
 raw[
 #include <raylib.h>
 #include <time.h>
@@ -16,13 +14,13 @@ gen Grid{Color, 10, 10}
 gen grid_set{Color, 10, 10}
 gen grid_get{Color, 10, 10}
 
-var tile_size: int = 20
-var world: Grid{Color, 10, 10} = new Grid{Color, 10, 10}(0)
+var tile_size = 20
+var world = new Grid{Color, 10, 10}(0)
 
-raw[inline]
+#inline
 fun render() {
-	for y in 0 to 10 {
-		for x in 0 to 10 {
+	for y in 0 to 11 {
+		for x in 0 to 11 {
 			DrawRectangle(y * tile_size, x * tile_size, tile_size, tile_size, grid_get{Color, 10, 10}(ref world, x, y))
 		}
 	}
@@ -30,10 +28,10 @@ fun render() {
 	DrawFPS(10, 10)
 }
 
-raw[inline]
+#inline
 fun rand_u8(): u8 -> ret (rand() / (RAND_MAX as float) * 255) as u8
 
-raw[inline]
+#inline
 fun random_color(): Color -> ret new Color(rand_u8(), rand_u8(), rand_u8(), rand_u8())
 
 fun main(): int {
@@ -42,8 +40,8 @@ fun main(): int {
 	SetTargetFPS(60)
 	InitWindow(800, 600, c"Raylib with Sea")
 
-	for y in 0 to 10 {
-		for x in 0 to 10 {
+	for y in 0 to 11 {
+		for x in 0 to 11 {
 			grid_set{Color, 10, 10}(ref world, x, y, random_color())
 		}
 	}

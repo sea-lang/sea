@@ -1,0 +1,12 @@
+use std/log
+
+fun main(): int {
+	var my_log = new Log(true, fopen(c"logging.log", c"wb"))
+
+	debug(ref my_log, "Hello, Debug!")
+	info(ref my_log, "Hello, Info!")
+	warn(ref my_log, "Hello, Warn!")
+	error(ref my_log, "Hello, Error!")
+
+	fclose(my_log.file)
+}

@@ -13,6 +13,7 @@ RBRACKET: ']';
 LCURLY: '{';
 RCURLY: '}';
 BACKSLASH: '\\';
+HASH: '#';
 
 OP_DOT: '.';
 OP_NOT: 'not';
@@ -54,19 +55,27 @@ IN: 'in';
 DEF: 'def';
 TEM: 'tem';
 GEN: 'gen';
+TAG: 'tag';
+SWITCH: 'switch';
+CASE: 'case';
+FALL: 'fall';
 
 TRUE: 'true';
 FALSE: 'false';
 
-NUMBER: '-'? [0-9]+ ('.' [0-9]+)?;
+FLOAT: '-'? [_0-9]+ '.' ([_0-9])+ [df]?;
+INT: '-'? [_0-9]+ [lu]?;
+HEX: '0x' [0-9a-fA-F_]*;
+BINARY: '0b' [01_]*;
+
 ID: [a-zA-Z_$][a-zA-Z_$0-9]*;
 WS: [ \t\n\r\f]+ -> skip;
-// Comments are intentionally left unskipped so they can be preserved in transpiles
-COMMENT: '//' ~[\r\n]*;
-MULTILINE_COMMENT: '/*' .*? '*/';
+COMMENT: '//' ~[\r\n]* -> skip;
+MULTILINE_COMMENT: '/*' .*? '*/' -> skip;
 // https://stackoverflow.com/a/24559773
 UNTERMINATED_STRING: '"' (~["\\] | '\\' ( . | EOF))*;
 STRING: 'c'? UNTERMINATED_STRING '"';
+CHAR: '`' (~[`\\] | '\\' ( . | EOF))+ '`';
 
 RAW_BLOCK: 'raw[' -> pushMode(RAW_MODE);
 

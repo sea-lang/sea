@@ -1,9 +1,0 @@
-use std\list
-
-fun main(argc: int, argv: ^char[]): int {
-	let args: List = listFromArray(argc, argv)
-	for i in 0 to argc {
-		println((listGet(ref args, i)^.value as ^String)^)
-	}
-	ret 0
-}

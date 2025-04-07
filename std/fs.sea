@@ -1,0 +1,49 @@
+use std/result
+use std/str
+
+def File = ^FILE
+
+tag FileMode(Read, Write, Append)
+
+gen Maybe{File}
+
+fun open_file(path: String, mode: FileMode): Maybe{File} {
+	var mode_str = ""
+
+	switch mode {
+		case Read -> mode_str = "r"
+		case Write -> mode_str = "w"
+		case Append -> mode_str = "a"
+	}
+
+	let file: File = fopen(path.str, mode_str.str)
+
+	if not file -> ret new Maybe{File}(Empty)
+	else -> ret new Maybe{File}(Some, file)
+}
+
+fun close_file(this: File) -> fclose(this)
+
+gen Maybe{String}
+
+fun read_file(path: String): Maybe{String} {
+	var maybe_file: Maybe{File} = open_file(path, Read)
+	if is_empty{File}(maybe_file) {
+		ret new Maybe{String}(Empty)
+	}
+	var file = unpack{File}(maybe_file)
+
+	// get file size
+	fseek(file, 0, SEEK_END)
+	let size: size_t = ftell(file)
+	rewind(file)
+
+	// create a buffer to hold the file
+	var str: ^char = malloc((size + 1) * sizeof(char))
+
+	// read file into buffer
+	fread(str, sizeof(char), size, file)
+	str[size] = `\0`
+
+	ret new Maybe{String}(Some, takeString(size, str))
+}

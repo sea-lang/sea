@@ -1,0 +1,16 @@
+use std/fs
+use std/result
+
+fun main(): int {
+	var maybe_file: Maybe{File} = open_file("hello.txt", Write)
+
+	if is_empty{File}(maybe_file) {
+		println("error: failed to open file")
+		ret 1
+	}
+
+	var file = unpack{File}(maybe_file)
+	fprintf(file, c"Hello, World!\n")
+
+	close_file(file)
+}

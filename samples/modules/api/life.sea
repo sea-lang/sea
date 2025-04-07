@@ -1,0 +1,1 @@
+fun get_the_meaning_of_life(): Something{u8} -> ret new Something{u8}(42)

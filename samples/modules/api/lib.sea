@@ -1,0 +1,20 @@
+tem (T: type) -> rec Something(it: T)
+
+gen Something{String}
+gen Something{Any}
+
+gen Something{char}
+gen Something{bool}
+
+gen Something{u8}
+gen Something{u16}
+gen Something{u32}
+gen Something{u64}
+
+gen Something{i8}
+gen Something{i16}
+gen Something{i32}
+gen Something{i64}
+
+gen Something{f32}
+gen Something{f64}

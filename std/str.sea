@@ -1,0 +1,47 @@
+/**
+ * Creates a <String> object with the given length and characters. The
+ * characters are not copied.
+ *
+ * Args:
+ *  len: int     - Length of the string.
+ *  chars: ^char - Pointer to the first character.
+**/
+fun stringView(len: int, chars: ^char): String -> ret new String(false, len, chars)
+
+/**
+ * Creates a <String> object with the given length and characters. The
+ * characters are not copied, however are assumed to be owned by the string.
+ *
+ * Args:
+ *  len: int     - Length of the string.
+ *  chars: ^char - Pointer to the first character.
+**/
+fun takeString(len: int, chars: ^char): String -> ret new String(true, len, chars)
+
+/**
+ * Creates a <String> object with the given length and characters. The
+ * characters are copied, make sure to free the <String> later.
+ *
+ * Args:
+ *  len: int     - Length of the string.
+ *  chars: ^char - Pointer to the first character.
+**/
+fun copyString(len: int, chars: ^char): String {
+	let str = new String(true, len, NULL)
+	memcpy(str.str, chars, len)
+	ret str
+}
+
+/// Frees the given string and its characters (if owned by the string)
+fun freeString(string: ^String) {
+	if string^.own -> free(string^.str)
+	free(string)
+}
+
+fun concat(a: String, b: String): String {
+	let len = a.len + b.len
+	var str: ^char = malloc(len * sizeof(char))
+	memcpy(str, a.str, a.len)
+	memcpy(str+b.len, b.str, b.len)
+	ret stringView(len, str)
+}

@@ -1,0 +1,8 @@
+use std/io
+use another
+use api/life
+
+fun main(): int {
+	println(get_hello_world().it)
+	printf(c"The meaning of life is %d!\n", get_the_meaning_of_life().it)
+}

@@ -1,5 +1,6 @@
-use std
+use std/io // println
 
 fun main(): int {
 	println("Hello, World!")
+	ret 0
 }

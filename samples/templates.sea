@@ -1,49 +1,45 @@
-use std
-
-rec test(a: int[])
-
 tem (T: type, size: int) {
 	rec Array2D(elements: T[size][size])
-	rec Array3D(elements: T[size][size][size])
-
-	fun getA2D(a2d: ^Array2D, x: int, y: int): T -> ret a2d.elements[x][y]
-	fun getA3D(a3d: ^Array3D, x: int, y: int, z: int): T -> ret a3d.elements[x][y][z]
-
-	fun setA2D(a2d: ^Array2D, x: int, y: int, value: T) -> a2d.elements[x][y] = value
-	fun setA3D(a3d: ^Array3D, x: int, y: int, z: int, value: T) -> a3d.elements[x][y][z] = value
+	fun getA2D(a2d: ^Array2D{T, size}, x: int, y: int): T -> ret a2d^.elements[x][y]
+	fun setA2D(a2d: ^Array2D{T, size}, x: int, y: int, value: T) -> a2d^.elements[x][y] = value
 }
 
 rec Tile(id: int)
 
 tem (size: int) {
-	rec World(size: size, grid: Array2D{Tile, size})
+	rec World(size: int, grid: Array2D{Tile, size})
 
-	fun newWorld(): World{size} -> ret new World(size, new Array2D{Tile, size}())
+	fun newWorld(size: int): World{size} -> ret new World{size}(size, new Array2D{Tile, size}())
 }
 
-fun main(): int {
-	let tileAir: Tile = new Tile(0)
-	let tileStone: Tile = new Tile(1)
-	let tileGrass: Tile = new Tile(2)
+gen Array2D{Tile, 5}
+gen getA2D{Tile, 5}
+gen setA2D{Tile, 5}
+gen World{5}
+gen newWorld{5}
 
-	let world: World{50} = newWorld{50}()
-	let pWorld: ^World{50} = ref world
+fun main(): int {
+	let tileAir = new Tile(0)
+	let tileStone = new Tile(1)
+	let tileGrass = new Tile(2)
+
+	let world = newWorld{5}(5)
 
 	// Fill the world
-	for var y: int = 0 ; y < world.size ; y++ {
-		for var x: int = 0 ; x < world.size ; x++ {
+	for var y = 0 ; y < world.size ; y++ {
+		for var x = 0 ; x < world.size ; x++ {
 			if y == 0 or x == 0 or y == world.size - 1 or x == world.size - 1 {
-				setA2D(pWorld, x, y, tileGrass)
+				setA2D{Tile, 5}(ref (world.grid), x, y, tileGrass)
 			} else {
-				setA2D(pWorld, x, y, tileStone)
+				setA2D{Tile, 5}(ref (world.grid), x, y, tileStone)
 			}
 		}
 	}
 
 	// Print the world
-	for var y: int = 0 ; y < world.size ; y++ {
-		for var x: int = 0 ; x < world.size ; x++ {
-			printf(c"(%d,%d): %d\n", x, y, getA2D(pWorld, x, y))
+	for var y = 0 ; y < world.size ; y++ {
+		for var x = 0 ; x < world.size ; x++ {
+			printf(c"(%d,%d): %d\n", x, y, getA2D{Tile, 5}(ref (world.grid), x, y))
 		}
 	}
 

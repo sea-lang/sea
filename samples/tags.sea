@@ -1,0 +1,73 @@
+use std/io
+
+tag Suit(SPADE, HEART, CLUB, DIAMOND)
+
+tag Face(
+	JACK  = 10
+	QUEEN = 11
+	KING  = 12
+)
+
+rec Card(suit: Suit, value: u8)
+
+// Tagged records (aka tagged unions) are similar to enums, but can store additional data with them.
+// You can think of them as being an enum of records.
+tag rec Move(
+	Play(card: Card),
+	Draw(),
+	SomethingElse(suit: Suit, card_value: u8)
+)
+
+/* This tag compiles down to this:
+	typedef enum {
+		Play,
+		Draw,
+		SomethingElse,
+	} Move$Kind;
+
+	typedef struct {
+		Move$Kind kind;
+		union {
+			struct { Card card; };
+			struct { Suit suit; u8 card_value; };
+		};
+	} Move;
+*/
+
+fun play_card(suit: Suit) ->
+	switch suit {
+		case SPADE   -> println("You played a spade!")
+		case HEART   -> println("You played a heart!")
+		case CLUB    -> println("You played a club!")
+		case DIAMOND -> println("You played a diamond!")
+	}
+
+fun play(move: Move) ->
+	// TODO: When I implement type inference, I should be able to check if I am switching over a tagged union, and if so, make `.kind` implicit.
+	switch move.kind {
+		case Play -> play_card(move.card.suit)
+		case Draw -> println("You drew a card!")
+		case SomethingElse -> printf(c"SomethingElse: %d\n", move.card_value)
+	}
+
+fun main(): int {
+	play(new Move(Play, new Card(SPADE)))
+	play(new Move(Play, new Card(HEART)))
+	play(new Move(Play, new Card(CLUB)))
+	play(new Move(Play, new Card(DIAMOND)))
+	play(new Move(Draw))
+	play(new Move(SomethingElse, SPADE, 21))
+	play(new Move(SomethingElse, DIAMOND, 42))
+
+	// You've probably noticed that switch statements automatically break. If you need to manually break them, you can use a fall case:
+	switch 2 {
+		case 0 -> println("Zero")
+		case 1 -> println("One")
+		fall case 2 -> println("Two")
+		fall case 3 -> println("Three")
+		case 4 -> println("Four")
+		case 5 -> println("Five")
+		else -> println("Six or more")
+	}
+	// The above outputs "Two", "Three", and "Four".
+}

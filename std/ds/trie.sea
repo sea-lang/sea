@@ -1,0 +1,64 @@
+rec Trie(terminal: bool, children: Trie[256])
+
+fun trie_new_node(): ^Trie {
+	var node: ^Trie = malloc(sizeof(Trie))
+
+	for i in 0 to 256 -> node^.children[i] = nil
+
+	node^.terminal = false
+
+	ret node
+}
+
+fun trie_insert(root: ^^Trie, word: String): bool {
+	if root^ == nil {
+		root^ = trie_new_node()
+	}
+
+	var n = root^
+
+	for i in 0 to word.len {
+		if n^.children[word.str[i]] == nil {
+			n^.children[word.str[i]] = trie_new_node()
+		}
+
+		n = tmp^.children[word.str[i]]
+	}
+
+	if n^.terminal -> ret false
+
+	n^.terminal = true
+	ret true
+}
+
+fun trie_contains(root: ^Trie, word: String): bool {
+	var n = root^
+
+	for i in 0 to word.len {
+		if n^.children[word.str[i]] == nil -> ret false
+
+		n = tmp^.children[word.str[i]]
+	}
+
+	ret n^.terminal
+}
+
+#static
+fun trie_print_inner(node: ^Trie, len: int, chars: ^u8) {
+	var new_chars: ^u8 = malloc((len + 1) * sizeof(u8))
+	memcpy(new_chars, chars, len)
+
+	for i in 0 to 256 {
+		if node^.children[i] != nil {
+			if node^.children[i].terminal {
+				printf(c"%.*s%c", len, chars, i)
+			} else {
+				trie_print_inner(node^.children[i], len+1, new_chars)
+			}
+		}
+	}
+
+	free(chars)
+}
+
+fun trie_print(root: ^Trie) -> trie_print_inner(root, 0, c"")

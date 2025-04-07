@@ -1,0 +1,8 @@
+use std/io
+
+#noret
+fun panic(message: String) {
+	print("panic: ")
+	println(message)
+	exit(1)
+}

@@ -1,0 +1,46 @@
+use std/fs
+
+tag rec Element(
+	Raw(node: String, params: String, text: String),
+	Node(node: String, params: String, children: ^Element),
+	End()
+)
+
+fun node(node: String, params: String, children: Element[]): Element ->
+	ret Element_newNode(node, params, ref children[0])
+
+fun raw_node(node: String, params: String, text: String): Element ->
+	ret Element_newRaw(node, params, text)
+
+fun end_node(): Element -> ret Element_newEnd()
+
+fun compile_element(file: File, element: ^Element) {
+	switch element^.kind {
+		case Raw {
+			fprintf(
+				file,
+				c"<%.*s %.*s>%.*s</%.*s>",
+				element^.Raw.node.len, element^.Raw.node.str,
+				element^.Raw.params.len, element^.Raw.params.str,
+				element^.Raw.text.len, element^.Raw.text.str,
+				element^.Raw.node.len, element^.Raw.node.str
+			)
+		}
+		case Node {
+			fprintf(
+				file,
+				c"<%.*s %.*s>",
+				element^.Node.node.len, element^.Node.node.str,
+				element^.Node.params.len, element^.Node.params.str
+			)
+			var child: ^Element = ref element^.Node.children[0]
+			for true {
+				if child^.kind == End -> break
+				compile_element(file, child)
+				child++
+			}
+			fprintf(file, c"</%.*s>", element^.Node.node.len, element^.Node.node.str)
+		}
+		case End { }
+	}
+}

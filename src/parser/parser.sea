@@ -5,7 +5,7 @@ rec Parser(L: ^Lexer, cur: Token, prev: Token, errored: bool)
 fun make_parser(L: ^Lexer): Parser -> ret new Parser(L, new Token(), new Token(), false)
 
 #static
-fun error_at(P: ^Parser, token: Token, message: String) {
+fun p_error_at(P: ^Parser, token: Token, message: String) {
 	fprintf(stderr, c"[line %d] error", token.line)
 
 	switch token.kind {
@@ -20,11 +20,11 @@ fun error_at(P: ^Parser, token: Token, message: String) {
 	P^.errored = true
 }
 
-#(static, inline) fun error_at_prev(P: ^Parser, message: String) -> error_at(P, P^.prev, message)
-#(static, inline) fun error_at_cur(P: ^Parser, message: String) -> error_at(P, P^.cur, message)
+#(static, inline) fun p_error_at_prev(P: ^Parser, message: String) -> error_at(P, P^.prev, message)
+#(static, inline) fun p_error_at_cur(P: ^Parser, message: String) -> error_at(P, P^.cur, message)
 
 #(static, inline)
-fun advance(P: ^Parser) {
+fun p_advance(P: ^Parser) {
 	P^.prev = P^.cur
 
 	// We loop here so that we can print multiple lexer errors at the same
@@ -42,37 +42,37 @@ fun advance(P: ^Parser) {
 
 		if P^.cur.type != TOKEN_ERR -> break
 
-		error_at_cur(P, stringView(P^.cur.len, P^.cur.start))
+		p_error_at_cur(P, stringView(P^.cur.len, P^.cur.start))
 	}
 }
 
 #static
-fun accept(P: ^Parser, kind: TokenKind): bool {
-	if P^.cur.type == kind {
-		advance(P)
+fun p_accept(P: ^Parser, kind: TokenKind): bool {
+	if P^.cur.kind == kind {
+		p_advance(P)
 		ret true
 	}
 	ret false
 }
 
 #static
-fun expect(P: ^Parser, kind: TokenKind, message: String): bool {
-	if accept(P, kind) -> ret true
-	error_at_cur(message)
+fun p_expect(P: ^Parser, kind: TokenKind, message: String): bool {
+	if p_accept(P, kind) -> ret true
+	p_error_at_cur(P, message)
 	ret false
 }
 
 #static
 fun parse_top_level_statement(P: ^Parser) {
-	if accept(P, TOKEN_K_USE) {
+	if p_accept(P, TOKEN_K_USE) {
 		// use ID ('/' ID)*
-		expect(P, TOKEN_K_ID, "expected identifier after `use`")
-		for accept(P, TOKEN_K_DIV) {
-			expect(P, TOKEN_K_ID, "expected identifier after `/` in a `use` path")
+		p_expect(P, TOKEN_ID, "expected identifier after `use`")
+		for p_accept(P, TOKEN_OP_DIV) {
+			p_expect(P, TOKEN_ID, "expected identifier after `/` in a `use` path")
 		}
 	}
 }
 
 fun parse_next(P: ^Parser) {
-	parse_top_level_statement()
+	parse_top_level_statement(P)
 }

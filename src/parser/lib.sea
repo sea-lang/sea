@@ -89,6 +89,8 @@ tag TokenKind(
 
 rec Token(kind: TokenKind, start: ^char, len: int, line: int)
 
+fun get_token_str(token: Token): String -> ret stringView(token.len, token.start)
+
 fun print_token(token: Token) {
 	switch token.kind {
 		case TOKEN_EQ            -> print("EQ")

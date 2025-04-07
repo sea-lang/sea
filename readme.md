@@ -14,7 +14,6 @@ performant, and portable code without needing to write C.
 - 100% interoperability with C. All C libraries can be cleanly used in Sea, and vice-versa too.
   - C interoperability is also completely overhead-free!
 - As little ambiguity as possible (except in the pronunciation of Sea and C, whoops).
-- No undefined variables and no null, except in inline C or when interfacing with C.
 - Equally as fast as C since Sea gets transpiled to C.
 
 **Inspired By:**
@@ -23,6 +22,13 @@ performant, and portable code without needing to write C.
 - [Odin](https://odin-lang.org)
 - [V](https://vlang.io)
 - [Cyclone](https://cyclone.thelanguage.org), partially
+
+## Installation
+
+Sea is currently very unfinished. If you still want to use it, you can use the
+prototype implementation with `python3 -m proto path/to/input/file.sea -rs .`
+
+You can also build the new compiler using `python3 -m proto src/main.sea -s .`
 
 ## Why?
 

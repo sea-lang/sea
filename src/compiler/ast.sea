@@ -1,0 +1,8 @@
+
+
+tag rec SeaAST(
+	// Top level statements
+	NodeUse(path: String)
+	NodeFun(name: String, param_count: int, params: ^SeaType, returns: SeaType, code: ^SeaAST)
+	NodeRec(name: String, )
+)

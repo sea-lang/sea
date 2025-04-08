@@ -1,5 +1,5 @@
 use std/result
-use parser/keywords
+use compiler/keywords
 
 gen Maybe{TokenKind}
 
@@ -10,20 +10,20 @@ fun make_lexer(code: String): Lexer -> ret new Lexer(code.str, code.str, 1)
 // Helpers
 #(static, inline) fun l_is_alpha(c: char): bool -> ret (c >= `a` and c <= `z`) or (c >= `A` and c <= `Z`) or c == `_` or c == `$`
 #(static, inline) fun l_is_digit(c: char): bool -> ret c >= `0` and c <= `9`
-#(static, inline) fun l_is_alnum(c: char): bool -> ret is_alpha(c) or is_digit(c)
+#(static, inline) fun l_is_alnum(c: char): bool -> ret l_is_alpha(c) or l_is_digit(c)
 
 #(static, inline) fun l_token(L: ^Lexer, kind: TokenKind): Token -> ret new Token(kind, L^.start, L^.cur - L^.start, L^.line)
 #(static, inline) fun l_error_token(L: ^Lexer, msg: String): Token -> ret new Token(TOKEN_ERR, msg.str, msg.len, L^.line)
 
 #(static, inline) fun l_is_done(L: ^Lexer): bool -> ret L^.cur^ == `\0`
 #(static, inline) fun l_peek(L: ^Lexer): char -> ret L^.cur^
-#(static, inline) fun l_peek_next(L: ^Lexer): char { if is_done(L) -> ret `\0` else -> ret L^.cur[1] }
+#(static, inline) fun l_peek_next(L: ^Lexer): char { if l_is_done(L) -> ret `\0` else -> ret L^.cur[1] }
 #(static, inline) fun l_peek_n(L: ^Lexer, offset: int): char -> ret L^.cur[offset]
 #(static, inline) fun l_skip(L: ^Lexer) -> L^.cur++
 #(static, inline) fun l_advance(L: ^Lexer): char { L^.cur++ ret L^.cur[-1] }
 
 #static
-fun skip_whitespace(L: ^Lexer) {
+fun l_skip_whitespace(L: ^Lexer) {
 	for true {
 		switch l_peek(L) {
 			fall case ` ` { }

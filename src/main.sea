@@ -27,16 +27,18 @@ fun main(argc: int, argv: ^char[]): int {
 
 	let source = unpack{String}(maybe_source)
 
-	var lexer = new Lexer(source.str, source.str, 1)
+	var lexer = make_lexer(source)
 	var L = ref lexer
+	var parser = make_parser(L)
+	parse_all(ref parser)
 
 	// TODO: feed tokens to the parser
-	for var t = get_next_token(L) ; t.kind != TOKEN_EOF ; t = get_next_token(L) {
-		print_token(t)
-		if t.kind == TOKEN_ERR {
-			var msg: ^char = nil as ^char
-			asprintf(ref msg, c"on line %d: %.*s", lexer.line, t.len, t.start)
-			sea_panicc(msg)
-		}
-	}
+	// for var t = get_next_token(L) ; t.kind != TOKEN_EOF ; t = get_next_token(L) {
+	// 	print_token(t)
+	// 	if t.kind == TOKEN_ERR {
+	// 		var msg: ^char = nil as ^char
+	// 		asprintf(ref msg, c"on line %d: %.*s", lexer.line, t.len, t.start)
+	// 		sea_panicc(msg)
+	// 	}
+	// }
 }

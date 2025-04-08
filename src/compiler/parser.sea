@@ -1,4 +1,4 @@
-use parser/lexer
+use compiler/lexer
 
 rec Parser(L: ^Lexer, cur: Token, prev: Token, errored: bool)
 
@@ -20,8 +20,8 @@ fun p_error_at(P: ^Parser, token: Token, message: String) {
 	P^.errored = true
 }
 
-#(static, inline) fun p_error_at_prev(P: ^Parser, message: String) -> error_at(P, P^.prev, message)
-#(static, inline) fun p_error_at_cur(P: ^Parser, message: String) -> error_at(P, P^.cur, message)
+#(static, inline) fun p_error_at_prev(P: ^Parser, message: String) -> p_error_at(P, P^.prev, message)
+#(static, inline) fun p_error_at_cur(P: ^Parser, message: String) -> p_error_at(P, P^.cur, message)
 
 #(static, inline)
 fun p_advance(P: ^Parser) {
@@ -40,7 +40,7 @@ fun p_advance(P: ^Parser) {
 			#endif
 		]
 
-		if P^.cur.type != TOKEN_ERR -> break
+		if P^.cur.kind != TOKEN_ERR -> break
 
 		p_error_at_cur(P, stringView(P^.cur.len, P^.cur.start))
 	}
@@ -64,15 +64,31 @@ fun p_expect(P: ^Parser, kind: TokenKind, message: String): bool {
 
 #static
 fun parse_top_level_statement(P: ^Parser) {
+	println("hit top level statement")
 	if p_accept(P, TOKEN_K_USE) {
+		println("hit use")
 		// use ID ('/' ID)*
 		p_expect(P, TOKEN_ID, "expected identifier after `use`")
 		for p_accept(P, TOKEN_OP_DIV) {
 			p_expect(P, TOKEN_ID, "expected identifier after `/` in a `use` path")
 		}
+	} else {
+		print("unexpected token: ")
+		print_token(P^.cur)
+		p_error_at_cur(P, "unexpected token (see above)")
+		exit(1)
 	}
 }
 
-fun parse_next(P: ^Parser) {
-	parse_top_level_statement(P)
+fun parse_all(P: ^Parser) {
+	p_advance(P)
+
+	for true {
+		print("token: ")
+		print_token(P^.cur)
+
+		if p_accept(P, TOKEN_EOF) -> break
+
+		parse_top_level_statement(P)
+	}
 }

@@ -1,0 +1,18 @@
+tem (T: type) {
+	/**
+	 * A simple dynamic array/list implementation.
+	 *
+	 * Params:
+	 *  bump: f32 - How much to multiply the length by when the list needs
+	 *              to grow.
+	 *  len: int  - The current length of the array. Do not mutate this!
+	 *  array: ^T - Pointer to the first element of the array.
+	**/
+	rec DynamicArray(bump: f32, len: int, array: ^T)
+
+	fun make_dynarr(initial_length: int,)
+
+	fun dynarr_append(dynarr: ^DynamicArray, it: T) {
+
+	}
+}

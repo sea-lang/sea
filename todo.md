@@ -17,11 +17,13 @@
 - [/] Type and generic inference
 - [ ] Prevent common C vulnerabilities (buffer overflows, use-after-free, double-free, etc)
 - [ ] Cache compiled libraries
+- [ ] Contracts
 
 - [ ] Make the compiler mean!
   - [ ] Throw errors when a user doesn't return something in a non-void function
   - [ ] Prevent implicit type conversions
   - [ ] Non-nil pointers (syntax subject to change)
+
     ```sea
     fun refref(pointer: notnil ^void): notnil ^^void {
       ret ref pointer

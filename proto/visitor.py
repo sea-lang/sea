@@ -183,7 +183,10 @@ class Visitor(ParserListener):
 				tem = expr.template_descriptor()
 				children = tem.getChildren(predicate = lambda it: isinstance(it, Parser.Template_descriptor_valueContext))
 				for child in children:
-					name += '_' + child.getText()
+					if self.template is not None and self.template.has_field(child.getText()):
+						name += '_' + self.template.get(child.getText())
+					else:
+						name += '_' + child.getText()
 			self.backend.invoke(name, items)
 		elif expr.expr_ref() is not None:
 			self.backend.ref(lambda: self.write_expr(expr.expr_ref().expr()))

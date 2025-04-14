@@ -1,6 +1,7 @@
+use std/ds/dynarr
 use compiler/lexer
 
-rec Parser(L: ^Lexer, cur: Token, prev: Token, errored: bool)
+rec Parser(L: ^Lexer, root: ASTNode, cur: Token, prev: Token, errored: bool)
 
 fun make_parser(L: ^Lexer): Parser -> ret new Parser(L, new Token(), new Token(), false)
 
@@ -9,7 +10,7 @@ fun p_error_at(P: ^Parser, token: Token, message: String) {
 	fprintf(stderr, c"[line %d] error", token.line)
 
 	switch token.kind {
-		case TOKEN_EOF -> eprint("at eof")
+		case TOKEN_EOF -> eprint(" at eof")
 		case TOKEN_ERR -> break
 		else -> fprintf(stderr, c" at '%.*s'", token.len, token.start)
 	}
@@ -68,10 +69,16 @@ fun parse_top_level_statement(P: ^Parser) {
 	if p_accept(P, TOKEN_K_USE) {
 		println("hit use")
 		// use ID ('/' ID)*
+		var path = make_dynarr{String}(1, sizeof(String), 2)
 		p_expect(P, TOKEN_ID, "expected identifier after `use`")
+		dynarr_append{String}(ref path, get_token_str(P^.prev))
 		for p_accept(P, TOKEN_OP_DIV) {
 			p_expect(P, TOKEN_ID, "expected identifier after `/` in a `use` path")
+			dynarr_append{String}(ref path, get_token_str(P^.prev))
 		}
+		var node = new $NodeUse(path)
+		ret new ASTNode(NodeUse, to_heap(node))
+
 	} else {
 		print("unexpected token: ")
 		print_token(P^.cur)

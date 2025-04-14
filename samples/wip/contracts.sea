@@ -1,0 +1,33 @@
+// Contracts in Sea are a way to verify arguments, return values, and describe
+// side effects of the function. When you develop an API using Sea, contracts
+// are a fast way for developers to know exactly what will happen when they use
+// your function *without* needing to read the whole code. It also prevents
+// quirks from going unnoticed!
+
+var number = 0
+
+// The following code will fail to compile when using contracts because this
+// function does not specify that it mutates `number` as a side effect.
+fun inc_number() -> number++
+
+// However, this code is valid:
+fun inc_number()
+@mut(number)
+-> number++
+
+// You can also perform validation checks using contracts:
+fun add_to_number(n: int): int
+@mut(number) // Specify that we will mutate `number` in the global scope.
+@arg(n > 0 and n <= 10) // Force `n` to be `> 0 and <= 10`
+{
+	number = number + n
+	ret n
+}
+
+fun main(): int {
+	inc_number()
+
+	add_to_number(5) // perfectly fine!
+	add_to_number(-1) // compiler error, since `-1` violates the first @arg of the contract.
+	add_to_number(11) // compiler error, since `11` violates the second @arg of the contract.
+}

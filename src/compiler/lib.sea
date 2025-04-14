@@ -168,4 +168,11 @@ fun print_token(token: Token) {
 	printf(c" = '%.*s'\n", token.len, token.start)
 }
 
-rec SeaType(pointers: int, name: String, params: )
+rec SeaType(
+	pointers: int,
+	name: String,
+	params: DynamicArray{String},
+	arrays: DynamicArray{int},
+	funptr_args: Maybe{DynamicArray{SeaType}},
+	funptr_rets: Maybe{SeaType}
+)

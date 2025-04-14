@@ -1,8 +1,28 @@
+use std/mem
+use std/io
+
+rec Name(first: String, last: String)
+
+gen to_heap{Name}
+
+fun greet(n: Name) {
+	print("Hello, ")
+	print(n.first)
+	print(" ")
+	print(n.last)
+	println("!")
+}
+
 fun main(): int {
 	var number = 1000
 	var pNumber = ref number
 	printf(c"%d\n", number)
 	pNumber^ = 10
 	printf(c"%d\n", number)
-	ret 0
+
+	let n = new Name("Frodo", "Baggins")
+	greet(n)
+	var pN = to_heap{Name}(n)
+	pN^.first = "Bilbo"
+	greet(pN^)
 }

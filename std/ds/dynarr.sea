@@ -1,18 +1,83 @@
+use std/panic
+
 tem (T: type) {
 	/**
-	 * A simple dynamic array/list implementation.
+	 * A simple dynamic array implementation.
+	 *
+	 * Use <make_dynarr> for instantiation.
 	 *
 	 * Params:
-	 *  bump: f32 - How much to multiply the length by when the list needs
-	 *              to grow.
-	 *  len: int  - The current length of the array. Do not mutate this!
-	 *  array: ^T - Pointer to the first element of the array.
+	 *  bump: f32  - How much to multiply the length by when the list needs to grow.
+	 *  esize: int - The size of each element in the array. Do not mutate this!
+	 *  len: int   - The current length of the array. Do not mutate this!
+	 *  cap: int   - The maximum length of the array. Do not mutate this!
+	 *  array: ^T  - Pointer to the first element of the array. Do not make other
+	 *               pointers to this since it may move from <realloc> calls when the
+	 *               array needs to grow.
 	**/
-	rec DynamicArray(bump: f32, len: int, array: ^T)
+	rec DynamicArray(bump: f32, esize: int, len: int, cap: int, array: ^T)
 
-	fun make_dynarr(initial_length: int,)
+	//TODO: Replace element_size with sizeof(T) implicitly. Generic types aren't replaced as identifiers in the prototype impl so we can't do this quite yet.
+	/**
+	 * Creates an empty <DynamicArray>.
+	 *
+	 * Args:
+	 *  initial_cap: int  - The initial maximum size of the array. Must be `> 0`.
+	 *  element_size: int - The size of each element, i.e, `sizeof(T)`.
+	 *  bump: f32         - How much to multiply `cap` by when the array exceeds it.
+	**/
+	fun make_dynarr(initial_cap: int, element_size: int, bump: f32): DynamicArray{T} {
+		var array: ^T = malloc(element_size * initial_cap)
+		ret new DynamicArray{String}(bump, element_size, 0, initial_cap, array)
+	}
 
-	fun dynarr_append(dynarr: ^DynamicArray, it: T) {
+	/// Gets the element in <'dynarr> at <'index>, panics if <'index> is out of range.
+	fun dynarr_get(dynarr: ^DynamicArray{T}, index: int): T {
+		if index > dynarr^.len or index < 0 -> panic("Invalid index")
 
+		ret dynarr^.array[index]
+	}
+
+	/// Grows <'dynarr> to the given <'new_cap>.
+	fun dynarr_grow(dynarr: ^DynamicArray{T}, new_cap: int): bool {
+		if dynarr^.cap >= new_cap -> ret false
+
+		var p: ^T = realloc(dynarr^.array, new_cap * dynarr^.esize)
+		if p == nil -> ret false
+
+		dynarr^.cap = new_cap
+		dynarr^.array = p
+		ret true
+	}
+
+	/// Frees the given 'dynarr.
+	fun dynarr_free(dynarr: ^DynamicArray{T}) {
+		free(dynarr^.array)
+	}
+
+	/// Appends <'it> to <'dynarr>, growing if needed.
+	fun dynarr_append(dynarr: ^DynamicArray{T}, it: T) {
+		if dynarr^.len + 1 > dynarr^.cap {
+			dynarr_grow{T}(dynarr, (dynarr^.cap * dynarr^.bump) as int)
+		}
+
+		dynarr^.array[dynarr^.len] = it
+		dynarr^.len++
+	}
+
+	/// Pops the latest element in <'dynarr> and returns it, panics if `<'dynarr>.len == 0`
+	fun dynarr_pop(dynarr: ^DynamicArray{T}): T {
+		if dynarr^.len == 0 -> panic("Cannot pop empty dynamic array")
+
+		dynarr^.len--
+
+		ret dynarr^.array[dynarr^.len]
+	}
+
+	/// Set the element in <'dynarr> at <'index> to <'it>, panics if <'index> is out of range.
+	fun dynarr_set(dynarr: ^DynamicArray{T}, index: int, it: T) {
+		if index > dynarr^.len or index < 0 -> panic("Invalid index")
+
+		dynarr^.array[index] = it
 	}
 }

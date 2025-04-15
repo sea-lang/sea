@@ -1,22 +1,16 @@
+rec Tile(id: int)
+
 tem (T: type, size: int) {
 	rec Array2D(elements: T[size][size])
 	fun getA2D(a2d: ^Array2D{T, size}, x: int, y: int): T -> ret a2d^.elements[x][y]
 	fun setA2D(a2d: ^Array2D{T, size}, x: int, y: int, value: T) -> a2d^.elements[x][y] = value
 }
 
-rec Tile(id: int)
-
 tem (size: int) {
 	rec World(size: int, grid: Array2D{Tile, size})
 
 	fun newWorld(size: int): World{size} -> ret new World{size}(size, new Array2D{Tile, size}())
 }
-
-gen Array2D{Tile, 5}
-gen getA2D{Tile, 5}
-gen setA2D{Tile, 5}
-gen World{5}
-gen newWorld{5}
 
 fun main(): int {
 	let tileAir = new Tile(0)
@@ -39,8 +33,9 @@ fun main(): int {
 	// Print the world
 	for var y = 0 ; y < world.size ; y++ {
 		for var x = 0 ; x < world.size ; x++ {
-			printf(c"(%d,%d): %d\n", x, y, getA2D{Tile, 5}(ref (world.grid), x, y))
+			printf(c"%d ", getA2D{Tile, 5}(ref (world.grid), x, y))
 		}
+		printf(c"\n")
 	}
 
 	// Potential alternate syntax for multi-dimensional for-loops

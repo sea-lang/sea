@@ -1,6 +1,7 @@
 use std/io
+use std/fs
 
-rec Log(log_to_stdout: bool, file: ^FILE)
+rec Log(log_to_stdout: bool, file: File)
 
 tag LogLevel(Debug, Info, Warn, Error)
 

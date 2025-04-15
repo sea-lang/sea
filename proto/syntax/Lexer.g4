@@ -14,6 +14,7 @@ LCURLY: '{';
 RCURLY: '}';
 BACKSLASH: '\\';
 HASH: '#';
+EXCLAMATION: '!';
 
 OP_DOT: '.';
 OP_NOT: 'not';
@@ -53,8 +54,7 @@ AS: 'as';
 TO: 'to';
 IN: 'in';
 DEF: 'def';
-TEM: 'tem';
-GEN: 'gen';
+MAC: 'mac';
 TAG: 'tag';
 SWITCH: 'switch';
 CASE: 'case';
@@ -78,8 +78,14 @@ STRING: 'c'? UNTERMINATED_STRING '"';
 CHAR: '`' (~[`\\] | '\\' ( . | EOF))+ '`';
 
 RAW_BLOCK: 'raw[' -> pushMode(RAW_MODE);
+MAC_BLOCK: 'mac' ID '(' (ID (',' ID)*)? ')' '{' -> pushMode(MAC_MODE);
 
 // Used for `raw` blocks
 mode RAW_MODE;
 RAW_TEXT: ~(']')+;
 END_RAW_BLOCK: ']' -> popMode;
+
+// Used for macros
+mode MAC_MODE;
+MAC_TEXT: ~('}')+;
+END_MAC_MODE: '}' -> popMode;

@@ -22,7 +22,7 @@ fun main(): int {
 
 	let n = new Name("Frodo", "Baggins")
 	greet(n)
-	var pN = to_heap{Name}(n)
+	var pN = to_heap!(n) // to_heap is a macro which takes the value passed in, copies it to the heap, and returns a pointer to it.
 	pN^.first = "Bilbo"
 	greet(pN^)
 }

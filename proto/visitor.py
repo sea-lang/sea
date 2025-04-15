@@ -1,25 +1,38 @@
 import os
 from pathlib import Path
-from typing import Optional
+from typing import NamedTuple, Optional
 import antlr4
 from antlr4.tree.Tree import TerminalNodeImpl
 from antlr4.error.ErrorListener import ErrorListener
 
 from .infer import infer_type
 from .backend import Backend
-from .compiler import SEA_VOID, AnyTemplate, HashTags, SeaFunction, SeaFunctionTemplate, SeaRecord, SeaRecordTemplate, SeaTag, SeaTagRec, SeaTagRecTemplate, SeaTemplate, SeaTemplateGroup, SeaTemplateParams, SeaType
+from .compiler import SEA_VOID, HashTags, SeaFunction, SeaRecord, SeaTag, SeaTagRec, SeaType
 from .syntax.Lexer import Lexer
 from .syntax.Parser import Parser
 from .syntax.ParserListener import ParserListener
 
-class Visitor(ParserListener):
-	ALLOWED_TEMPLATE_TYPES = ['type', 'int', 'char', 'bool', 'float', 'double']
+# This visitor looks for functions, records, etc to generate forward declarations for
+class PreVisitor(ParserListener):
+	def __init__(self, backend: Backend):
+		self.backend = backend
 
-	def __init__(self, backend: Backend, nostd: bool = False):
+	def _get_all(self, to_find) -> list:
+		ret = []
+		i = 0
+		it = to_find(i)
+		while it is not None:
+			ret.append(it)
+			i += 1
+			it = to_find(i)
+		return ret
+
+class Visitor(ParserListener):
+	def __init__(self, previsitor: PreVisitor, backend: Backend, nostd: bool = False):
+		self.previsitor = previsitor
 		self.backend = backend
 		self.nostd = nostd
 		self.skipping = False
-		self.template: Optional[SeaTemplateParams] = None
 		self.add_implicit_break_statement = False
 
 	def _writer(self, expr, index: Optional[int] = None):
@@ -86,33 +99,10 @@ class Visitor(ParserListener):
 		visit(path, backend = self.backend)
 		return True
 
-	def _write_applied_template(self, id: str, applied, original_template: AnyTemplate, params: list[str]):
-		if isinstance(applied, SeaFunction):
-			name = id + ''.join([f'_{p}' for p in params])
-			self.backend.fun_begin(name, applied)
-			self.backend.block_begin()
-
-			assert isinstance(original_template, SeaFunctionTemplate)
-			end_offset = 1 if original_template.code.LCURLY() is not None else 0 # Check whether we are a {} or a ->
-			for i in range(1, original_template.code.getChildCount() - end_offset):
-				it = original_template.code.getChild(i)
-				walker = antlr4.ParseTreeWalker()
-				walker.walk(self, it)
-
-			self.backend.block_end()
-			self.backend.fun_end()
-		elif isinstance(applied, SeaRecord):
-			name = id + ''.join([f'_{p}' for p in params])
-			self.backend.rec(name, applied)
-		elif isinstance(applied, SeaTagRec):
-			name = id + ''.join([f'_{p}' for p in params])
-			self.backend.tagrec_rec(name, applied.fields, applied.kind_id)
-		else:
-			print(f'internal error: unhandled template application for `{type(applied)}`\n\tthis error should never happen; please report it!')
-			exit(1)
-
 	def enterProgram(self, ctx: Parser.ProgramContext):
 		self.backend.file_begin()
+
+		# Implicit `use std`
 		if not self.nostd:
 			searched = []
 			for path in self.backend.libpaths:
@@ -126,6 +116,8 @@ class Visitor(ParserListener):
 					# Replace home dir with ~ to censor username
 					print('  - ' + path.replace(str(Path.home()), '~'))
 				exit(1)
+
+		# Write forward declarations
 
 	def exitProgram(self, ctx: Parser.ProgramContext):
 		self.backend.file_end()
@@ -178,22 +170,13 @@ class Visitor(ParserListener):
 					continue
 				items.append(self._writer(e, i))
 
-			name = expr.ID().symbol.text
-			if expr.template_descriptor() is not None:
-				tem = expr.template_descriptor()
-				children = tem.getChildren(predicate = lambda it: isinstance(it, Parser.Template_descriptor_valueContext))
-				for child in children:
-					if self.template is not None and self.template.has_field(child.getText()):
-						name += '_' + self.template.get(child.getText())
-					else:
-						name += '_' + child.getText()
-			self.backend.invoke(name, items)
+			self.backend.invoke(expr.ID().symbol.text, items)
 		elif expr.expr_ref() is not None:
 			self.backend.ref(lambda: self.write_expr(expr.expr_ref().expr()))
 		elif expr.PTR() is not None and expr.expr() is not None:
 			self.backend.deref(lambda: self.write_expr(expr.getChild(0)))
 		elif expr.AS() is not None:
-			self.backend.cast(SeaType.from_str(expr.typedesc().getText(), template = self.template), lambda: self.write_expr(expr.getChild(0)))
+			self.backend.cast(SeaType.from_str(expr.typedesc().getText()), lambda: self.write_expr(expr.getChild(0)))
 		elif expr.part_index() is not None:
 			e = expr.part_index()
 			self.backend.index(self._writer(expr, 0), self._writer(e, 1))
@@ -242,7 +225,7 @@ class Visitor(ParserListener):
 					continue
 				items.append(self._writer(e, i))
 
-			type = None if len(items) == 0 else infer_type(self.backend.compiler, expr, self.template)
+			type = None if len(items) == 0 else infer_type(self.backend.compiler, expr)
 
 			self.backend.array(type, items)
 		elif expr.expr_new() is not None:
@@ -250,18 +233,6 @@ class Visitor(ParserListener):
 			name = e.ID().symbol.text
 
 			start = 1
-			if e.template_descriptor() is not None:
-				tem = e.template_descriptor()
-				i = 0
-				it = tem.template_descriptor_value(i)
-				params = []
-				while it is not None:
-					params.append(it.getText())
-					i += 1
-					it = tem.template_descriptor_value(i)
-				# Ready to see a cursed one-liner?
-				name += ''.join('_' + (p if self.template is None or not self.template.has_field(p) else self.template.get(p)) for p in params)
-				start = 3
 
 			items = []
 			for i in range(start, e.getChildCount() - 1):
@@ -275,18 +246,37 @@ class Visitor(ParserListener):
 			e = expr.expr_var()
 			name = e.ID().symbol.text
 			if e.typedesc() is None:
-				typ = infer_type(self.backend.compiler, e.expr(), self.template)
+				typ = infer_type(self.backend.compiler, e.expr())
 			else:
-				typ = SeaType.from_str(e.typedesc().getText(), template = self.template)
+				typ = SeaType.from_str(e.typedesc().getText())
+
+			if e.expr().expr_list() is not None:
+				l = e.expr().expr_list()
+				size = len(self._get_all(l.expr))
+				if typ.arrays[0] == -1:
+					typ = typ.copy_with(arrays = [size, *typ.arrays[1:]])
+
 			self.backend.var(name, typ, self._writer(e.expr()))
 		elif expr.expr_let() is not None:
 			e = expr.expr_let()
 			name = e.ID().symbol.text
 			if e.typedesc() is None:
-				typ = infer_type(self.backend.compiler, e.expr(), self.template)
+				typ = infer_type(self.backend.compiler, e.expr())
 			else:
-				typ = SeaType.from_str(e.typedesc().getText(), template = self.template)
+				typ = SeaType.from_str(e.typedesc().getText())
+
+			if e.expr().expr_list() is not None:
+				l = e.expr().expr_list()
+				size = len(self._get_all(l.expr))
+				if typ.arrays[0] == -1:
+					typ = typ.copy_with(arrays = [size, *typ.arrays[1:]])
+
 			self.backend.let(name, typ, self._writer(e.expr()))
+		elif expr.invoke_mac() is not None:
+			e = expr.invoke_mac()
+			name = e.ID().symbol.text
+			params = self._get_all(e.expr)
+			self._expand_macro(name, params)
 		elif expr.EQ() is not None:
 			self.backend.assign(self._writer(expr, 0), self._writer(expr, 2))
 
@@ -297,18 +287,18 @@ class Visitor(ParserListener):
 			e = ctx.expr_var()
 			name = e.ID().symbol.text
 			if e.typedesc() is None:
-				typ = infer_type(self.backend.compiler, e.expr(), self.template)
+				typ = infer_type(self.backend.compiler, e.expr())
 			else:
-				typ = SeaType.from_str(e.typedesc().getText(), template = self.template)
+				typ = SeaType.from_str(e.typedesc().getText())
 			self.backend.var(name, typ, lambda: self.write_expr(e.expr()), is_top_level = True)
 			self.backend.write(self.backend.line_ending, False)
 		elif ctx.expr_let() is not None:
 			e = ctx.expr_let()
 			name = e.ID().symbol.text
 			if e.typedesc() is None:
-				typ = infer_type(self.backend.compiler, e.expr(), self.template)
+				typ = infer_type(self.backend.compiler, e.expr())
 			else:
-				typ = SeaType.from_str(e.typedesc().getText(), template = self.template)
+				typ = SeaType.from_str(e.typedesc().getText())
 			self.backend.let(name, typ, lambda: self.write_expr(e.expr()), is_top_level = True)
 			self.backend.write(self.backend.line_ending, False)
 
@@ -352,112 +342,6 @@ class Visitor(ParserListener):
 	def enterDef(self, ctx: Parser.DefContext):
 		if self._should_skip(): return
 		self.backend.def_(ctx.ID().symbol.text, SeaType.from_str(ctx.typedesc().getText()))
-
-	def enterTem(self, ctx: Parser.TemContext):
-		if self._should_skip(): return
-
-		if self.backend.compiler.current_template is not None:
-			print('error: templates cannot be nested')
-			exit(1)
-
-		self.skipping = True
-
-		fields = {}
-		i = 0
-		it = ctx.template_def_param(i)
-		while it is not None:
-			if not it.ID(1).symbol.text in self.ALLOWED_TEMPLATE_TYPES:
-				print(f'error: templates may only accept parameters of types: {self.ALLOWED_TEMPLATE_TYPES}')
-				exit(1)
-			fields[it.ID(0).symbol.text] = it.ID(1).symbol.text
-			i += 1
-			it = ctx.template_def_param(i)
-
-		template = SeaTemplate(fields)
-		self.backend.compiler.current_template = template
-
-		is_group = ctx.top_level_stat(1) is not None # Check if there are at least 2 things in teh template, if so then we are a group
-		templates: dict[str, AnyTemplate] = {}
-
-		# Add templates
-		i = 0
-		it = ctx.top_level_stat(i)
-		while it is not None:
-			if it.fun() is not None:
-				fun = it.fun()
-				block = fun.expr_block()
-				if block is None:
-					print('error: cannot forward-declare functions in a template')
-					exit(1)
-				tem = SeaFunctionTemplate(template, self._get_fun(fun), block)
-				if is_group:
-					templates[fun.ID().symbol.text] = tem
-				else:
-					self.backend.compiler.add_function_template(fun.ID().symbol.text, tem)
-			elif it.rec() is not None:
-				rec = it.rec()
-				tem = SeaRecordTemplate(template, self._get_rec(rec))
-				if is_group:
-					templates[rec.ID().symbol.text] = tem
-				else:
-					self.backend.compiler.add_record_template(rec.ID().symbol.text, tem)
-			elif it.tagrec() is not None:
-				tagrec = it.tagrec()
-				fields = self._get_tagrec_fields(tagrec)
-				hashtags = [] if tagrec.hashtag() is None else [HashTags.TagRec[id.symbol.text.upper()] for id in self._get_all(tagrec.hashtag().ID)]
-				tem = SeaTagRecTemplate(template, SeaTagRec(tagrec.ID().symbol.text + '$Kind', fields, hashtags))
-
-				# We'll write the enum (since those aren't template-able) now and save the records as a template
-				tag_name = tagrec.ID().symbol.text
-				self.backend.tagrec_tag(tag_name, list(fields.keys()))
-
-				if is_group:
-					templates[tagrec.ID().symbol.text] = tem
-				else:
-					self.backend.compiler.add_tagrec_template(tagrec.ID().symbol.text, tem)
-			else:
-				print('error: templates can only contain functions and records, got: ' + str(type(it).__name__))
-				exit(1)
-			i += 1
-			it = ctx.top_level_stat(i)
-
-		if is_group:
-			self.backend.compiler.add_template_group(templates, template)
-
-		self.backend.compiler.current_template = None
-
-	def exitTem(self, ctx: Parser.TemContext):
-		self.skipping = False
-
-	def enterGen(self, ctx: Parser.GenContext):
-		if self._should_skip(): return
-
-		id = ctx.ID().symbol.text
-		template = self.backend.compiler.find_template_by_id(id)
-
-		if template is None:
-			print(f'error: no such template: {id}')
-			exit(1)
-
-		t = ctx.template_descriptor()
-		params: list[str] = []
-		i = 0
-		it = t.template_descriptor_value(i)
-		while it is not None:
-			params.append(it.getText())
-			i += 1
-			it = t.template_descriptor_value(i)
-
-		tem_params = SeaTemplateParams(template.template, params)
-		self.template = tem_params
-
-		if isinstance(template, SeaTemplateGroup):
-			for id, t in template.templates.items():
-				self._write_applied_template(id, t.apply(tem_params), t, params)
-		else:
-			self._write_applied_template(id, template.apply(tem_params), template, params)
-
-		self.template = None
 
 	def enterTag(self, ctx: Parser.TagContext):
 		if self._should_skip(): return
@@ -573,4 +457,10 @@ def visit(file_path: str, backend: Backend, nostd: bool = False):
 	# print(tree.toStringTree(recog = parser))
 
 	walker = antlr4.ParseTreeWalker()
-	walker.walk(Visitor(backend, nostd), tree)
+
+	# Previsit
+	previsitor = PreVisitor(backend)
+	walker.walk(previsitor, tree)
+
+	# Compile
+	walker.walk(Visitor(previsitor, backend, nostd), tree)

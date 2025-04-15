@@ -1,5 +1,3 @@
-use std/panic
-
 /// Represents a potential error.
 tag rec Result(
 	Err(why: String)
@@ -8,44 +6,3 @@ tag rec Result(
 
 fun is_ok(this: Result): bool -> ret this.kind == Ok
 fun is_err(this: Result): bool -> ret this.kind == Err
-
-tem (T: type) {
-	/// Represents an optional return value.
-	tag rec Maybe(
-		Empty()
-		Some(it: T)
-	)
-
-	fun is_empty(this: Maybe{T}): bool -> ret this.kind == Empty
-	fun is_some(this: Maybe{T}): bool -> ret this.kind == Some
-
-	/**
-	 * Unpacks and returns the held value in a <Maybe>. If the value is
-	 * empty then it will <panic>. See <unpack_or> for a non-panicking
-	 * version.
-	 *
-	 * Args:
-	 *  this: Maybe{T} - The <Maybe> to unpack.
-	 *
-	 * Rets: The <Maybe>'s held value, if there is one.
-	**/
-	fun unpack(this: Maybe{T}): T {
-		if this.kind == Empty -> panic("Cannot unpack Maybe with no value.")
-		else -> ret this.Some.it
-	}
-
-	/**
-	 * Unpacks and returns the held value in a <Maybe>. If the value is
-	 * empty then it will return the provided <'it>.
-	 *
-	 * Args:
-	 *  this: Maybe{T} - The <Maybe> to unpack.
-	 *  it: T          - The value to return when the the <Maybe> is empty.
-	 *
-	 * Rets: The <Maybe>'s held value or <'it>.
-	**/
-	fun unpack_or(this: Maybe{T}, it: T): T {
-		if this.kind == Empty -> ret it
-		else -> ret this.Some.it
-	}
-}

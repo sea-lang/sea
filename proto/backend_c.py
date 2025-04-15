@@ -13,25 +13,18 @@ class Backend_C(Backend):
 			print('error: function pointers must be named')
 			exit(1)
 		else:
-			for param in type.params:
-				name += '_' + param.replace('{', '_').replace('}', '')
 			return name + ('*' * type.pointers) + ''.join(['[]' if it == -1 else f'[{it}]' for it in type.arrays])
 
 	def typed_id(self, type: SeaType, id: str) -> str:
 		name = type.name
 		if name == 'fun':
-			name = id
-			for param in type.params:
-				name += '_' + param.replace('{', '_').replace('}', '')
 			return (
 				self.type(type.funptr_rets or SEA_VOID) +
-				'(*' + ('*' * type.pointers) + name + ') (' +
+				'(*' + ('*' * type.pointers) + id + ') (' +
 				', '.join([self.type(it) for it in type.funptr_args]) + ')' +
 				''.join(['[]' if it == -1 else f'[{it}]' for it in type.arrays])
 			)
 		else:
-			for param in type.params:
-				name += '_' + param.replace('{', '_').replace('}', '')
 			return name + ' ' + ('*' * type.pointers) + id + ''.join(['[]' if it == -1 else f'[{it}]' for it in type.arrays])
 
 
@@ -252,7 +245,7 @@ class Backend_C(Backend):
 		typ = self.compiler.find_type_of(of)
 		if typ == None:
 			self.compiler.panic(f'no such variable: {of}')
-		typ = SeaType(typ.pointers, typ.name, typ.params, typ.arrays, typ.funptr_args, typ.funptr_rets)
+		typ = SeaType(typ.pointers, typ.name, typ.arrays, typ.funptr_args, typ.funptr_rets)
 
 		self.writeln('{')
 		self.depth += 1
@@ -359,11 +352,7 @@ class Backend_C(Backend):
 
 	def array(self, type: Optional[SeaType], items: list[Callable]):
 		if len(items) > 4: # Write on multiple lines
-			if type is None:
-				self.writeln('{', False)
-			else:
-				self.writeln(f'({self.type(type)}){{', False)
-
+			self.writeln('{', False)
 			self.depth += 1
 			for item in items:
 				self.force_indent_next = True
@@ -372,11 +361,7 @@ class Backend_C(Backend):
 			self.depth -= 1
 			self.write('}')
 		else: # Write on one line
-			if type is None:
-				self.write('{', False)
-			else:
-				self.write(f'({self.type(type)}){{', False)
-
+			self.write('{', False)
 			for item in items:
 				item()
 				self.write(',', False)

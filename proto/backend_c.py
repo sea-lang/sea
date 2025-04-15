@@ -14,7 +14,7 @@ class Backend_C(Backend):
 			exit(1)
 		else:
 			for param in type.params:
-				name += f'_{param}'
+				name += '_' + param.replace('{', '_').replace('}', '')
 			return name + ('*' * type.pointers) + ''.join(['[]' if it == -1 else f'[{it}]' for it in type.arrays])
 
 	def typed_id(self, type: SeaType, id: str) -> str:
@@ -22,7 +22,7 @@ class Backend_C(Backend):
 		if name == 'fun':
 			name = id
 			for param in type.params:
-				name += f'_{param}'
+				name += '_' + param.replace('{', '_').replace('}', '')
 			return (
 				self.type(type.funptr_rets or SEA_VOID) +
 				'(*' + ('*' * type.pointers) + name + ') (' +
@@ -31,7 +31,7 @@ class Backend_C(Backend):
 			)
 		else:
 			for param in type.params:
-				name += f'_{param}'
+				name += '_' + param.replace('{', '_').replace('}', '')
 			return name + ' ' + ('*' * type.pointers) + id + ''.join(['[]' if it == -1 else f'[{it}]' for it in type.arrays])
 
 

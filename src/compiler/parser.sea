@@ -43,7 +43,7 @@ fun p_advance(P: ^Parser) {
 
 		if P^.cur.kind != TOKEN_ERR -> break
 
-		p_error_at_cur(P, stringView(P^.cur.len, P^.cur.start))
+		p_error_at_cur(P, string_view(P^.cur.len, P^.cur.start))
 	}
 }
 
@@ -78,7 +78,6 @@ fun parse_top_level_statement(P: ^Parser) {
 		}
 		var node = new $NodeUse(path)
 		ret new ASTNode(NodeUse, to_heap(node))
-
 	} else {
 		print("unexpected token: ")
 		print_token(P^.cur)
@@ -94,7 +93,7 @@ fun parse_all(P: ^Parser) {
 		print("token: ")
 		print_token(P^.cur)
 
-		if p_accept(P, TOKEN_EOF) -> break
+		if P^.cur.kind == TOKEN_EOF -> break
 
 		parse_top_level_statement(P)
 	}

@@ -28,7 +28,7 @@ tem (T: type) {
 	**/
 	fun make_dynarr(initial_cap: int, element_size: int, bump: f32): DynamicArray{T} {
 		var array: ^T = malloc(element_size * initial_cap)
-		ret new DynamicArray{String}(bump, element_size, 0, initial_cap, array)
+		ret new DynamicArray{T}(bump, element_size, 0, initial_cap, array)
 	}
 
 	/// Gets the element in <'dynarr> at <'index>, panics if <'index> is out of range.

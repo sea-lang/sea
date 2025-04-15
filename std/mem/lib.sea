@@ -1,16 +1,15 @@
-tem (T: type) {
-	/**
-	 * Allocates <'something> on the heap and returns a pointer to it.
-	 *
-	 * This *copies* <'something>, so modifying the value passed in will not modify
-	 * the returned value.
-	 *
-	 * Args:
-	 *  something: T - The value to allocate.
-	**/
-	fun to_heap(something: T): ^T {
-		var on_heap: ^T = malloc(sizeof(something)) as ^T
-		on_heap ^= something
-		ret on_heap
-	}
+/**
+ * Allocates <'something> on the heap and returns a pointer to it.
+ *
+ * This *copies* <'something>, so modifying the value passed in will not modify
+ * the returned value.
+ *
+ * Args:
+ *  something: T - The value to allocate.
+**/
+tem (T: type) ->
+fun to_heap(something: T): ^T {
+	var on_heap: ^T = malloc(sizeof(something)) as ^T
+	on_heap ^= something
+	ret on_heap
 }

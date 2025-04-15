@@ -1,4 +1,8 @@
 use std/io
+use std/ds/dynarr
+
+gen DynamicArray{String}
+gen DynamicArray{int}
 
 tag TokenKind(
 	// Generic symbols
@@ -89,7 +93,7 @@ tag TokenKind(
 
 rec Token(kind: TokenKind, start: ^char, len: int, line: int)
 
-fun get_token_str(token: Token): String -> ret stringView(token.len, token.start)
+fun get_token_str(token: Token): String -> ret string_view(token.len, token.start)
 
 fun print_token(token: Token) {
 	switch token.kind {
@@ -167,6 +171,17 @@ fun print_token(token: Token) {
 	}
 	printf(c" = '%.*s'\n", token.len, token.start)
 }
+
+// Forward declare
+//TODO: Replace this when there's a "proper" way of doing it
+raw[
+	struct SeaType;
+	typedef struct SeaType SeaType;
+]
+
+gen DynamicArray{SeaType}
+gen Maybe{DynamicArray{SeaType}}
+gen Maybe{SeaType}
 
 rec SeaType(
 	pointers: int,

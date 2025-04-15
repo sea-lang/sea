@@ -116,7 +116,7 @@ class SeaType(NamedTuple):
 			elif template is not None and template.has_field(name):
 				name = template.get(name)
 
-			tem = [it.strip() for it in s[s.find('{')+1:s.find('}')].split(',')]
+			tem = [it.strip() for it in s[s.find('{')+1:s.rfind('}')].split(',')]
 			if template is not None:
 				for i, t in enumerate(tem):
 					if template.has_field(t):

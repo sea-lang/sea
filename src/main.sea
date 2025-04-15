@@ -1,6 +1,6 @@
 use std/fs
-use parser/lexer
-use parser/parser
+use compiler/lexer
+use compiler/parser
 
 var coloured_messages = true
 
@@ -16,13 +16,13 @@ fun sea_panic(message: String) {
 }
 
 #noret
-fun sea_panicc(message: ^char) -> sea_panic(stringView(strlen(message), message))
+fun sea_panicc(message: ^char) -> sea_panic(string_view(strlen(message), message))
 
 fun main(argc: int, argv: ^char[]): int {
 	// TODO: replace with getopt
 	if argc == 1 -> sea_panic("no input file provided.")
 
-	let maybe_source = read_file(stringView(strlen(argv[1]), argv[1]))
+	let maybe_source = read_file(string_view(strlen(argv[1]), argv[1]))
 	if is_empty{String}(maybe_source) -> sea_panic("failed to read input file")
 
 	let source = unpack{String}(maybe_source)

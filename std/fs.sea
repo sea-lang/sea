@@ -45,5 +45,5 @@ fun read_file(path: String): Maybe{String} {
 	fread(str, sizeof(char), size, file)
 	str[size] = `\0`
 
-	ret new Maybe{String}(Some, takeString(size, str))
+	ret new Maybe{String}(Some, take_string(size, str))
 }

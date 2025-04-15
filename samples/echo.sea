@@ -5,7 +5,7 @@ fun main(argc: int, argv: ^char[]): int {
 	var arg: ^char = nil
 	for i in 0 to argc {
 		arg = argv[i]
-		println(stringView(strlen(arg), arg))
+		println(string_view(strlen(arg), arg))
 	}
 	ret 0
 }

@@ -1,5 +1,5 @@
 use api
 
-let hello_world = "Hello, World!"
+let HELLO_WORLD = "Hello, World!"
 
-fun get_hello_world(): Something{String} -> ret new Something{String}(hello_world)
+fun get_hello_world(): String -> ret HELLO_WORLD

@@ -3,25 +3,18 @@ raw[
 #include <time.h>
 ]
 
-tem (T: type, width: int, height: int) {
-	rec Grid(width: int, height: int, elements: T[width][height])
-
-	fun grid_set(grid: ^Grid{T, width, height}, x: int, y: int, it: T) -> grid^.elements[x][y] = it
-	fun grid_get(grid: ^Grid{T, width, height}, x: int, y: int): T -> ret grid^.elements[x][y]
-}
-
-gen Grid{Color, 10, 10}
-gen grid_set{Color, 10, 10}
-gen grid_get{Color, 10, 10}
+rec Grid(elements: Color[10][10])
+fun grid_set(grid: ^Grid, x: int, y: int, it: T) -> grid^.elements[x][y] = it
+fun grid_get(grid: ^Grid, x: int, y: int): T -> ret grid^.elements[x][y]
 
 var tile_size = 20
-var world = new Grid{Color, 10, 10}(0)
+var world = new Grid()
 
 #inline
 fun render() {
 	for y in 0 to 11 {
 		for x in 0 to 11 {
-			DrawRectangle(y * tile_size, x * tile_size, tile_size, tile_size, grid_get{Color, 10, 10}(ref world, x, y))
+			DrawRectangle(y * tile_size, x * tile_size, tile_size, tile_size, grid_get(ref world, x, y))
 		}
 	}
 
@@ -42,7 +35,7 @@ fun main(): int {
 
 	for y in 0 to 11 {
 		for x in 0 to 11 {
-			grid_set{Color, 10, 10}(ref world, x, y, random_color())
+			grid_set(ref world, x, y, random_color())
 		}
 	}
 

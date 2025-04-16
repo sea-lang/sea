@@ -1,6 +1,6 @@
 use std/panic
 
-tem (T: type) {
+mac gen_DynamicArray(T) = "
 	/**
 	 * A simple dynamic array implementation.
 	 *
@@ -11,11 +11,12 @@ tem (T: type) {
 	 *  esize: int - The size of each element in the array. Do not mutate this!
 	 *  len: int   - The current length of the array. Do not mutate this!
 	 *  cap: int   - The maximum length of the array. Do not mutate this!
-	 *  array: ^T  - Pointer to the first element of the array. Do not make other
-	 *               pointers to this since it may move from <realloc> calls when the
-	 *               array needs to grow.
+	 *  array: ^${T} -
+	 *    Pointer to the first element of the array. Do not make other
+	 *    pointers to this since it may move from <realloc> calls when the
+	 *    array needs to grow.
 	**/
-	rec DynamicArray(bump: f32, esize: int, len: int, cap: int, array: ^T)
+	rec DynamicArray_${T}(bump: f32, esize: int, len: int, cap: int, array: ^${T})
 
 	//TODO: Replace element_size with sizeof(T) implicitly. Generic types aren't replaced as identifiers in the prototype impl so we can't do this quite yet.
 	/**
@@ -23,26 +24,26 @@ tem (T: type) {
 	 *
 	 * Args:
 	 *  initial_cap: int  - The initial maximum size of the array. Must be `> 0`.
-	 *  element_size: int - The size of each element, i.e, `sizeof(T)`.
+	 *  element_size: int - The size of each element, i.e, `sizeof(${T})`.
 	 *  bump: f32         - How much to multiply `cap` by when the array exceeds it.
 	**/
-	fun make_dynarr(initial_cap: int, element_size: int, bump: f32): DynamicArray{T} {
-		var array: ^T = malloc(element_size * initial_cap)
-		ret new DynamicArray{T}(bump, element_size, 0, initial_cap, array)
+	fun make_dynarr_${T}(initial_cap: int, element_size: int, bump: f32): DynamicArray_${T} {
+		var array: ^${T} = malloc(element_size * initial_cap)
+		ret new DynamicArray_${T}(bump, element_size, 0, initial_cap, array)
 	}
 
 	/// Gets the element in <'dynarr> at <'index>, panics if <'index> is out of range.
-	fun dynarr_get(dynarr: ^DynamicArray{T}, index: int): T {
-		if index > dynarr^.len or index < 0 -> panic("Invalid index")
+	fun dynarr_${T}_get(dynarr: ^DynamicArray_${T}, index: int): ${T} {
+		if index > dynarr^.len or index < 0 -> panic(\"Invalid index\")
 
 		ret dynarr^.array[index]
 	}
 
 	/// Grows <'dynarr> to the given <'new_cap>.
-	fun dynarr_grow(dynarr: ^DynamicArray{T}, new_cap: int): bool {
+	fun dynarr_${T}_grow(dynarr: ^DynamicArray_${T}, new_cap: int): bool {
 		if dynarr^.cap >= new_cap -> ret false
 
-		var p: ^T = realloc(dynarr^.array, new_cap * dynarr^.esize)
+		var p: ^${T} = realloc(dynarr^.array, new_cap * dynarr^.esize)
 		if p == nil -> ret false
 
 		dynarr^.cap = new_cap
@@ -51,14 +52,14 @@ tem (T: type) {
 	}
 
 	/// Frees the given 'dynarr.
-	fun dynarr_free(dynarr: ^DynamicArray{T}) {
+	fun dynarr_${T}_free(dynarr: ^DynamicArray_${T}) {
 		free(dynarr^.array)
 	}
 
 	/// Appends <'it> to <'dynarr>, growing if needed.
-	fun dynarr_append(dynarr: ^DynamicArray{T}, it: T) {
+	fun dynarr_${T}_append(dynarr: ^DynamicArray_${T}, it: ${T}) {
 		if dynarr^.len + 1 > dynarr^.cap {
-			dynarr_grow{T}(dynarr, (dynarr^.cap * dynarr^.bump) as int)
+			dynarr_${T}_grow(dynarr, (dynarr^.cap * dynarr^.bump) as int)
 		}
 
 		dynarr^.array[dynarr^.len] = it
@@ -66,8 +67,8 @@ tem (T: type) {
 	}
 
 	/// Pops the latest element in <'dynarr> and returns it, panics if `<'dynarr>.len == 0`
-	fun dynarr_pop(dynarr: ^DynamicArray{T}): T {
-		if dynarr^.len == 0 -> panic("Cannot pop empty dynamic array")
+	fun dynarr_${T}_pop(dynarr: ^DynamicArray_${T}): ${T} {
+		if dynarr^.len == 0 -> panic(\"Cannot pop empty dynamic array\")
 
 		dynarr^.len--
 
@@ -75,9 +76,9 @@ tem (T: type) {
 	}
 
 	/// Set the element in <'dynarr> at <'index> to <'it>, panics if <'index> is out of range.
-	fun dynarr_set(dynarr: ^DynamicArray{T}, index: int, it: T) {
-		if index > dynarr^.len or index < 0 -> panic("Invalid index")
+	fun dynarr_${T}_set(dynarr: ^DynamicArray_${T}, index: int, it: ${T}) {
+		if index > dynarr^.len or index < 0 -> panic(\"Invalid index\")
 
 		dynarr^.array[index] = it
 	}
-}
+"

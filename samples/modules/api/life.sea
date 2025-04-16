@@ -1,1 +1,1 @@
-fun get_the_meaning_of_life(): Something{u8} -> ret new Something{u8}(42)
+fun get_the_meaning_of_life(): u8 -> ret MEANING_OF_LIFE

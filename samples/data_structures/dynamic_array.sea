@@ -1,29 +1,29 @@
 use std/ds/dynarr
 
-gen DynamicArray{String}
+@gen_DynamicArray(String)
 
 fun main(): int {
-	var names = make_dynarr{String}(2, sizeof(String), 2)
+	var names = make_dynarr_String(2, sizeof(String), 2)
 
 	println("--- Should be empty:")
-	for i in 0 to names.len -> println(dynarr_get{String}(ref names, i))
+	for i in 0 to names.len -> println(dynarr_String_get(ref names, i))
 
-	dynarr_append{String}(ref names, "Frodo")
-	dynarr_append{String}(ref names, "Gandalf")
+	dynarr_String_append(ref names, "Frodo")
+	dynarr_String_append(ref names, "Gandalf")
 
 	println("--- Should have `Frodo` and `Gandalf`")
-	for i in 0 to names.len -> println(dynarr_get{String}(ref names, i))
+	for i in 0 to names.len -> println(dynarr_String_get(ref names, i))
 
-	dynarr_append{String}(ref names, "Sam")
-	dynarr_append{String}(ref names, "Merry")
-	dynarr_append{String}(ref names, "Pippin")
+	dynarr_String_append(ref names, "Sam")
+	dynarr_String_append(ref names, "Merry")
+	dynarr_String_append(ref names, "Pippin")
 
 	println("--- Should be the Fellowship of the Ring's hobbits and `Gandalf`")
-	for i in 0 to names.len -> println(dynarr_get{String}(ref names, i))
+	for i in 0 to names.len -> println(dynarr_String_get(ref names, i))
 
-	let pippin = dynarr_pop{String}(ref names)
+	let pippin = dynarr_String_pop(ref names)
 	println("--- Ditto of above but without Pippin")
-	for i in 0 to names.len -> println(dynarr_get{String}(ref names, i))
+	for i in 0 to names.len -> println(dynarr_String_get(ref names, i))
 	println("--- Should just be Pippin:")
 	println(pippin)
 }

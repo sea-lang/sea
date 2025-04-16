@@ -27,16 +27,13 @@ fun take_string(len: int, chars: ^char): String -> ret new String(true, len, cha
  *  chars: ^char - Pointer to the first character.
 **/
 fun copy_string(len: int, chars: ^char): String {
-	let str = new String(true, len, NULL)
+	let str = new String(true, len, malloc(sizeof(char) * len))
 	memcpy(str.str, chars, len)
 	ret str
 }
 
-/// Frees the given string and its characters (if owned by the string)
-fun free_string(string: ^String) {
-	if string^.own -> free(string^.str)
-	free(string)
-}
+/// Frees the given string's characters, if it owns them.
+fun free_string(string: ^String) -> if string^.own -> free(string^.str)
 
 /// Concatenates <'a> and <'b>, then returns the result.
 fun concat(a: String, b: String): String {

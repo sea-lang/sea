@@ -1,0 +1,10 @@
+use std/io
+
+fun main(): int {
+	var a = "Not a bozo"
+	{
+		var a = "Bozo"
+		println(a) // Bozo
+	}
+	println(a) // Not a bozo
+}

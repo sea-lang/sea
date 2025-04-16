@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="40mm"
+   height="40mm"
+   viewBox="0 0 40 40"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.4 (e7c3feb100, 2024-10-09)"
+   sodipodi:docname="logo.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <title
+     id="title12">Sea Language Logo</title>
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="false"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="3.9912249"
+     inkscape:cx="69.026428"
+     inkscape:cy="98.466011"
+     inkscape:window-width="1908"
+     inkscape:window-height="1026"
+     inkscape:window-x="6"
+     inkscape:window-y="6"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1">
+    <linearGradient
+       id="linearGradient2"
+       inkscape:collect="always">
+      <stop
+         style="stop-color:#3bb1ff;stop-opacity:1;"
+         offset="0"
+         id="stop2" />
+      <stop
+         style="stop-color:#89d3ff;stop-opacity:1;"
+         offset="0.5"
+         id="stop4" />
+      <stop
+         style="stop-color:#32acff;stop-opacity:1;"
+         offset="1"
+         id="stop3" />
+    </linearGradient>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient2"
+       id="linearGradient3"
+       x1="52.985626"
+       y1="15.995105"
+       x2="80.922714"
+       y2="43.932194"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(1.0124273,0,0,1.0124273,-0.58656435,-0.12687246)" />
+  </defs>
+  <g
+     inkscape:label="Logo"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-47.199665,-10.209145)">
+    <ellipse
+       style="fill:url(#linearGradient3);fill-opacity:1;stroke:#ffffff;stroke-width:0.267871;stroke-opacity:0"
+       id="path2"
+       cx="67.199669"
+       cy="30.209146"
+       inkscape:label="Circle"
+       rx="19.866066"
+       ry="19.866064" />
+    <path
+       style="fill:none;fill-opacity:0;stroke:#ffffff;stroke-width:1;stroke-linecap:round;stroke-linejoin:miter;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       d="m 52.687922,25.274907 c 0,0 7.891823,5.957667 15.407532,0 7.515705,-5.957665 13.615954,0.24598 13.615954,0.24598"
+       id="path1"
+       inkscape:label="Wave 1" />
+    <path
+       style="fill:none;fill-opacity:0;stroke:#ffffff;stroke-width:1;stroke-linecap:round;stroke-linejoin:miter;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       d="m 52.687922,30.180605 c 0,0 7.891823,5.957662 15.407532,0 7.515708,-5.957669 13.615954,0.245974 13.615954,0.245974"
+       id="path1-5"
+       inkscape:label="Wave 2" />
+    <path
+       style="fill:none;fill-opacity:0;stroke:#ffffff;stroke-width:1;stroke-linecap:round;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       d="m 52.687922,35.086295 c 0,0 7.891823,5.957665 15.407532,0 7.515708,-5.957667 13.615954,0.245977 13.615954,0.245977"
+       id="path1-5-2"
+       inkscape:label="Wave 3" />
+  </g>
+  <metadata
+     id="metadata12">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:title>Sea Language Logo</dc:title>
+        <dc:date>April 15, 2025</dc:date>
+        <dc:creator>
+          <cc:Agent>
+            <dc:title>Emmeline Coats</dc:title>
+          </cc:Agent>
+        </dc:creator>
+        <cc:license
+           rdf:resource="http://creativecommons.org/publicdomain/zero/1.0/" />
+      </cc:Work>
+      <cc:License
+         rdf:about="http://creativecommons.org/publicdomain/zero/1.0/">
+        <cc:permits
+           rdf:resource="http://creativecommons.org/ns#Reproduction" />
+        <cc:permits
+           rdf:resource="http://creativecommons.org/ns#Distribution" />
+        <cc:permits
+           rdf:resource="http://creativecommons.org/ns#DerivativeWorks" />
+      </cc:License>
+    </rdf:RDF>
+  </metadata>
+</svg>

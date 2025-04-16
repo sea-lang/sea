@@ -1,28 +1,28 @@
 use std/io
 
 // Macros are a neat little way of writing compile-time code
-mac say_hello() -> println("Hello, World!")
+mac say_hello() = "println(\"Hello, World!\")"
 
 // Macros can take in parameters, which can be used for generic types.
 // The important note about this is that macro parameters **are not** typed.
-mac genArray2D(T, width, height) {
-	rec Array2D_${T}(elements: T[width][height])
+mac genArray2D(T, width, height) = "
+	rec Array2D_${T}(elements: ${T}[${width}][${height}])
 
-	fun Array2D_${T}_get(a2d: ^Array2D_${T}, x: int, y: int): T {
+	fun Array2D_${T}_get(a2d: ^Array2D_${T}, x: int, y: int): ${T} {
 		ret a2d^.elements[y][x]
 	}
 
-	fun Array2D_${T}_set(a2d: ^Array2D_${T}, x: int, y: int, it: T) {
+	fun Array2D_${T}_set(a2d: ^Array2D_${T}, x: int, y: int, it: ${T}) {
 		a2d^.elements[y][x] = it
 	}
-}
+"
 
-genArray2D(int, 5, 5)
+@genArray2D(int, 5, 5)
 
 fun main(): int {
-	say_hello!()
+	@say_hello()
 
-	let it = new Array2D_int([
+	var it = new Array2D_int([
 		[ 1, 1, 1, 1, 1 ],
 		[ 1, 0, 0, 0, 1 ],
 		[ 1, 0, 0, 0, 1 ],
@@ -32,8 +32,8 @@ fun main(): int {
 
 	Array2D_int_set(ref it, 0, 0, 2)
 
-	for y in 0 to 6 {
-		for x in 0 to 6 {
+	for y in 0 to 5 {
+		for x in 0 to 5 {
 			printf(c"%d ", Array2D_int_get(ref it, x, y))
 		}
 		printf(c"\n")
@@ -52,11 +52,11 @@ Due to the simplicity of this approach, macros can do some pretty interesting
 things that you may not expect them to be capable of, for example:
 
 ```
-mac create_macro(name, code) {
+mac create_macro(name, code) #{
 	mac ${name}() ${code}
 }
 
-create_macro(say_hello, {
+create_macro(say_hello, #{
 	print("Hello, World!")
 })
 ```

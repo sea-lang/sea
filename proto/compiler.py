@@ -118,6 +118,7 @@ class SeaTagRec(NamedTuple):
 
 class SeaMacro(NamedTuple):
 	params: list[str]
+	code: str
 	hashtags: list[HashTags.Mac]
 
 class SeaVariable(NamedTuple):
@@ -165,6 +166,11 @@ class Compiler:
 			if key in self.tag_values_to_tag_name:
 				self.panic(f'duplicate tag entry: {name}')
 			self.tag_values_to_tag_name[key] = name
+
+	def add_macro(self, name: str, macro: SeaMacro):
+		if name in self.macros:
+			self.panic(f'macro {name} already exists.')
+		self.macros[name] = macro
 
 	def add_variable(self, name: str, type: SeaType, constant: bool = False):
 		self.variables[name] = SeaVariable(type, constant, self.scope_depth)

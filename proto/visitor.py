@@ -1,13 +1,13 @@
 import os
 from pathlib import Path
-from typing import NamedTuple, Optional
+from typing import Optional
 import antlr4
 from antlr4.tree.Tree import TerminalNodeImpl
 from antlr4.error.ErrorListener import ErrorListener
 
 from .infer import infer_type
 from .backend import Backend
-from .compiler import SEA_VOID, HashTags, SeaFunction, SeaRecord, SeaTag, SeaTagRec, SeaType
+from .compiler import SEA_VOID, HashTags, SeaFunction, SeaMacro, SeaRecord, SeaTag, SeaType
 from .syntax.Lexer import Lexer
 from .syntax.Parser import Parser
 from .syntax.ParserListener import ParserListener
@@ -34,6 +34,7 @@ class Visitor(ParserListener):
 		self.nostd = nostd
 		self.skipping = False
 		self.add_implicit_break_statement = False
+		self.no_boilerplate = False
 
 	def _writer(self, expr, index: Optional[int] = None):
 		if index is None:
@@ -44,9 +45,9 @@ class Visitor(ParserListener):
 	def _should_skip(self) -> bool:
 		return self.skipping
 
-	def _get_all(self, to_find) -> list:
+	def _get_all(self, to_find, start: int = 0) -> list:
 		ret = []
-		i = 0
+		i = start
 		it = to_find(i)
 		while it is not None:
 			ret.append(it)
@@ -99,7 +100,47 @@ class Visitor(ParserListener):
 		visit(path, backend = self.backend)
 		return True
 
+	def _expand_macro(self, name: str, params: list[Parser.ExprContext], top_level: bool):
+		if name not in self.backend.compiler.macros:
+			print('error: no such macro: ' + name)
+			exit(1)
+
+		m = self.backend.compiler.macros[name]
+		code = m.code
+
+		# Replace ${<param>} with its value
+		for param_name, param_value in zip(m.params, params):
+			code = code.replace(f'${{{param_name}}}', param_value.getText())
+
+		self._subparse(code, top_level)
+
+	# Parses and compiles the given code
+	def _subparse(self, code: str, top_level: bool):
+		lexer = Lexer(antlr4.InputStream(code))
+		stream = antlr4.CommonTokenStream(lexer)
+		parser = Parser(stream)
+		parser.removeErrorListeners()
+		error_listener = SeaErrorListener(self)
+		parser.addErrorListener(error_listener)
+
+		if top_level:
+			tree = parser.program()
+		else:
+			tree = parser.stat()
+
+		walker = antlr4.ParseTreeWalker()
+
+		previsitor = PreVisitor(self.backend)
+		visitor = Visitor(previsitor, self.backend, self.nostd)
+		visitor.no_boilerplate = True
+
+		walker.walk(previsitor, tree)
+		walker.walk(visitor, tree)
+
 	def enterProgram(self, ctx: Parser.ProgramContext):
+		if self.no_boilerplate:
+			return
+
 		self.backend.file_begin()
 
 		# Implicit `use std`
@@ -120,6 +161,9 @@ class Visitor(ParserListener):
 		# Write forward declarations
 
 	def exitProgram(self, ctx: Parser.ProgramContext):
+		if self.no_boilerplate:
+			return
+
 		self.backend.file_end()
 
 	def enterUse(self, ctx: Parser.UseContext):
@@ -163,14 +207,20 @@ class Visitor(ParserListener):
 			self.backend.group_expr(_writer(1))
 		elif expr.part_invoke() is not None:
 			e = expr.part_invoke()
-			items = []
-			for i in range(1, e.getChildCount() - 1):
-				item = e.children[i]
-				if isinstance(item, TerminalNodeImpl):
-					continue
-				items.append(self._writer(e, i))
 
-			self.backend.invoke(expr.ID().symbol.text, items)
+			if expr.AT() is not None: # Macro invoke
+				name = expr.ID().symbol.text
+				params = self._get_all(e.expr)
+				self._expand_macro(name, params, False)
+			else:
+				items = []
+				for i in range(1, e.getChildCount() - 1):
+					item = e.children[i]
+					if isinstance(item, TerminalNodeImpl):
+						continue
+					items.append(self._writer(e, i))
+
+				self.backend.invoke(expr.ID().symbol.text, items)
 		elif expr.expr_ref() is not None:
 			self.backend.ref(lambda: self.write_expr(expr.expr_ref().expr()))
 		elif expr.PTR() is not None and expr.expr() is not None:
@@ -272,11 +322,6 @@ class Visitor(ParserListener):
 					typ = typ.copy_with(arrays = [size, *typ.arrays[1:]])
 
 			self.backend.let(name, typ, self._writer(e.expr()))
-		elif expr.invoke_mac() is not None:
-			e = expr.invoke_mac()
-			name = e.ID().symbol.text
-			params = self._get_all(e.expr)
-			self._expand_macro(name, params)
 		elif expr.EQ() is not None:
 			self.backend.assign(self._writer(expr, 0), self._writer(expr, 2))
 
@@ -301,6 +346,12 @@ class Visitor(ParserListener):
 				typ = SeaType.from_str(e.typedesc().getText())
 			self.backend.let(name, typ, lambda: self.write_expr(e.expr()), is_top_level = True)
 			self.backend.write(self.backend.line_ending, False)
+		elif ctx.invoke_mac() is not None:
+			e = ctx.invoke_mac()
+			name = e.ID().symbol.text
+			p = e.part_invoke()
+			params = self._get_all(p.expr)
+			self._expand_macro(name, params, True)
 
 	def enterStat(self, ctx: Parser.StatContext):
 		if self._should_skip(): return
@@ -367,6 +418,17 @@ class Visitor(ParserListener):
 	def enterTagrec(self, ctx: Parser.TagrecContext):
 		if self._should_skip(): return
 		self.backend.tagrec(ctx.ID().symbol.text, self._get_tagrec_fields(ctx))
+
+	def enterMac(self, ctx: Parser.MacContext):
+		if self._should_skip(): return
+
+		hashtags = [] if ctx.hashtag() is None else [HashTags.Mac[id.symbol.text.upper()] for id in self._get_all(ctx.hashtag().ID)]
+
+		params = self._get_all(ctx.ID, start = 1)
+
+		code = ctx.STRING().getText()[1:-1].replace('\\"', '"')
+
+		self.backend.compiler.add_macro(ctx.ID(0).symbol.text, SeaMacro(params, code, hashtags))
 
 
 	def enterExpr_block(self, ctx: Parser.Expr_blockContext):
@@ -453,14 +515,12 @@ def visit(file_path: str, backend: Backend, nostd: bool = False):
 	error_listener = SeaErrorListener(file_path)
 	parser.addErrorListener(error_listener)
 
+	previsitor = PreVisitor(backend)
+	visitor = Visitor(previsitor, backend, nostd)
+
 	tree = parser.program()
 	# print(tree.toStringTree(recog = parser))
 
 	walker = antlr4.ParseTreeWalker()
-
-	# Previsit
-	previsitor = PreVisitor(backend)
 	walker.walk(previsitor, tree)
-
-	# Compile
-	walker.walk(Visitor(previsitor, backend, nostd), tree)
+	walker.walk(visitor, tree)

@@ -1,19 +1,23 @@
-<div align=center>
+<div align="center" style="display:grid;place-items:center;">
 
 ![Sea Logo](res/logo.svg)
 
 # Sea
 
+[guide](doc/guide.md) - [samples](samples/)
+
 </div>
 
 > _C for the modern world._
+
+---
 
 Sea is a general-purpose language made to allow programmers to write low-level,
 performant, and portable code without needing to write C.
 
 > If you are conversing about Sea and C, then you may want to pronounce Sea as
 > `see-uh` instead of `see` to prevent ambiguity. You could also call it
-> `ocean`, `fish c`, or any other random thing that helps to fix the ambiguity.
+> `fish c` or any other random thing that helps to fix the ambiguity.
 
 **Features:**
 
@@ -28,6 +32,7 @@ performant, and portable code without needing to write C.
 - [Odin](https://odin-lang.org)
 - [V](https://vlang.io)
 - [Cyclone](https://cyclone.thelanguage.org), partially
+- [Go](https://go.dev)
 
 ## Installation
 

@@ -1,4 +1,10 @@
+<div align=center>
+
+![Sea Logo](res/logo.svg)
+
 # Sea
+
+</div>
 
 > _C for the modern world._
 

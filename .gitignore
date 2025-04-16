@@ -17,3 +17,6 @@ proto/syntax/.antlr
 proto/syntax/*.interp
 proto/syntax/*.py
 proto/syntax/*.tokens
+
+# Rust
+/target

@@ -4,11 +4,5 @@ end_of_line = lf
 insert_final_newline = true
 trim_trailing_whitespace = true
 
-[{*.c,*.h}]
-indent_style = tab
-
-[{*.sea}]
-indent_style = tab
-
-[{*.py}]
+[{*.c,*.h,*.sea,*.py,*.rs}]
 indent_style = tab

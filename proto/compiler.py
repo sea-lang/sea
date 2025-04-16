@@ -117,6 +117,7 @@ class SeaTagRec(NamedTuple):
 	hashtags: list[HashTags.TagRec]
 
 class SeaMacro(NamedTuple):
+	returns: Optional[str]
 	params: list[str]
 	code: str
 	hashtags: list[HashTags.Mac]

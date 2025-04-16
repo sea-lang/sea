@@ -1,5 +1,17 @@
+from antlr4 import Lexer
+import antlr4
 from .syntax.Parser import Parser
 from .compiler import *
+
+def _get_all(to_find, start: int = 0) -> list:
+	ret = []
+	i = start
+	it = to_find(i)
+	while it is not None:
+		ret.append(it)
+		i += 1
+		it = to_find(i)
+	return ret
 
 def infer_type(compiler: Compiler, expr: Parser.ExprContext) -> SeaType:
 	# TODO: Organize
@@ -8,11 +20,31 @@ def infer_type(compiler: Compiler, expr: Parser.ExprContext) -> SeaType:
 	elif expr.part_invoke() is not None:
 		name = expr.ID().symbol.text
 
-		if name not in compiler.functions:
-			print(f'error: cannot infer type for unknown (or unbound) function `{name}`')
-			exit(1)
+		if expr.AT() is not None:
+			if name not in compiler.macros:
+				print(f'error: cannot infer type for unknown (or unbound) macro: ' + name)
+				exit(1)
 
-		return compiler.functions[name].returns
+			m = compiler.macros[name]
+			rets = m.returns
+
+			if rets is None:
+				print(f'error: cannot infer type for macro with no return type: ' + name)
+				exit(1)
+
+			p = expr.part_invoke()
+			params = _get_all(p.expr)
+
+			# Replace ${<param>} with its value
+			for param_name, param_value in zip(m.params, params):
+				rets = rets.replace(f'${{{param_name}}}', param_value.getText())
+
+			return SeaType.from_str(rets)
+		else:
+			if name not in compiler.functions:
+				print('error: cannot infer type for unknown (or unbound) function: ' + name)
+				exit(1)
+			return compiler.functions[name].returns
 	elif expr.expr_ref() is not None:
 		typ = infer_type(compiler, expr.expr_ref().expr())
 		return typ.copy_with(pointers = typ.pointers + 1)

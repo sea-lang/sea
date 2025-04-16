@@ -422,13 +422,12 @@ class Visitor(ParserListener):
 	def enterMac(self, ctx: Parser.MacContext):
 		if self._should_skip(): return
 
+		returns = None if ctx.COLON() is None else ctx.STRING(0).getText()[1:-1].replace('\\"', '"')
 		hashtags = [] if ctx.hashtag() is None else [HashTags.Mac[id.symbol.text.upper()] for id in self._get_all(ctx.hashtag().ID)]
-
 		params = self._get_all(ctx.ID, start = 1)
+		code = ctx.STRING(0 if returns is None else 1).getText()[1:-1].replace('\\"', '"')
 
-		code = ctx.STRING().getText()[1:-1].replace('\\"', '"')
-
-		self.backend.compiler.add_macro(ctx.ID(0).symbol.text, SeaMacro(params, code, hashtags))
+		self.backend.compiler.add_macro(ctx.ID(0).symbol.text, SeaMacro(returns, params, code, hashtags))
 
 
 	def enterExpr_block(self, ctx: Parser.Expr_blockContext):

@@ -27,7 +27,7 @@ fun: hashtag? 'fun' ID part_params (':' typedesc)? expr_block?;
 raw_block: RAW_BLOCK RAW_TEXT END_RAW_BLOCK;
 rec: hashtag? 'rec' ID part_params;
 def: 'def' ID '=' typedesc;
-mac: hashtag? 'mac' ID '(' (ID (',' ID)*)? ')' '=' STRING;
+mac: hashtag? 'mac' ID '(' (ID (',' ID)*)? ')' (':' STRING)? '=' STRING;
 tag: hashtag? 'tag' ID '(' tag_entry (','? tag_entry)* ')';
 tagrec: hashtag? 'tag' 'rec' ID '(' tagrec_entry (','? tagrec_entry)* ')';
 invoke_mac: '@' ID part_invoke;

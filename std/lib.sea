@@ -27,6 +27,8 @@ def i64 = int64_t
 def f32 = float
 def f64 = double
 
+def usize = size_t
+
 // Records
 /**
  * A generic string type, null-termination is not guaranteed.

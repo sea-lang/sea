@@ -1,16 +1,9 @@
 /**
- * Allocates <'something> on the heap and returns a pointer to it.
- *
- * This *copies* <'something>, so modifying the value passed in will not modify
- * the returned value.
+ * Allocates `sizeof(<'T>)` on the heap and returns a pointer to it.
  *
  * Args:
- *  something: T - The value to allocate.
+ *  T  - The type to allocate.
+ *
+ * Rets: ^T - A pointer to a heap-allocated <'T>.
 **/
-// mac to_heap(something: T) {
-// 	var it: ^T = malloc(sizeof(something))
-// 	it^ = something
-// 	it
-// }
-
-mac to_heap(T) -> raw[( T *it = malloc(sizeof(something)), *it = something, it )]
+mac talloc(T): "^${T}" = "malloc(sizeof(${T})) as ^${T}"

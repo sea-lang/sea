@@ -1,5 +1,6 @@
 use core::fmt;
 
+#[derive(Default, Debug, Clone)]
 pub struct Token {
     pub kind: TokenKind,
     pub start: usize,
@@ -14,8 +15,10 @@ impl fmt::Display for Token {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenKind {
+    #[default]
+    None,
     // Common/misc symbols
     Comma,
     Colon,
@@ -31,6 +34,7 @@ pub enum TokenKind {
     Hashtag,
     At,
     Eq,
+    Arrow,
     // Operators
     OpDot,
     OpNot,
@@ -49,6 +53,7 @@ pub enum TokenKind {
     OpMul,
     OpDiv,
     OpMod,
+    OpPipe, // TODO (expr |> expr)
     // Keywords
     KwUse,
     KwRec,

@@ -1,31 +1,33 @@
-use parser::lexer::make_lexer;
+use parse::{lexer::make_lexer, parser::make_parser};
 
-pub mod ast;
 pub mod error;
 pub mod hashtags;
-pub mod parser;
-pub mod type_;
+pub mod parse;
 
 fn main() {
-    let source = "use std/io
+    let code: String = "
+        use std/io
 
-fun main(): int {
-	println(\"Hello, World!\")
-	ret 0
-}
-"
+        fun something(
+            a_really_weirdly_typed_parameter: ^^^fun(int, ^char[]): int,
+            not_a_weird_parameter: int
+        ): int[3][3] { }
+
+        fun main(argc: int, argv: ^char[]): int {
+            ret 0
+        }
+    "
     .to_string();
 
-    // let source = "\"A string!\" \"another string!!!\" \"a
-    // multiline string\""
-    //     .to_string();
+    // let mut lexer = make_lexer(&code);
+    // while let Some(tok) = lexer.next_token() {
+    //     println!("tok: {:?}", tok);
+    // }
 
-    let mut lexer = make_lexer(&source);
+    let mut parser = make_parser(make_lexer(&code));
 
-    while let Some(it) = lexer.next_token() {
-        match it {
-            Ok(token) => println!("token: {}", token),
-            Err(why) => println!("parsing error: {}", why.to_string()),
-        }
+    match parser.parse() {
+        Ok(node) => node.pretty_print(0),
+        Err(why) => eprintln!("error: {}", why),
     }
 }

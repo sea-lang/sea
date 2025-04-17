@@ -7,7 +7,6 @@ use super::{
 
 pub struct Lexer<'a> {
     code: Peekable<Chars<'a>>, // the source code being lexed
-    length: usize,             // the length of the source code
     start: usize,              // the index at which the current token started
     pos: usize,                // the index to the current character
     line: usize,               // the current line that the lexer is on
@@ -78,7 +77,7 @@ impl<'a> Lexer<'a> {
     }
 
     fn is_done(&self) -> bool {
-        self.pos >= self.length
+        self.cur == '\0'
     }
 
     fn make_token(&self, kind: TokenKind) -> Token {
@@ -148,7 +147,7 @@ impl<'a> Lexer<'a> {
     }
 
     fn lex_id_or_keyword(&mut self) -> Result<Token, ParseError> {
-        while is_valid_id(self.peek()) || self.is_done() {
+        while is_valid_id(self.peek()) {
             self.skip();
         }
 
@@ -159,13 +158,15 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn next_token(&mut self) -> Option<Result<Token, ParseError>> {
+    fn get_next_token(&mut self) -> Option<Result<Token, ParseError>> {
         self.skip_whitespace();
 
         self.buffer.clear();
         self.start = self.pos;
 
         let cur = self.advance();
+
+        // println!("c: {}", cur);
 
         if self.is_done() {
             None
@@ -187,51 +188,58 @@ impl<'a> Lexer<'a> {
                 '@' => Some(Ok(self.make_token(TokenKind::At))),
                 // Operators
                 '.' => Some(Ok(self.make_token(TokenKind::OpDot))),
-                '=' => {
-                    if self.peek() == '=' {
+                '=' => match self.peek() {
+                    '=' => {
+                        self.skip();
                         Some(Ok(self.make_token(TokenKind::OpEq)))
-                    } else {
-                        Some(Ok(self.make_token(TokenKind::Eq)))
                     }
-                }
-                '!' => {
-                    if self.peek() == '=' {
+                    _ => Some(Ok(self.make_token(TokenKind::Eq))),
+                },
+                '!' => match self.peek() {
+                    '=' => {
+                        self.skip();
                         Some(Ok(self.make_token(TokenKind::OpNeq)))
-                    } else {
-                        Some(Err(ParseError::UnexpectedCharacter(cur)))
                     }
-                }
-                '>' => {
-                    if self.peek() == '=' {
+                    _ => Some(Err(ParseError::UnexpectedCharacter(cur))),
+                },
+                '>' => match self.peek() {
+                    '=' => {
+                        self.skip();
                         Some(Ok(self.make_token(TokenKind::OpGtEq)))
-                    } else {
-                        Some(Ok(self.make_token(TokenKind::OpGt)))
                     }
-                }
-                '<' => {
-                    if self.peek() == '=' {
+                    _ => Some(Ok(self.make_token(TokenKind::OpGt))),
+                },
+                '<' => match self.peek() {
+                    '=' => {
+                        self.skip();
                         Some(Ok(self.make_token(TokenKind::OpLtEq)))
-                    } else {
-                        Some(Ok(self.make_token(TokenKind::OpLt)))
                     }
-                }
-                '+' => {
-                    if self.peek() == '+' {
+                    _ => Some(Ok(self.make_token(TokenKind::OpLt))),
+                },
+                '+' => match self.peek() {
+                    '+' => {
+                        self.skip();
                         Some(Ok(self.make_token(TokenKind::OpInc)))
-                    } else {
-                        Some(Ok(self.make_token(TokenKind::OpAdd)))
                     }
-                }
-                '-' => {
-                    if self.peek() == '-' {
+                    _ => Some(Ok(self.make_token(TokenKind::OpAdd))),
+                },
+                '-' => match self.peek() {
+                    '-' => {
+                        self.skip();
                         Some(Ok(self.make_token(TokenKind::OpDec)))
-                    } else {
-                        Some(Ok(self.make_token(TokenKind::OpSub)))
                     }
-                }
+                    '>' => {
+                        self.skip();
+                        Some(Ok(self.make_token(TokenKind::Arrow)))
+                    }
+                    _ => Some(Ok(self.make_token(TokenKind::OpSub))),
+                },
                 '*' => Some(Ok(self.make_token(TokenKind::OpMul))),
                 '/' => Some(Ok(self.make_token(TokenKind::OpDiv))),
                 '%' => Some(Ok(self.make_token(TokenKind::OpMod))),
+                cur if cur == '|' && self.peek() == '>' => {
+                    Some(Ok(self.make_token(TokenKind::OpPipe)))
+                }
                 // Literals
                 '"' => Some(self.lex_string()),
                 cur if is_valid_id_start(cur) => Some(self.lex_id_or_keyword()),
@@ -240,12 +248,23 @@ impl<'a> Lexer<'a> {
             }
         }
     }
+
+    pub fn next_token(&mut self) -> Option<Result<Token, ParseError>> {
+        let tok = self.get_next_token();
+        // println!(
+        //     "lexer debug: {:?} (at {}/{}) [{}]",
+        //     tok,
+        //     self.pos,
+        //     self.length,
+        //     self.is_done()
+        // );
+        tok
+    }
 }
 
 pub fn make_lexer<'a>(code: &'a String) -> Lexer<'a> {
     Lexer {
         code: code.chars().peekable(),
-        length: code.len(),
         start: 0,
         pos: 0,
         line: 1,

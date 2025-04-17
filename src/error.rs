@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use thiserror::Error;
 
-use crate::parser::error::ParseError;
+use crate::parse::error::ParseError;
 
 #[derive(Debug, Clone, Error)]
 pub enum SeaError {

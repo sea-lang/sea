@@ -1,7 +1,10 @@
 use parser::lexer::make_lexer;
 
+pub mod ast;
 pub mod error;
+pub mod hashtags;
 pub mod parser;
+pub mod type_;
 
 fn main() {
     let source = "use std/io

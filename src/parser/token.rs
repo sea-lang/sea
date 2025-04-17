@@ -5,6 +5,7 @@ pub struct Token {
     pub start: usize,
     pub len: usize,
     pub text: String,
+    pub line: usize,
 }
 
 impl fmt::Display for Token {
@@ -13,7 +14,7 @@ impl fmt::Display for Token {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum TokenKind {
     // Common/misc symbols
     Comma,
@@ -21,7 +22,7 @@ pub enum TokenKind {
     Semicolon,
     Pointer,
     OpenParen,
-    CloseParent,
+    CloseParen,
     OpenBracket,
     CloseBracket,
     OpenCurly,
@@ -29,6 +30,7 @@ pub enum TokenKind {
     Backslash,
     Hashtag,
     At,
+    Eq,
     // Operators
     OpDot,
     OpNot,

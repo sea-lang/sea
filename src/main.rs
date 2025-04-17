@@ -4,9 +4,18 @@ pub mod error;
 pub mod parser;
 
 fn main() {
-    let source = "\"A string!\" \"another string!!!\" \"a
-	multiline string\""
-        .to_string();
+    let source = "use std/io
+
+fun main(): int {
+	println(\"Hello, World!\")
+	ret 0
+}
+"
+    .to_string();
+
+    // let source = "\"A string!\" \"another string!!!\" \"a
+    // multiline string\""
+    //     .to_string();
 
     let mut lexer = make_lexer(&source);
 

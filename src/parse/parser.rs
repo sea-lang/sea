@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::Debug, path::PathBuf, str::FromStr};
 
-use crate::hashtags::FunTags;
+use crate::{hashtags::FunTags, parse::operator::Associativity};
 
 use super::{
     ast::Node,
@@ -17,7 +17,7 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    fn advance(&mut self) -> bool {
+    pub fn advance(&mut self) -> bool {
         self.prev = self.token.clone();
 
         let opt_tok = self.lexer.next_token();
@@ -34,7 +34,7 @@ impl<'a> Parser<'a> {
         return true;
     }
 
-    fn accept(&mut self, kind: TokenKind) -> bool {
+    pub fn accept(&mut self, kind: TokenKind) -> bool {
         if self.token.kind == kind {
             self.advance();
             true
@@ -43,7 +43,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn expect(&mut self, kind: TokenKind, msg: &str) {
+    pub fn expect(&mut self, kind: TokenKind, msg: &str) {
         if self.token.kind == kind {
             self.advance();
         } else {
@@ -51,7 +51,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_hashtags<T: FromStr>(&mut self) -> Vec<T>
+    pub fn parse_hashtags<T: FromStr>(&mut self) -> Vec<T>
     where
         <T as FromStr>::Err: Debug,
     {
@@ -59,7 +59,7 @@ impl<'a> Parser<'a> {
             let mut tags: Vec<T> = vec![];
             loop {
                 self.accept(TokenKind::Identifier);
-                tags.push(T::from_str("static").expect("unknown hashtag"));
+                tags.push(T::from_str(self.prev.text.as_str()).expect("unknown hashtag"));
                 if self.accept(TokenKind::CloseParen) {
                     break;
                 }
@@ -78,8 +78,9 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_expression(&mut self) -> Result<Node, ParseError> {
-        // println!("parsing expression: {}", self.token);
+    // Parses *non operator* expressions.
+    pub fn parse_atom(&mut self) -> Result<Node, ParseError> {
+        // println!("atom: {}", self.token);
         match *self {
             _ if self.accept(TokenKind::OpenParen) => {
                 let node = Node::ExprGroup(Box::new(
@@ -92,6 +93,8 @@ impl<'a> Parser<'a> {
                 );
                 Ok(node)
             }
+
+            // Literals
             _ if self.accept(TokenKind::Int) => Ok(Node::ExprNumber(self.prev.text.clone())),
             _ if self.accept(TokenKind::Float) => Ok(Node::ExprNumber(self.prev.text.clone())),
             _ if self.accept(TokenKind::Hex) => Ok(Node::ExprNumber(self.prev.text.clone())),
@@ -102,6 +105,11 @@ impl<'a> Parser<'a> {
             )),
             _ if self.accept(TokenKind::True) => Ok(Node::ExprTrue),
             _ if self.accept(TokenKind::False) => Ok(Node::ExprFalse),
+            _ if self.accept(TokenKind::Identifier) => {
+                Ok(Node::ExprIdentifier(self.prev.text.clone()))
+            }
+
+            // Blocks
             _ if self.accept(TokenKind::OpenCurly) => {
                 if self.accept(TokenKind::CloseCurly) {
                     return Ok(Node::ExprBlock(vec![]));
@@ -109,7 +117,7 @@ impl<'a> Parser<'a> {
 
                 let mut exprs: Vec<Node> = vec![];
                 loop {
-                    exprs.push(self.parse_statement().unwrap());
+                    exprs.push(self.parse_statement()?);
                     if self.accept(TokenKind::CloseCurly) {
                         break;
                     }
@@ -117,23 +125,101 @@ impl<'a> Parser<'a> {
                 Ok(Node::ExprBlock(exprs))
             }
             _ if self.accept(TokenKind::Arrow) => {
-                Ok(Node::ExprBlock(vec![self.parse_statement().unwrap()]))
+                Ok(Node::ExprBlock(vec![self.parse_statement()?]))
             }
+
+            // Misc
+            _ if self.accept(TokenKind::KwNew) => {
+                self.expect(TokenKind::Identifier, "expected identifier after `new`");
+                let id = self.prev.text.clone();
+                let mut params: Vec<Node> = vec![];
+
+                self.expect(
+                    TokenKind::OpenParen,
+                    "expected open parenthesis in `new` expression",
+                );
+                if self.token.kind != TokenKind::CloseParen {
+                    loop {
+                        params.push(self.parse_atom()?);
+                        if !self.accept(TokenKind::Comma) {
+                            break;
+                        }
+                    }
+                }
+                self.expect(
+                    TokenKind::CloseParen,
+                    "expected closed parenthesis to end `new` expression",
+                );
+
+                Ok(Node::ExprNew { id, params })
+            }
+
             _ => Err(ParseError::ExpectedExpression),
         }
     }
 
-    fn parse_statement(&mut self) -> Result<Node, ParseError> {
+    pub fn parse_expression_inner(&mut self, left_node: Node, min_prec: u8) -> Node {
+        // println!("pei:");
+        // https://en.wikipedia.org/wiki/Operator-precedence_parser#Pseudocode
+        let mut left_atom = left_node.clone();
+        let mut lookahead = self.token.clone();
+        let mut lookahead_op = lookahead.kind.get_operator().expect("expected operator");
+        while lookahead.kind.is_operator() && lookahead_op.prec >= min_prec {
+            let op = lookahead_op;
+            self.advance();
+            let mut right_atom = self.parse_atom().unwrap();
+            // println!("  right atom: {}", right_atom);
+            lookahead = self.token.clone();
+            // println!("  lookahead: {}", lookahead);
+            // println!("  isop: {}", lookahead.kind.is_operator());
+            if lookahead.kind.is_operator() {
+                lookahead_op = lookahead.kind.get_operator().expect("expected operator");
+                while lookahead.kind.is_operator()
+                    && (lookahead_op.prec > op.prec
+                        || (lookahead_op.assoc == Associativity::Right
+                            && lookahead_op.prec == op.prec))
+                {
+                    right_atom = self.parse_expression_inner(
+                        right_atom,
+                        op.prec + if lookahead_op.prec > op.prec { 1 } else { 0 },
+                    );
+                    lookahead = self.token.clone();
+                    if lookahead.kind.is_operator() {
+                        lookahead_op = lookahead.kind.get_operator().expect("expected operator");
+                    } else {
+                        break;
+                    }
+                }
+            }
+            left_atom = Node::join(op.kind, left_atom, right_atom);
+            // println!("  joined: {}", left_atom);
+            // println!("  lookahead: {}", lookahead);
+            // println!("  precs: {} > {}", lookahead_op.prec, min_prec);
+        }
+        // println!("end pei: {}", left_atom);
+        left_atom
+    }
+
+    pub fn parse_expression(&mut self) -> Result<Node, ParseError> {
+        let left = self.parse_atom()?;
+        if self.token.kind.is_operator() {
+            Ok(self.parse_expression_inner(left, 0))
+        } else {
+            Ok(left)
+        }
+    }
+
+    pub fn parse_statement(&mut self) -> Result<Node, ParseError> {
         // println!("stat: {}", self.token);
         match *self {
-            _ if self.accept(TokenKind::KwRet) => Ok(Node::StatRet(Some(Box::new(
-                self.parse_expression().unwrap(),
-            )))),
+            _ if self.accept(TokenKind::KwRet) => {
+                Ok(Node::StatRet(Some(Box::new(self.parse_expression()?))))
+            }
             _ => Err(ParseError::ExpectedStatement),
         }
     }
 
-    fn parse_type(&mut self) -> Result<Node, ParseError> {
+    pub fn parse_type(&mut self) -> Result<Node, ParseError> {
         let mut pointers = 0;
         while self.accept(TokenKind::Pointer) {
             pointers += 1
@@ -152,12 +238,9 @@ impl<'a> Parser<'a> {
             );
             if self.token.kind != TokenKind::CloseParen {
                 loop {
-                    let it = self.parse_type().unwrap();
-                    println!("funptrarg: {}", it);
+                    let it = self.parse_type()?;
                     funptr_args_vec.push(it);
-                    println!("tttttok: {}", self.token);
                     if !self.accept(TokenKind::Comma) {
-                        println!("no comma!");
                         break;
                     }
                 }
@@ -169,7 +252,7 @@ impl<'a> Parser<'a> {
             funptr_args = Some(funptr_args_vec);
 
             if self.accept(TokenKind::Colon) {
-                funptr_rets = Some(Box::new(self.parse_type().unwrap().clone()));
+                funptr_rets = Some(Box::new(self.parse_type()?.clone()));
             } else {
                 funptr_rets = Some(Box::new(Node::get_void_type()));
             }
@@ -212,7 +295,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_fun(&mut self, tags: Vec<FunTags>) -> Result<Node, ParseError> {
+    pub fn parse_fun(&mut self, tags: Vec<FunTags>) -> Result<Node, ParseError> {
         self.expect(TokenKind::Identifier, "expected identifier after `fun`");
         let id = self.prev.text.clone();
         let mut params: HashMap<String, Node> = HashMap::new();
@@ -227,7 +310,7 @@ impl<'a> Parser<'a> {
                 TokenKind::Colon,
                 "expected colon in between parameter ID and its type",
             );
-            let typ = self.parse_type().unwrap();
+            let typ = self.parse_type()?;
             params.insert(param_id, typ);
             if !self.accept(TokenKind::Comma) {
                 // if there is no comma then we must be on the last parameter
@@ -240,13 +323,13 @@ impl<'a> Parser<'a> {
         );
 
         let rets: Box<Node> = if self.accept(TokenKind::Colon) {
-            Box::new(self.parse_type().unwrap())
+            Box::new(self.parse_type()?)
         } else {
             Box::new(Node::get_void_type())
         };
 
         let expr = Box::new(
-            self.parse_expression()
+            self.parse_atom()
                 .expect("expected expression after function declaration"),
         );
 
@@ -259,7 +342,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_top_level_statement(&mut self) -> Result<Node, ParseError> {
+    pub fn parse_top_level_statement(&mut self) -> Result<Node, ParseError> {
         if self.accept(TokenKind::KwUse) {
             let mut path = PathBuf::new();
             self.expect(TokenKind::Identifier, "expected identifier after `use`");
@@ -287,7 +370,7 @@ impl<'a> Parser<'a> {
         let mut nodes: Vec<Node> = vec![];
         self.advance();
         while !self.done {
-            nodes.push(self.parse_top_level_statement().unwrap());
+            nodes.push(self.parse_top_level_statement()?);
         }
         Ok(Node::Program(nodes))
     }

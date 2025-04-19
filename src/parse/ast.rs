@@ -1,4 +1,8 @@
-use std::{collections::HashMap, fmt, path::PathBuf};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt,
+    path::PathBuf,
+};
 
 use crate::hashtags;
 
@@ -27,9 +31,10 @@ pub enum Node {
     TopRec {
         tags: Vec<hashtags::RecTags>,
         id: String,
-        params: HashMap<String, Node>,
+        fields: HashMap<String, Node>,
     },
     TopDef {
+        tags: Vec<hashtags::DefTags>,
         id: String,
         typ: Box<Node>,
     },
@@ -43,12 +48,12 @@ pub enum Node {
     TopTag {
         tags: Vec<hashtags::TagTags>,
         id: String,
-        entries: Vec<String>,
+        entries: HashSet<String>,
     },
     TopTagRec {
         tags: Vec<hashtags::TagRecTags>,
         id: String,
-        entries: Vec<(String, HashMap<String, Node>)>,
+        entries: HashMap<String, HashMap<String, Node>>,
     },
     // Statements
     StatRet(Option<Box<Node>>),
@@ -59,8 +64,26 @@ pub enum Node {
     },
     StatSwitch {
         switch: Box<Node>,
-        cases: HashMap<Option<Box<Node>>, Box<Node>>,
+        // A list of: (case expression [if None then this is the `else` case], is fall case, case code block)
+        cases: Vec<(Option<Box<Node>>, bool, Box<Node>)>,
     },
+    StatForCStyle {
+        def: Box<Node>,
+        cond: Box<Node>,
+        inc: Box<Node>,
+        expr: Box<Node>,
+    },
+    StatForSingleExpr {
+        cond: Box<Node>,
+        expr: Box<Node>,
+    },
+    StatForRange {
+        var: Option<String>,
+        from: Box<Node>,
+        to: Box<Node>,
+        expr: Box<Node>,
+    },
+    // StatForIn {},
     StatExpr(Box<Node>),
     // Expressions
     ExprGroup(Box<Node>),

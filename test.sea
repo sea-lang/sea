@@ -1,0 +1,62 @@
+use std/io
+use a_thing
+
+def u8 = uint8_t
+
+rec User(name: String, age: int, life_getter: fun(): int)
+
+#static
+rec Name(first: String, last: String)
+
+tag Suit(SPADE, HEART, DIAMOND, CLUB)
+
+tag rec Play(
+	Draw,
+	Play(suit: Suit, value: u8),
+	Discard()
+)
+
+#union
+rec FunnyThing(
+	as_int: i32,
+	as_float: f32,
+	as_char: char
+)
+
+fun $omething(
+	a_really_weirdly_typed_parameter: ^^^fun(int, ^char[]): int,
+	not_a_weird_parameter: int
+): int[3][3] { }
+
+#inline
+fun fake() -> ret new Fake()
+
+#(inline, static)
+fun another_fake() -> ret new AnotherFake(0, true, false, {
+	ret 1_000_000
+})
+
+fun main(argc: int, argv: ^char[]): int {
+	ret 1 + 2 + 3 * 4 as u8
+	ret 0x02
+	ret 0b11
+	ret 4.0
+
+	if true { ret 0 } else { ret 0 }
+
+	if 1 == 0 + 1 -> ret 0 else { ret 0 }
+
+	if 1 == 0 + 1 -> ret 0
+	else if 0 == 0 * 2 -> ret 0
+	else -> ret new Name("Frodo", "Baggins")
+
+	switch bozo {
+		case 0 -> ret 0
+		case 1 -> ret 1
+		case 2 -> ret 2
+		fall case 3 -> ret 3
+		fall case 4 -> ret 4
+		case 5 -> ret 5
+		else -> ret 0-1
+	}
+}

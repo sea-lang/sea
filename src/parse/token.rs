@@ -4,6 +4,7 @@ use core::fmt;
 pub struct Token {
     pub kind: TokenKind,
     pub start: usize,
+    pub column: usize,
     pub len: usize,
     pub text: String,
     pub line: usize,

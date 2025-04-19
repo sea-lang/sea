@@ -24,7 +24,7 @@ Sea is intentionally quite minimal, it provides you with more than C but less
 than, say, C++.
 
 Despite this minimalism, Sea is very capable. You can embed raw C code and use
-any C libraries directly in Sea *without needing bindings*.
+any C libraries directly in Sea _without needing bindings_.
 
 ## Installation
 
@@ -53,26 +53,26 @@ You can run this (assuming the prototype compiler is in `proto/`) using
 - [Symbol Visibility](#symbol-visibility)
 - [Variables](#variables)
 - [Types](#types)
-	- [Primitives](#primitives)
-	- [Strings](#strings)
-	- [Characters](#characters)
-	- [Numbers](#numbers)
-	- [Arrays](#arrays)
-		- [Multidimensional Arrays](#multidimensional-arrays)
-		- [Fixed-Size Arrays](#fixed-size-arrays)
+  - [Primitives](#primitives)
+  - [Strings](#strings)
+  - [Characters](#characters)
+  - [Numbers](#numbers)
+  - [Arrays](#arrays)
+    - [Multidimensional Arrays](#multidimensional-arrays)
+    - [Fixed-Size Arrays](#fixed-size-arrays)
 - [Modules](#modules)
 - [Statements](#statements)
-	- [if/else](#ifelse)
-	- [switch/case](#switchcase)
-	- [for](#for)
+  - [if/else](#ifelse)
+  - [switch/case](#switchcase)
+  - [for](#for)
 - [Expressions and Operators](#expressions-and-operators)
-	- [Type Casting](#type-casting)
-	- [References and Pointers](#references-and-pointers)
+  - [Type Casting](#type-casting)
+  - [References and Pointers](#references-and-pointers)
 - [Data Types](#data-types)
-	- [Records](#records)
-	- [Tags](#tags)
-	- [Tagged Records](#tagged-records)
-	- [Type Aliases](#type-aliases)
+  - [Records](#records)
+  - [Tags](#tags)
+  - [Tagged Records](#tagged-records)
+  - [Type Aliases](#type-aliases)
 - [Raw C Code](#raw-c-code)
 - [Builtins](#builtins)
 - [Documentation](#documentation)
@@ -94,6 +94,8 @@ fun main(): int {
 
 /* Multi-line
    comment */
+
+/* /* You can nest multi-line comments too. */ */
 ```
 
 ## Functions
@@ -184,7 +186,7 @@ guaranteed, however strings always store their length with them.
 ```
 
 `own` tells you weather or not the string owns the memory for its characters.
-You can use this to differentiate strings from string *views*.
+You can use this to differentiate strings from string _views_.
 
 > ![NOTE]
 > Strings defined literally **do not own their memory**. This is the case in C
@@ -320,6 +322,7 @@ fun main(): int -> ret get_life()
 `library/lib.sea` gets implicitly imported.
 
 If you import `some/path/api`, then you'll import:
+
 ```
 some/lib.sea (if exists)
 some/path/lib.sea (if exists)
@@ -355,8 +358,7 @@ condition.
 > ![TODO]
 > Ternary expression
 
-> ![WARNING]
-> `else` is not part of the `if` statement, it is its own statement.
+> ![WARNING] > `else` is not part of the `if` statement, it is its own statement.
 > This means that the following code **is not valid**:
 >
 > ```sea
@@ -533,6 +535,7 @@ in the future (derives).
 Records also do not have methods, though this is planned.
 
 > ![TODO]
+>
 > - Record derives
 > - Record methods
 
@@ -683,7 +686,7 @@ def usize = size_t
 rec String(own: bool, len: int, str: ^char)
 ```
 
-Since Sea has no namespaces (*yet), functions imported from other modules are
+Since Sea has no namespaces (\*yet), functions imported from other modules are
 thrown into the global scope :/
 
 ## Documentation
@@ -717,7 +720,7 @@ Doc comments are written in a markdown-style format:
 
 To write "good" doc comments, we **recommend** the following guidelines:
 
-> Ultimately it is up to *you*, the programmer, to decide what you use. Though,
+> Ultimately it is up to _you_, the programmer, to decide what you use. Though,
 > for public libraries, I highly recommend using these guidelines!
 
 > These guidelines are based on the Javadoc guidelines, since I'm quite used to
@@ -762,4 +765,3 @@ To write "good" doc comments, we **recommend** the following guidelines:
 - The usage of `aka` ("also known as"), `i.e.` ("that is" or "to be specific"),
   and `e.g.` ("for example") is okay! Avoid other less well-known abbreviations
   though.
-

@@ -16,12 +16,18 @@ pub enum ParseError {
     #[error("function pointer types cannot be arrays, use an array of a type alias to a function pointer instead")]
     FunPtrWithArrays,
 
-    #[error("unexpected token: {0}")]
+    #[error("unexpected token: `{}`", .0.text)]
     UnexpectedToken(token::Token),
 
-    #[error("expected expression")]
-    ExpectedExpression,
+    #[error("expected token but got `{}`", .0.text)]
+    ExpectedToken(token::Token),
 
-    #[error("expected statement")]
-    ExpectedStatement,
+    #[error("expected expression but got `{}`", .0.text)]
+    ExpectedExpression(token::Token),
+
+    #[error("expected statement but got `{}`", .0.text)]
+    ExpectedStatement(token::Token),
+
+    #[error("(internal error) advance error (caused by: {0})")]
+    AdvanceError(Box<ParseError>),
 }

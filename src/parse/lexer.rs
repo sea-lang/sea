@@ -1,4 +1,4 @@
-use std::{collections::HashMap, iter::Peekable, str::Chars, sync::LazyLock};
+use std::{collections::HashMap, iter::Peekable, path::PathBuf, str::Chars, sync::LazyLock};
 
 use super::{
     error::ParseError,
@@ -6,12 +6,16 @@ use super::{
 };
 
 pub struct Lexer<'a> {
-    code: Peekable<Chars<'a>>, // the source code being lexed
-    start: usize,              // the index at which the current token started
-    pos: usize,                // the index to the current character
-    line: usize,               // the current line that the lexer is on
-    cur: char,                 // the current character
-    buffer: String,            // all characters since `start`
+    pub file: PathBuf,             // path to the file being lexed
+    pub source: &'a str,           // source code
+    pub code: Peekable<Chars<'a>>, // source code being lexed
+    pub start: usize,              // index at which the current token started
+    pub column: usize,             // column of the current token
+    pub pos: usize,                // index to the current character
+    pub line: usize,               // current line that the lexer is on
+    cur: char,                     // current character
+    prev: char,                    // previous character
+    buffer: String,                // all characters since `start`
 }
 
 static KEYWORDS: LazyLock<HashMap<&str, TokenKind>> = LazyLock::new(|| {
@@ -54,15 +58,32 @@ fn is_valid_id(ch: char) -> bool {
 }
 
 impl<'a> Lexer<'a> {
-    fn skip(&mut self) {
-        self.skip_no_buffer();
-        self.buffer.push(self.cur);
+    // Gets the provided line, along with the one before and the one after it. Used for error messages.
+    pub fn get_lines(&self, line: usize) -> Vec<(usize, &str)> {
+        let mut lines: Vec<(usize, &str)> = vec![];
+        let mut itr = self.source.lines().enumerate();
+
+        if line > 1 {
+            itr.nth(line - 1);
+        }
+
+        itr.take(3)
+            .for_each(|(index, str_)| lines.push((index + 1, str_)));
+
+        lines
     }
 
     fn skip_no_buffer(&mut self) {
+        self.prev = self.cur;
         self.cur = self.peek();
         self.code.next();
         self.pos += 1;
+        self.column += 1;
+    }
+
+    fn skip(&mut self) {
+        self.skip_no_buffer();
+        self.buffer.push(self.cur);
     }
 
     fn advance(&mut self) -> char {
@@ -84,6 +105,7 @@ impl<'a> Lexer<'a> {
         Token {
             kind,
             start: self.start,
+            column: self.column - (self.pos - self.start),
             len: self.pos - self.start,
             text: self.buffer.clone(),
             line: self.line,
@@ -97,6 +119,7 @@ impl<'a> Lexer<'a> {
                 '\n' => {
                     self.skip_no_buffer();
                     self.line += 1;
+                    self.column = 0;
                 }
                 ch if ch.is_whitespace() => self.skip(),
                 _ => return,
@@ -111,6 +134,7 @@ impl<'a> Lexer<'a> {
         while self.peek() != '"' && !self.is_done() {
             if self.cur == '\n' {
                 self.line += 1;
+                self.column = 0;
             }
             self.skip();
         }
@@ -235,7 +259,28 @@ impl<'a> Lexer<'a> {
                     _ => Some(Ok(self.make_token(TokenKind::OpSub))),
                 },
                 '*' => Some(Ok(self.make_token(TokenKind::OpMul))),
-                '/' => Some(Ok(self.make_token(TokenKind::OpDiv))),
+                '/' => {
+                    if self.peek() == '/' {
+                        while self.peek() != '\n' {
+                            self.skip_no_buffer()
+                        }
+                        return self.get_next_token();
+                    } else if self.peek() == '*' {
+                        let mut depth = 1;
+                        while depth > 0 {
+                            self.skip_no_buffer();
+                            if self.cur == '*' && self.peek() == '/' {
+                                depth -= 1;
+                            } else if self.cur == '/' && self.peek() == '*' {
+                                depth += 1;
+                            }
+                        }
+                        self.skip_no_buffer(); // Skip the ending `/`
+                        return self.get_next_token();
+                    } else {
+                        Some(Ok(self.make_token(TokenKind::OpDiv)))
+                    }
+                }
                 '%' => Some(Ok(self.make_token(TokenKind::OpMod))),
                 cur if cur == '|' && self.peek() == '>' => {
                     Some(Ok(self.make_token(TokenKind::OpPipe)))
@@ -262,13 +307,17 @@ impl<'a> Lexer<'a> {
     }
 }
 
-pub fn make_lexer<'a>(code: &'a String) -> Lexer<'a> {
+pub fn make_lexer<'a>(file: PathBuf, code: &'a String) -> Lexer<'a> {
     Lexer {
+        file,
+        source: code,
         code: code.chars().peekable(),
         start: 0,
+        column: 1,
         pos: 0,
         line: 1,
         cur: ' ',
+        prev: ' ',
         buffer: Default::default(),
     }
 }

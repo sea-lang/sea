@@ -54,3 +54,7 @@ and a more... usable standard library.
 
 Of note, the Sea standard library can be 100% ignored and you can use solely the
 C standard library if you wish.
+
+## Developers and Contributors
+
+Read this! [doc/developers.md](doc/developers.md)

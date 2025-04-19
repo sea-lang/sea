@@ -21,6 +21,12 @@ pub enum RecTags {
 }
 
 #[derive(Debug, Clone, Copy, EnumString)]
+pub enum DefTags {
+    #[strum(serialize = "static")]
+    Static,
+}
+
+#[derive(Debug, Clone, Copy, EnumString)]
 pub enum TagTags {
     #[strum(serialize = "static")]
     Static,

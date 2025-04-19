@@ -1,6 +1,15 @@
-use std::{collections::HashMap, fmt::Debug, path::PathBuf, str::FromStr};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Debug,
+    path::PathBuf,
+    process::exit,
+    str::FromStr,
+};
 
-use crate::{hashtags::FunTags, parse::operator::Associativity};
+use crate::{
+    hashtags::{DefTags, FunTags, MacTags, RecTags, TagRecTags, TagTags},
+    parse::operator::Associativity,
+};
 
 use super::{
     ast::Node,
@@ -17,6 +26,61 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
+    pub fn make_parser(lexer: lexer::Lexer<'a>) -> Self {
+        Parser {
+            lexer,
+            token: Default::default(),
+            prev: Default::default(),
+            done: false,
+        }
+    }
+
+    fn throw_exception(&self, error: ParseError, help: Option<&str>) -> ! {
+        let line = self.prev.line;
+
+        println!(
+            "\x1b[31;1m{}:{}:{}:\x1b[0;1m {error}\x1b[0m",
+            self.lexer.file.to_str().unwrap(),
+            self.token.line,
+            self.token.column
+        );
+
+        let lines = self.lexer.get_lines(line);
+        if lines.len() == 0 {
+            println!("No line information available :(");
+            println!("This error shouldn't happen, please report it.");
+            println!("Debug: line={line}, token={}", self.token.clone())
+        } else {
+            // Determine the longest integer by digit so that we can make our error prettier.
+            let longest_length = lines.iter().map(|it| it.0).max().unwrap().to_string().len();
+
+            for (line_index, line_str) in lines {
+                // We replace `\t` with ` ` so that no matter the terminal indentation, the underline will be aligned
+                let indents = line_str.chars().filter(|it| *it == '\t').count();
+                let sanitized = line_str.replace('\t', "    ");
+
+                println!("\x1b[1;34m{line_index:>longest_length$} | \x1b[0m{sanitized}");
+                if line_index == self.token.line {
+                    // Determine the column that the token is on to highlight it
+                    println!(
+                        "\x1b[1;34m{} | {}\x1b[31m{}\x1b[0m",
+                        " ".repeat(longest_length),
+                        " ".repeat((self.token.column - indents) + (indents * 4)),
+                        "~".repeat(self.token.len)
+                    );
+                }
+            }
+        }
+
+        if let Some(help) = help {
+            println!("\x1b[1;32mhelp:\x1b[0m {}", help);
+        }
+
+        exit(1)
+    }
+
+    // #region: Token Utilities
+
     pub fn advance(&mut self) -> bool {
         self.prev = self.token.clone();
 
@@ -27,7 +91,7 @@ impl<'a> Parser<'a> {
         }
         let tok = opt_tok.unwrap();
         if tok.is_err() {
-            panic!("parsing advance error: {}", tok.err().unwrap());
+            self.throw_exception(ParseError::AdvanceError(Box::new(tok.err().unwrap())), None);
         }
 
         self.token = tok.unwrap();
@@ -47,179 +111,15 @@ impl<'a> Parser<'a> {
         if self.token.kind == kind {
             self.advance();
         } else {
-            panic!("parsing error: {}", msg);
+            self.throw_exception(ParseError::ExpectedToken(self.token.clone()), Some(msg));
         }
     }
 
-    pub fn parse_hashtags<T: FromStr>(&mut self) -> Vec<T>
-    where
-        <T as FromStr>::Err: Debug,
-    {
-        if self.accept(TokenKind::OpenParen) {
-            let mut tags: Vec<T> = vec![];
-            loop {
-                self.accept(TokenKind::Identifier);
-                tags.push(T::from_str(self.prev.text.as_str()).expect("unknown hashtag"));
-                if self.accept(TokenKind::CloseParen) {
-                    break;
-                }
-                self.expect(
-                    TokenKind::Comma,
-                    "expected comma or closed parenthesis after identifier in hashtag list",
-                )
-            }
-            tags
-        } else {
-            self.expect(
-                TokenKind::Identifier,
-                "expected identifier or parenthesis after hashtag (#)",
-            );
-            vec![T::from_str(self.prev.text.as_str()).expect("unknown hashtag")]
-        }
-    }
+    // #endregion: Token Utilities
 
-    // Parses *non operator* expressions.
-    pub fn parse_atom(&mut self) -> Result<Node, ParseError> {
-        // println!("atom: {}", self.token);
-        match *self {
-            _ if self.accept(TokenKind::OpenParen) => {
-                let node = Node::ExprGroup(Box::new(
-                    self.parse_expression()
-                        .expect("expected expression inside group"),
-                ));
-                self.expect(
-                    TokenKind::CloseParen,
-                    "expected closed parenthesis to match open parenthesis in expression group",
-                );
-                Ok(node)
-            }
+    // #region: Misc Parsing Utilities
 
-            // Literals
-            _ if self.accept(TokenKind::Int) => Ok(Node::ExprNumber(self.prev.text.clone())),
-            _ if self.accept(TokenKind::Float) => Ok(Node::ExprNumber(self.prev.text.clone())),
-            _ if self.accept(TokenKind::Hex) => Ok(Node::ExprNumber(self.prev.text.clone())),
-            _ if self.accept(TokenKind::Binary) => Ok(Node::ExprNumber(self.prev.text.clone())),
-            _ if self.accept(TokenKind::String) => Ok(Node::ExprString(self.prev.text.clone())),
-            _ if self.accept(TokenKind::Character) => Ok(Node::ExprChar(
-                self.prev.text.clone().chars().nth(1).unwrap(),
-            )),
-            _ if self.accept(TokenKind::True) => Ok(Node::ExprTrue),
-            _ if self.accept(TokenKind::False) => Ok(Node::ExprFalse),
-            _ if self.accept(TokenKind::Identifier) => {
-                Ok(Node::ExprIdentifier(self.prev.text.clone()))
-            }
-
-            // Blocks
-            _ if self.accept(TokenKind::OpenCurly) => {
-                if self.accept(TokenKind::CloseCurly) {
-                    return Ok(Node::ExprBlock(vec![]));
-                }
-
-                let mut exprs: Vec<Node> = vec![];
-                loop {
-                    exprs.push(self.parse_statement()?);
-                    if self.accept(TokenKind::CloseCurly) {
-                        break;
-                    }
-                }
-                Ok(Node::ExprBlock(exprs))
-            }
-            _ if self.accept(TokenKind::Arrow) => {
-                Ok(Node::ExprBlock(vec![self.parse_statement()?]))
-            }
-
-            // Misc
-            _ if self.accept(TokenKind::KwNew) => {
-                self.expect(TokenKind::Identifier, "expected identifier after `new`");
-                let id = self.prev.text.clone();
-                let mut params: Vec<Node> = vec![];
-
-                self.expect(
-                    TokenKind::OpenParen,
-                    "expected open parenthesis in `new` expression",
-                );
-                if self.token.kind != TokenKind::CloseParen {
-                    loop {
-                        params.push(self.parse_atom()?);
-                        if !self.accept(TokenKind::Comma) {
-                            break;
-                        }
-                    }
-                }
-                self.expect(
-                    TokenKind::CloseParen,
-                    "expected closed parenthesis to end `new` expression",
-                );
-
-                Ok(Node::ExprNew { id, params })
-            }
-
-            _ => Err(ParseError::ExpectedExpression),
-        }
-    }
-
-    pub fn parse_expression_inner(&mut self, left_node: Node, min_prec: u8) -> Node {
-        // println!("pei:");
-        // https://en.wikipedia.org/wiki/Operator-precedence_parser#Pseudocode
-        let mut left_atom = left_node.clone();
-        let mut lookahead = self.token.clone();
-        let mut lookahead_op = lookahead.kind.get_operator().expect("expected operator");
-        while lookahead.kind.is_operator() && lookahead_op.prec >= min_prec {
-            let op = lookahead_op;
-            self.advance();
-            let mut right_atom = self.parse_atom().unwrap();
-            // println!("  right atom: {}", right_atom);
-            lookahead = self.token.clone();
-            // println!("  lookahead: {}", lookahead);
-            // println!("  isop: {}", lookahead.kind.is_operator());
-            if lookahead.kind.is_operator() {
-                lookahead_op = lookahead.kind.get_operator().expect("expected operator");
-                while lookahead.kind.is_operator()
-                    && (lookahead_op.prec > op.prec
-                        || (lookahead_op.assoc == Associativity::Right
-                            && lookahead_op.prec == op.prec))
-                {
-                    right_atom = self.parse_expression_inner(
-                        right_atom,
-                        op.prec + if lookahead_op.prec > op.prec { 1 } else { 0 },
-                    );
-                    lookahead = self.token.clone();
-                    if lookahead.kind.is_operator() {
-                        lookahead_op = lookahead.kind.get_operator().expect("expected operator");
-                    } else {
-                        break;
-                    }
-                }
-            }
-            left_atom = Node::join(op.kind, left_atom, right_atom);
-            // println!("  joined: {}", left_atom);
-            // println!("  lookahead: {}", lookahead);
-            // println!("  precs: {} > {}", lookahead_op.prec, min_prec);
-        }
-        // println!("end pei: {}", left_atom);
-        left_atom
-    }
-
-    pub fn parse_expression(&mut self) -> Result<Node, ParseError> {
-        let left = self.parse_atom()?;
-        if self.token.kind.is_operator() {
-            Ok(self.parse_expression_inner(left, 0))
-        } else {
-            Ok(left)
-        }
-    }
-
-    pub fn parse_statement(&mut self) -> Result<Node, ParseError> {
-        // println!("stat: {}", self.token);
-        match *self {
-            _ if self.accept(TokenKind::KwRet) => {
-                Ok(Node::StatRet(Some(Box::new(self.parse_expression()?))))
-            }
-            _ => Err(ParseError::ExpectedStatement),
-        }
-    }
-
-    pub fn parse_type(&mut self) -> Result<Node, ParseError> {
+    pub fn parse_type(&mut self) -> Node {
         let mut pointers = 0;
         while self.accept(TokenKind::Pointer) {
             pointers += 1
@@ -238,7 +138,7 @@ impl<'a> Parser<'a> {
             );
             if self.token.kind != TokenKind::CloseParen {
                 loop {
-                    let it = self.parse_type()?;
+                    let it = self.parse_type();
                     funptr_args_vec.push(it);
                     if !self.accept(TokenKind::Comma) {
                         break;
@@ -252,7 +152,7 @@ impl<'a> Parser<'a> {
             funptr_args = Some(funptr_args_vec);
 
             if self.accept(TokenKind::Colon) {
-                funptr_rets = Some(Box::new(self.parse_type()?.clone()));
+                funptr_rets = Some(Box::new(self.parse_type().clone()));
             } else {
                 funptr_rets = Some(Box::new(Node::get_void_type()));
             }
@@ -264,7 +164,7 @@ impl<'a> Parser<'a> {
         let mut arrays: Vec<(Option<usize>, Option<String>)> = vec![];
         while self.accept(TokenKind::OpenBracket) {
             if funptr_rets.is_some() {
-                return Err(ParseError::FunPtrWithArrays);
+                self.throw_exception(ParseError::FunPtrWithArrays, None);
             }
 
             // `int[5]`
@@ -286,16 +186,280 @@ impl<'a> Parser<'a> {
             );
         }
 
-        Ok(Node::Type {
+        Node::Type {
             pointers,
             name,
             arrays,
             funptr_args,
             funptr_rets,
-        })
+        }
     }
 
-    pub fn parse_fun(&mut self, tags: Vec<FunTags>) -> Result<Node, ParseError> {
+    pub fn parse_hashtags(&mut self) -> Vec<String> {
+        if self.accept(TokenKind::OpenParen) {
+            let mut tags: Vec<String> = vec![];
+            loop {
+                self.accept(TokenKind::Identifier);
+                tags.push(self.prev.text.clone());
+                if self.accept(TokenKind::CloseParen) {
+                    break;
+                }
+                self.expect(
+                    TokenKind::Comma,
+                    "expected comma or closed parenthesis after identifier in hashtag list",
+                )
+            }
+            tags
+        } else {
+            self.expect(
+                TokenKind::Identifier,
+                "expected identifier or parenthesis after hashtag (#)",
+            );
+            vec![self.prev.text.clone()]
+        }
+    }
+
+    pub fn cast_hashtags<T: FromStr>(tags: Vec<String>) -> Vec<T>
+    where
+        <T as FromStr>::Err: Debug,
+    {
+        let mut casted: Vec<T> = vec![];
+        for tag in tags {
+            casted.push(T::from_str(tag.as_str()).expect("unknown hashtag"));
+        }
+        casted
+    }
+
+    // #endregion: Misc Parsing Utilities
+
+    // #region: Expressions
+
+    pub fn parse_block(&mut self, advance: bool) -> Node {
+        if advance {
+            self.advance();
+        }
+
+        if self.prev.kind == TokenKind::OpenCurly {
+            if self.accept(TokenKind::CloseCurly) {
+                return Node::ExprBlock(vec![]);
+            }
+
+            let mut exprs: Vec<Node> = vec![];
+            loop {
+                exprs.push(self.parse_statement());
+                if self.accept(TokenKind::CloseCurly) {
+                    break;
+                }
+            }
+            Node::ExprBlock(exprs)
+        } else {
+            Node::ExprBlock(vec![self.parse_statement()])
+        }
+    }
+
+    // Parses *non operator* expressions.
+    pub fn parse_atom(&mut self) -> Node {
+        match *self {
+            _ if self.accept(TokenKind::OpenParen) => {
+                let node = Node::ExprGroup(Box::new(self.parse_expression()));
+                self.expect(
+                    TokenKind::CloseParen,
+                    "expected closed parenthesis to match open parenthesis in expression group",
+                );
+                node
+            }
+
+            // Literals
+            _ if self.accept(TokenKind::Int) => Node::ExprNumber(self.prev.text.clone()),
+            _ if self.accept(TokenKind::Float) => Node::ExprNumber(self.prev.text.clone()),
+            _ if self.accept(TokenKind::Hex) => Node::ExprNumber(self.prev.text.clone()),
+            _ if self.accept(TokenKind::Binary) => Node::ExprNumber(self.prev.text.clone()),
+            _ if self.accept(TokenKind::String) => Node::ExprString(self.prev.text.clone()),
+            _ if self.accept(TokenKind::Character) => {
+                Node::ExprChar(self.prev.text.clone().chars().nth(1).unwrap())
+            }
+            _ if self.accept(TokenKind::True) => Node::ExprTrue,
+            _ if self.accept(TokenKind::False) => Node::ExprFalse,
+            _ if self.accept(TokenKind::Identifier) => Node::ExprIdentifier(self.prev.text.clone()),
+
+            // Blocks
+            _ if self.accept(TokenKind::OpenCurly) => self.parse_block(false),
+            _ if self.accept(TokenKind::Arrow) => self.parse_block(false),
+
+            // Misc
+            _ if self.accept(TokenKind::KwNew) => {
+                self.expect(TokenKind::Identifier, "expected identifier after `new`");
+                let id = self.prev.text.clone();
+                let mut params: Vec<Node> = vec![];
+
+                self.expect(
+                    TokenKind::OpenParen,
+                    "expected open parenthesis in `new` expression",
+                );
+                if self.token.kind != TokenKind::CloseParen {
+                    loop {
+                        params.push(self.parse_atom());
+                        if !self.accept(TokenKind::Comma) {
+                            break;
+                        }
+                    }
+                }
+                self.expect(
+                    TokenKind::CloseParen,
+                    "expected closed parenthesis to end `new` expression",
+                );
+
+                Node::ExprNew { id, params }
+            }
+
+            _ => self.throw_exception(ParseError::ExpectedExpression(self.token.clone()), None),
+        }
+    }
+
+    pub fn parse_expression_inner(&mut self, left_node: Node, min_prec: u8) -> Node {
+        // https://en.wikipedia.org/wiki/Operator-precedence_parser#Pseudocode
+        let mut left_atom = left_node.clone();
+        let mut lookahead = self.token.clone();
+        let mut lookahead_op = lookahead.kind.get_operator().expect("expected operator");
+        while lookahead.kind.is_operator() && lookahead_op.prec >= min_prec {
+            let op = lookahead_op;
+            self.advance();
+            let mut right_atom = self.parse_atom();
+            lookahead = self.token.clone();
+            if lookahead.kind.is_operator() {
+                lookahead_op = lookahead.kind.get_operator().expect("expected operator");
+                while lookahead.kind.is_operator()
+                    && (lookahead_op.prec > op.prec
+                        || (lookahead_op.assoc == Associativity::Right
+                            && lookahead_op.prec == op.prec))
+                {
+                    right_atom = self.parse_expression_inner(
+                        right_atom,
+                        op.prec + if lookahead_op.prec > op.prec { 1 } else { 0 },
+                    );
+                    lookahead = self.token.clone();
+                    if lookahead.kind.is_operator() {
+                        lookahead_op = lookahead.kind.get_operator().expect("expected operator");
+                    } else {
+                        break;
+                    }
+                }
+            }
+            left_atom = Node::join(op.kind, left_atom, right_atom);
+        }
+        left_atom
+    }
+
+    pub fn parse_expression(&mut self) -> Node {
+        let left = self.parse_atom();
+        if self.token.kind.is_operator() {
+            self.parse_expression_inner(left, 0)
+        } else {
+            left
+        }
+    }
+
+    // #endregion: Expressions
+
+    // #region: Statements
+
+    pub fn parse_ret(&mut self) -> Node {
+        Node::StatRet(Some(Box::new(self.parse_expression())))
+    }
+
+    pub fn parse_if(&mut self) -> Node {
+        let cond = self.parse_expression();
+        let expr = self.parse_block(true);
+        let mut else_: Option<Box<Node>> = None;
+        if self.accept(TokenKind::KwElse) {
+            // the only statement allowed after `else` is another `if` statement, otherwise it must be a block
+            if self.accept(TokenKind::KwIf) {
+                else_ = Some(Box::new(self.parse_if()));
+            } else {
+                else_ = Some(Box::new(self.parse_block(true)));
+            }
+        }
+        Node::StatIf {
+            cond: Box::new(cond),
+            expr: Box::new(expr),
+            else_,
+        }
+    }
+
+    pub fn parse_switch(&mut self) -> Node {
+        let switch = Box::new(self.parse_expression());
+        self.expect(
+            TokenKind::OpenCurly,
+            "expected open curly brace (`{`) after `switch <expression>`",
+        );
+
+        let mut cases: Vec<(Option<Box<Node>>, bool, Box<Node>)> = vec![];
+        loop {
+            let is_fall_case = self.accept(TokenKind::KwFall);
+
+            if self.accept(TokenKind::KwElse) {
+                if is_fall_case {
+                    self.throw_exception(
+                        ParseError::UnexpectedToken(self.prev.clone()),
+                        Some("`fall` cannot be used with `else`"),
+                    )
+                }
+
+                let block = self.parse_block(true);
+                cases.push((None, is_fall_case, Box::new(block)));
+
+                if !self.accept(TokenKind::CloseCurly) {
+                    self.throw_exception(
+                        ParseError::UnexpectedToken(self.prev.clone()),
+                        Some("`else` must be the last case of a `switch` statement."),
+                    )
+                }
+
+                break;
+            } else {
+                self.expect(TokenKind::KwCase, "expected `case`");
+                let case = Some(Box::new(self.parse_expression()));
+                let block = self.parse_block(true);
+                cases.push((case, is_fall_case, Box::new(block)));
+
+                if self.accept(TokenKind::CloseCurly) {
+                    break;
+                }
+            }
+        }
+
+        Node::StatSwitch { switch, cases }
+    }
+
+    pub fn parse_statement(&mut self) -> Node {
+        match *self {
+            _ if self.accept(TokenKind::KwRet) => self.parse_ret(),
+            _ if self.accept(TokenKind::KwIf) => self.parse_if(),
+            _ if self.accept(TokenKind::KwSwitch) => self.parse_switch(),
+            // if nothing works, we'll try to parse an expression, and if *that* doesn't work, then we have a syntax error
+            _ => self.parse_expression(),
+        }
+    }
+
+    // #endregion: Statements
+
+    // #region: Top level statements
+
+    pub fn parse_use(&mut self) -> Node {
+        let mut path = PathBuf::new();
+        self.expect(TokenKind::Identifier, "expected identifier after `use`");
+        path.push(self.prev.text.clone());
+        while self.accept(TokenKind::OpDiv) {
+            self.expect(
+                TokenKind::Identifier,
+                "expected identifier after `/` in `use`",
+            );
+            path.push(self.prev.text.clone());
+        }
+        Node::TopUse(path)
+    }
+
+    pub fn parse_fun(&mut self, tags: Vec<FunTags>) -> Node {
         self.expect(TokenKind::Identifier, "expected identifier after `fun`");
         let id = self.prev.text.clone();
         let mut params: HashMap<String, Node> = HashMap::new();
@@ -310,7 +474,7 @@ impl<'a> Parser<'a> {
                 TokenKind::Colon,
                 "expected colon in between parameter ID and its type",
             );
-            let typ = self.parse_type()?;
+            let typ = self.parse_type();
             params.insert(param_id, typ);
             if !self.accept(TokenKind::Comma) {
                 // if there is no comma then we must be on the last parameter
@@ -323,64 +487,183 @@ impl<'a> Parser<'a> {
         );
 
         let rets: Box<Node> = if self.accept(TokenKind::Colon) {
-            Box::new(self.parse_type()?)
+            Box::new(self.parse_type())
         } else {
             Box::new(Node::get_void_type())
         };
 
-        let expr = Box::new(
-            self.parse_atom()
-                .expect("expected expression after function declaration"),
-        );
+        let expr = Box::new(self.parse_block(true));
 
-        Ok(Node::TopFun {
+        Node::TopFun {
             tags,
             id,
             params,
             rets,
             expr,
-        })
+        }
     }
 
-    pub fn parse_top_level_statement(&mut self) -> Result<Node, ParseError> {
-        if self.accept(TokenKind::KwUse) {
-            let mut path = PathBuf::new();
-            self.expect(TokenKind::Identifier, "expected identifier after `use`");
-            path.push(self.prev.text.clone());
-            while self.accept(TokenKind::OpDiv) {
-                self.expect(
-                    TokenKind::Identifier,
-                    "expected identifier after `/` in `use`",
-                );
-                path.push(self.prev.text.clone());
+    pub fn parse_rec(&mut self, tags: Vec<RecTags>) -> Node {
+        self.expect(TokenKind::Identifier, "expected identifier after `rec`");
+        let id = self.prev.text.clone();
+        let mut fields: HashMap<String, Node> = HashMap::new();
+
+        self.expect(
+            TokenKind::OpenParen,
+            "expected open parenthesis after record name",
+        );
+        while self.accept(TokenKind::Identifier) {
+            let param_id = self.prev.text.clone();
+            self.expect(
+                TokenKind::Colon,
+                "expected colon in between field ID and its type",
+            );
+            let typ = self.parse_type();
+            fields.insert(param_id, typ);
+            if !self.accept(TokenKind::Comma) {
+                // if there is no comma then we must be on the last field
+                break;
             }
-            return Ok(Node::TopUse(path));
+        }
+        self.expect(
+            TokenKind::CloseParen,
+            "expected closed parenthesis after record field list",
+        );
+
+        Node::TopRec { tags, id, fields }
+    }
+
+    fn parse_def(&mut self, tags: Vec<DefTags>) -> Node {
+        self.expect(TokenKind::Identifier, "expected identifier after `def`");
+        let id = self.prev.text.clone();
+        self.expect(TokenKind::Eq, "expected `=` after `def <identifier>`");
+        let typ = self.parse_type();
+        Node::TopDef {
+            tags,
+            id,
+            typ: Box::new(typ),
+        }
+    }
+
+    fn parse_mac(&mut self, tags: Vec<MacTags>) -> Node {
+        unimplemented!()
+    }
+
+    fn parse_tag(&mut self, tags: Vec<TagTags>) -> Node {
+        self.expect(TokenKind::Identifier, "expected identifier after `tag`");
+        let id = self.prev.text.clone();
+        let mut entries: HashSet<String> = HashSet::new();
+
+        self.expect(
+            TokenKind::OpenParen,
+            "expected open parenthesis after tag name",
+        );
+        while self.accept(TokenKind::Identifier) {
+            let entry_id = self.prev.text.clone();
+            entries.insert(entry_id);
+            self.accept(TokenKind::Comma); // commas are optional for enums
+        }
+        self.expect(
+            TokenKind::CloseParen,
+            "expected closed parenthesis after tag entry list",
+        );
+
+        Node::TopTag { tags, id, entries }
+    }
+
+    fn parse_tagrec(&mut self, tags: Vec<TagRecTags>) -> Node {
+        self.expect(TokenKind::Identifier, "expected identifier after `tag`");
+        let id = self.prev.text.clone();
+        let mut entries: HashMap<String, HashMap<String, Node>> = HashMap::new();
+
+        self.expect(
+            TokenKind::OpenParen,
+            "expected open parenthesis after tag name",
+        );
+        while self.accept(TokenKind::Identifier) {
+            let entry_id = self.prev.text.clone();
+            let mut entry_entries: HashMap<String, Node> = HashMap::new();
+
+            // tagrec entry parameters
+            if self.accept(TokenKind::OpenParen) {
+                while self.accept(TokenKind::Identifier) {
+                    let param_id = self.prev.text.clone();
+                    self.expect(
+                        TokenKind::Colon,
+                        "expected colon in between field ID and its type",
+                    );
+                    let typ = self.parse_type();
+                    entry_entries.insert(param_id, typ);
+                    if !self.accept(TokenKind::Comma) {
+                        // if there is no comma then we must be on the last field
+                        break;
+                    }
+                }
+                self.expect(
+                    TokenKind::CloseParen,
+                    "expected closed parenthesis after `tag rec` entry list",
+                )
+            }
+
+            entries.insert(entry_id, entry_entries);
+            self.accept(TokenKind::Comma); // commas are optional for enums
+        }
+        self.expect(
+            TokenKind::CloseParen,
+            "expected closed parenthesis after tag entry list",
+        );
+
+        Node::TopTagRec { tags, id, entries }
+    }
+
+    pub fn parse_top_level_statement(&mut self) -> Node {
+        if self.accept(TokenKind::KwUse) {
+            return self.parse_use();
         } else if self.accept(TokenKind::Hashtag) {
-            let hashtags = self.parse_hashtags::<FunTags>();
+            let tags = self.parse_hashtags();
             if self.accept(TokenKind::KwFun) {
-                return self.parse_fun(hashtags);
+                return self.parse_fun(Parser::cast_hashtags::<FunTags>(tags));
+            } else if self.accept(TokenKind::KwRec) {
+                return self.parse_rec(Parser::cast_hashtags::<RecTags>(tags));
+            } else if self.accept(TokenKind::KwRec) {
+                return self.parse_rec(Parser::cast_hashtags::<RecTags>(tags));
+            } else if self.accept(TokenKind::KwDef) {
+                return self.parse_def(Parser::cast_hashtags::<DefTags>(tags));
+            } else if self.accept(TokenKind::KwMac) {
+                return self.parse_mac(Parser::cast_hashtags::<MacTags>(tags));
+            } else if self.accept(TokenKind::KwTag) {
+                if self.accept(TokenKind::KwRec) {
+                    return self.parse_tagrec(Parser::cast_hashtags::<TagRecTags>(tags));
+                } else {
+                    return self.parse_tag(Parser::cast_hashtags::<TagTags>(tags));
+                }
             }
         } else if self.accept(TokenKind::KwFun) {
             return self.parse_fun(vec![]);
+        } else if self.accept(TokenKind::KwRec) {
+            return self.parse_rec(vec![]);
+        } else if self.accept(TokenKind::KwDef) {
+            return self.parse_def(vec![]);
+        } else if self.accept(TokenKind::KwMac) {
+            return self.parse_mac(vec![]);
+        } else if self.accept(TokenKind::KwTag) {
+            if self.accept(TokenKind::KwRec) {
+                return self.parse_tagrec(vec![]);
+            } else {
+                return self.parse_tag(vec![]);
+            }
         }
-        return Err(ParseError::UnexpectedToken(self.token.clone()));
+        self.throw_exception(ParseError::UnexpectedToken(self.token.clone()), None);
     }
 
-    pub fn parse(&mut self) -> Result<Node, ParseError> {
+    // #endregion: Top level statements
+
+    pub fn parse(&mut self) -> Node {
         let mut nodes: Vec<Node> = vec![];
         self.advance();
         while !self.done {
-            nodes.push(self.parse_top_level_statement()?);
+            nodes.push(self.parse_top_level_statement());
         }
-        Ok(Node::Program(nodes))
-    }
-}
-
-pub fn make_parser<'a>(lexer: lexer::Lexer<'a>) -> Parser<'a> {
-    Parser {
-        lexer,
-        token: Default::default(),
-        prev: Default::default(),
-        done: false,
+        Node::Program(nodes)
     }
 }

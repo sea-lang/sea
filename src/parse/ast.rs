@@ -24,14 +24,14 @@ pub enum Node {
     TopFun {
         tags: Vec<hashtags::FunTags>,
         id: String,
-        params: HashMap<String, Node>,
+        params: Vec<(String, Node)>,
         rets: Box<Node>,
         expr: Box<Node>,
     },
     TopRec {
         tags: Vec<hashtags::RecTags>,
         id: String,
-        fields: HashMap<String, Node>,
+        fields: Vec<(String, Node)>,
     },
     TopDef {
         tags: Vec<hashtags::DefTags>,
@@ -48,12 +48,12 @@ pub enum Node {
     TopTag {
         tags: Vec<hashtags::TagTags>,
         id: String,
-        entries: HashSet<String>,
+        entries: Vec<String>,
     },
     TopTagRec {
         tags: Vec<hashtags::TagRecTags>,
         id: String,
-        entries: HashMap<String, HashMap<String, Node>>,
+        entries: Vec<(String, Vec<(String, Node)>)>,
     },
     // Statements
     StatRet(Option<Box<Node>>),
@@ -89,6 +89,7 @@ pub enum Node {
     ExprGroup(Box<Node>),
     ExprNumber(String),
     ExprString(String),
+    ExprCString(String),
     ExprChar(char),
     ExprTrue,
     ExprFalse,
@@ -118,10 +119,12 @@ pub enum Node {
     ExprList(Vec<Node>),
     ExprVar {
         name: String,
+        typ: Option<Box<Node>>,
         value: Box<Node>,
     },
     ExprLet {
         name: String,
+        typ: Option<Box<Node>>,
         value: Box<Node>,
     },
 }

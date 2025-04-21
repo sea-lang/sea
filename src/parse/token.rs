@@ -90,5 +90,6 @@ pub enum TokenKind {
     Binary,
     Identifier,
     String,
+    CString,
     Character,
 }

@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::LazyLock};
 
 use super::token::TokenKind;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OperatorKind {
     Ref,
     Deref,
@@ -54,7 +54,7 @@ pub const OPERATORS: LazyLock<HashMap<TokenKind, Operator>> = LazyLock::new(|| {
     HashMap::from([
         // . as
         TokenKind::OpDot.li(1), // expr.expr
-        TokenKind::KwAs.ri(1),  // expr as expr
+        TokenKind::KwAs.ri(1),  // expr as type
         // + -
         TokenKind::OpAdd.ri(2), // expr + expr
         TokenKind::OpSub.ri(2), // expr - expr

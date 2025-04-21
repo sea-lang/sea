@@ -1,0 +1,20 @@
+raw [
+	#include <stdlib.h>
+	#include <stdio.h>
+]
+
+rec Box(val: ^int)
+
+fun to_heap(it: int): ^int {
+	var p: ^int = malloc(sizeof(it)) as ^int
+	p ^= it
+	ret p
+}
+
+fun echo(it: int): ^int -> ret to_heap(it)
+
+fun box(it: int): Box -> ret new Box(echo(it))
+
+fun main(argc: int, argv: ^char[]): int {
+	printf(c"%d\n", (box(42).val)^)
+}

@@ -292,6 +292,7 @@ impl Node {
             }
             Node::ExprNumber(value) => println!("{EXPR}number: '{TEXT}{value}{EXPR}'"),
             Node::ExprString(value) => println!("{EXPR}string: '{TEXT}{value}{EXPR}'"),
+            Node::ExprCString(value) => println!("{EXPR}cstring: c'{TEXT}{value}{EXPR}'"),
             Node::ExprChar(value) => println!("{EXPR}char: '{TEXT}{value}{EXPR}'"),
             Node::ExprTrue => println!("{EXPR}true"),
             Node::ExprFalse => println!("{EXPR}false"),
@@ -344,14 +345,32 @@ impl Node {
                     node.pretty_print_inner(indent + 1, false);
                 }
             }
-            Node::ExprVar { name, value } => {
-                println!("{EXPR}var '{TEXT}{name}{EXPR}' =");
-                value.pretty_print_inner(indent + 1, true);
-            }
-            Node::ExprLet { name, value } => {
-                println!("{EXPR}let '{TEXT}{name}{EXPR}' =");
-                value.pretty_print_inner(indent + 1, true);
-            }
+            Node::ExprVar { name, typ, value } => match typ {
+                Some(it) => {
+                    println!("{EXPR}var '{TEXT}{name}{EXPR}':");
+                    print!("{EXPR}{spacing}  type: ");
+                    it.pretty_print_inner(indent + 1, false);
+                    print!("{EXPR}{spacing}  value = ");
+                    value.pretty_print_inner(indent + 1, false);
+                }
+                None => {
+                    println!("{EXPR}var '{TEXT}{name}{EXPR}' =");
+                    value.pretty_print_inner(indent + 1, true);
+                }
+            },
+            Node::ExprLet { name, typ, value } => match typ {
+                Some(it) => {
+                    println!("{EXPR}let '{TEXT}{name}{EXPR}':");
+                    print!("{EXPR}{spacing}  type: ");
+                    it.pretty_print_inner(indent + 1, false);
+                    print!("{EXPR}{spacing}  value = ");
+                    value.pretty_print_inner(indent + 1, false);
+                }
+                None => {
+                    println!("{EXPR}let '{TEXT}{name}{EXPR}' =");
+                    value.pretty_print_inner(indent + 1, true);
+                }
+            },
         }
 
         print!("{RESET}");

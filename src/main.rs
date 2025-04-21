@@ -1,7 +1,14 @@
-use std::fs;
+use std::{
+    fs::{self, File},
+    path::PathBuf,
+};
 
+use backend::{backend::Backend, backends::c::CBackend};
+use compile::{compiler::Compiler, symbol::SymbolTable};
 use parse::{lexer::make_lexer, parser::Parser};
 
+pub mod backend;
+pub mod compile;
 pub mod error;
 pub mod hashtags;
 pub mod parse;
@@ -39,10 +46,30 @@ mod flags {
 }
 
 fn compile(flags: flags::Compile) {
-    let code = fs::read_to_string(flags.input.clone()).unwrap();
+    let path = || flags.input.clone();
+    let c_output_path = PathBuf::from(".sea/build/output.c");
 
-    let mut parser = Parser::make_parser(make_lexer(flags.input.clone(), &code));
-    parser.parse().pretty_print();
+    // Load the source code
+    let code = fs::read_to_string(path()).unwrap();
+
+    // Parse
+    let mut parser = Parser::make_parser(make_lexer(path(), &code));
+    let program = parser.parse();
+
+    // Print AST
+    program.pretty_print();
+
+    // Make compiler and backend
+    let compiler = Compiler {
+        output_path: path(),
+        output_file: File::create(c_output_path).unwrap(),
+        scope: 0,
+        symbols: SymbolTable {},
+    };
+    let mut backend = CBackend { compiler };
+
+    // Write output C code
+    backend.write(program);
 }
 
 fn sandbox(_flags: flags::Sandbox) {

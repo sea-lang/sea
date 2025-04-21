@@ -102,14 +102,22 @@ impl PolishNodeTree {
                 "list".to_string(),
                 PolishNodeTree::from_node_vec(nodes).unwrap(),
             ),
-            Node::ExprVar { name, value } => PolishNodeTree::Branch(
+            Node::ExprVar {
+                name,
+                typ: _typ,
+                value,
+            } => PolishNodeTree::Branch(
                 "var".to_string(),
                 vec![
                     PolishNodeTree::Leaf(name),
                     PolishNodeTree::from_node(value.as_ref().clone()).unwrap(),
                 ],
             ),
-            Node::ExprLet { name, value } => PolishNodeTree::Branch(
+            Node::ExprLet {
+                name,
+                typ: _typ,
+                value,
+            } => PolishNodeTree::Branch(
                 "let".to_string(),
                 vec![
                     PolishNodeTree::Leaf(name),

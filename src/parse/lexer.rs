@@ -147,6 +147,20 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    fn lex_c_string(&mut self) -> Result<Token, ParseError> {
+        self.start += 1;
+        self.advance(); // skip the `c`
+        self.buffer.remove(0); // remove the `c` from the buffer
+
+        match self.lex_string() {
+            Ok(it) => Ok(Token {
+                kind: TokenKind::CString,
+                ..it
+            }),
+            Err(it) => Err(it),
+        }
+    }
+
     fn lex_number(&mut self) -> Result<Token, ParseError> {
         let mut is_float = false;
 
@@ -375,6 +389,7 @@ impl<'a> Lexer<'a> {
                 }
                 // Literals
                 '"' => Some(self.lex_string()),
+                'c' if self.peek() == '"' => Some(self.lex_c_string()),
                 cur if is_valid_id_start(cur) => Some(self.lex_id_or_keyword()),
                 '0'..='9' => Some(self.lex_number()),
                 _ => Some(Err(ParseError::UnexpectedCharacter(cur))),

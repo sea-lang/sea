@@ -318,6 +318,7 @@ impl<'a> Parser<'a> {
             _ if self.accept(TokenKind::Hex) => Node::ExprNumber(self.prev.text.clone()),
             _ if self.accept(TokenKind::Binary) => Node::ExprNumber(self.prev.text.clone()),
             _ if self.accept(TokenKind::String) => Node::ExprString(self.prev.text.clone()),
+            _ if self.accept(TokenKind::CString) => Node::ExprCString(self.prev.text.clone()),
             _ if self.accept(TokenKind::Character) => {
                 Node::ExprChar(self.prev.text.clone().chars().nth(1).unwrap())
             }
@@ -444,7 +445,11 @@ impl<'a> Parser<'a> {
         while lookahead.kind.is_operator() && lookahead_op.prec >= min_prec {
             let op = lookahead_op;
             self.advance();
-            let mut right_atom = self.parse_atom();
+            let mut right_atom = if op.kind == OperatorKind::As {
+                self.parse_type()
+            } else {
+                self.parse_atom()
+            };
 
             lookahead = self.token.clone();
             if lookahead.kind.is_operator() {
@@ -454,10 +459,14 @@ impl<'a> Parser<'a> {
                         || (lookahead_op.assoc == Associativity::Right
                             && lookahead_op.prec == op.prec))
                 {
-                    right_atom = self.parse_expression_inner(
-                        right_atom,
-                        op.prec + if lookahead_op.prec > op.prec { 1 } else { 0 },
-                    );
+                    if lookahead_op.kind == OperatorKind::As {
+                        right_atom = self.parse_type();
+                    } else {
+                        right_atom = self.parse_expression_inner(
+                            right_atom,
+                            op.prec + if lookahead_op.prec > op.prec { 1 } else { 0 },
+                        );
+                    }
                     lookahead = self.token.clone();
                     if lookahead.kind.is_operator() {
                         lookahead_op = lookahead.kind.get_operator().expect("expected operator");
@@ -476,20 +485,31 @@ impl<'a> Parser<'a> {
         if self.accept(TokenKind::KwVar) || self.accept(TokenKind::KwLet) {
             let text = self.prev.text.clone();
             let is_mutable = self.prev.kind == TokenKind::KwVar;
+
             self.expect(
                 TokenKind::Identifier,
                 format!("expected identifier after {}", text).as_str(),
             );
+
             let name = self.prev.text.clone();
+
+            let typ: Option<Box<Node>> = if self.accept(TokenKind::Colon) {
+                Some(Box::new(self.parse_type()))
+            } else {
+                None
+            };
+
             self.expect(
                 TokenKind::Eq,
                 format!("expected `=` after `{} <id>`", text).as_str(),
             );
+
             let value = Box::new(self.parse_expression());
+
             if is_mutable {
-                return Node::ExprVar { name, value };
+                return Node::ExprVar { name, typ, value };
             } else {
-                return Node::ExprLet { name, value };
+                return Node::ExprLet { name, typ, value };
             }
         } else {
             let left = self.parse_atom();
@@ -655,7 +675,7 @@ impl<'a> Parser<'a> {
             _ if self.accept(TokenKind::KwRaw) => self.parse_raw(),
             _ if self.accept(TokenKind::At) => self.parse_mac_invoke(),
             // if nothing works, we'll try to parse an expression, and if *that* doesn't work, then we have a syntax error
-            _ => self.parse_expression(),
+            _ => Node::StatExpr(Box::new(self.parse_expression())),
         }
     }
 
@@ -680,7 +700,7 @@ impl<'a> Parser<'a> {
     pub fn parse_fun(&mut self, tags: Vec<FunTags>) -> Node {
         self.expect(TokenKind::Identifier, "expected identifier after `fun`");
         let id = self.prev.text.clone();
-        let mut params: HashMap<String, Node> = HashMap::new();
+        let mut params: Vec<(String, Node)> = vec![];
 
         self.expect(
             TokenKind::OpenParen,
@@ -693,7 +713,7 @@ impl<'a> Parser<'a> {
                 "expected colon in between parameter ID and its type",
             );
             let typ = self.parse_type();
-            params.insert(param_id, typ);
+            params.push((param_id, typ));
             if !self.accept(TokenKind::Comma) {
                 // if there is no comma then we must be on the last parameter
                 break;
@@ -724,7 +744,7 @@ impl<'a> Parser<'a> {
     pub fn parse_rec(&mut self, tags: Vec<RecTags>) -> Node {
         self.expect(TokenKind::Identifier, "expected identifier after `rec`");
         let id = self.prev.text.clone();
-        let mut fields: HashMap<String, Node> = HashMap::new();
+        let mut fields: Vec<(String, Node)> = vec![];
 
         self.expect(
             TokenKind::OpenParen,
@@ -737,7 +757,7 @@ impl<'a> Parser<'a> {
                 "expected colon in between field ID and its type",
             );
             let typ = self.parse_type();
-            fields.insert(param_id, typ);
+            fields.push((param_id, typ));
             if !self.accept(TokenKind::Comma) {
                 // if there is no comma then we must be on the last field
                 break;
@@ -807,7 +827,7 @@ impl<'a> Parser<'a> {
     fn parse_tag(&mut self, tags: Vec<TagTags>) -> Node {
         self.expect(TokenKind::Identifier, "expected identifier after `tag`");
         let id = self.prev.text.clone();
-        let mut entries: HashSet<String> = HashSet::new();
+        let mut entries: Vec<String> = vec![];
 
         self.expect(
             TokenKind::OpenParen,
@@ -815,7 +835,7 @@ impl<'a> Parser<'a> {
         );
         while self.accept(TokenKind::Identifier) {
             let entry_id = self.prev.text.clone();
-            entries.insert(entry_id);
+            entries.push(entry_id);
             self.accept(TokenKind::Comma); // commas are optional for enums
         }
         self.expect(
@@ -829,7 +849,7 @@ impl<'a> Parser<'a> {
     fn parse_tagrec(&mut self, tags: Vec<TagRecTags>) -> Node {
         self.expect(TokenKind::Identifier, "expected identifier after `tag`");
         let id = self.prev.text.clone();
-        let mut entries: HashMap<String, HashMap<String, Node>> = HashMap::new();
+        let mut entries: Vec<(String, Vec<(String, Node)>)> = vec![];
 
         self.expect(
             TokenKind::OpenParen,
@@ -837,7 +857,7 @@ impl<'a> Parser<'a> {
         );
         while self.accept(TokenKind::Identifier) {
             let entry_id = self.prev.text.clone();
-            let mut entry_entries: HashMap<String, Node> = HashMap::new();
+            let mut entry_entries: Vec<(String, Node)> = vec![];
 
             // tagrec entry parameters
             if self.accept(TokenKind::OpenParen) {
@@ -848,7 +868,7 @@ impl<'a> Parser<'a> {
                         "expected colon in between field ID and its type",
                     );
                     let typ = self.parse_type();
-                    entry_entries.insert(param_id, typ);
+                    entry_entries.push((param_id, typ));
                     if !self.accept(TokenKind::Comma) {
                         // if there is no comma then we must be on the last field
                         break;
@@ -860,7 +880,7 @@ impl<'a> Parser<'a> {
                 )
             }
 
-            entries.insert(entry_id, entry_entries);
+            entries.push((entry_id, entry_entries));
             self.accept(TokenKind::Comma); // commas are optional for enums
         }
         self.expect(

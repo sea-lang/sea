@@ -5,4 +5,5 @@ edition = "2021"
 
 [dependencies]
 strum = { version = "0.27.1", features = ["derive"] }
+text_io = "0.1.13"
 thiserror = "2.0.12"

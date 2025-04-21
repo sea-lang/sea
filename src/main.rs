@@ -1,12 +1,17 @@
 use std::{fs, path::PathBuf, str::FromStr};
 
-use parse::{lexer::make_lexer, parser::Parser};
+use parse::{lexer::make_lexer, parser::Parser, polish_notation::PolishNodeTree};
+use sandbox::Sandbox;
 
 pub mod error;
 pub mod hashtags;
 pub mod parse;
+pub mod sandbox;
 
 fn main() {
+    // let mut sandbox = Sandbox::new();
+    // sandbox.start();
+
     let path = PathBuf::from_str("test.sea").unwrap();
     let code = fs::read_to_string(&path).unwrap();
 
@@ -18,7 +23,7 @@ fn main() {
     let mut parser = Parser::make_parser(make_lexer(path, &code));
     parser.parse().pretty_print();
 
-    // let expr = "(1 % 2 == 0) as u8 * 2 + 3".to_string();
+    // let expr = "thing(1 + 2, -3 + 4)^.2".to_string();
     // println!("Expression: {expr}");
     // let mut expr_parser = Parser::make_parser(make_lexer(PathBuf::new(), &expr));
     // expr_parser.advance();

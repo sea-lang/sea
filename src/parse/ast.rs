@@ -42,7 +42,7 @@ pub enum Node {
         tags: Vec<hashtags::MacTags>,
         id: String,
         params: Vec<String>,
-        returns: Option<Box<Node>>,
+        rets: Option<Box<Node>>,
         expands_to: String,
     },
     TopTag {
@@ -112,7 +112,7 @@ pub enum Node {
         params: Vec<Node>,
     },
     ExprMacInvoke {
-        left: Box<Node>,
+        name: String,
         params: Vec<Node>,
     },
     ExprList(Vec<Node>),

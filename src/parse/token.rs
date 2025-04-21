@@ -20,6 +20,7 @@ impl fmt::Display for Token {
 pub enum TokenKind {
     #[default]
     None,
+    LiteralText,
     // Common/misc symbols
     Comma,
     Colon,

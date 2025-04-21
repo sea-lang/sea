@@ -1,0 +1,23 @@
+/*
+ * This file contains a comprehensive test of Sea's syntax
+ * I do not care if the type/symbol/whatever checkers complain on this file, it
+ * is solely for testing the *syntax* of Sea.
+**/
+
+// #region: Functions
+
+#static
+fun f_static(): int -> ret 0
+
+#(static, inline)
+fun f_static_inline() -> println("Bozo")
+
+fun f(): int {
+	println("Bozo")
+	ret 1
+}
+
+fun f_complex(it: int, left: fun(arg: int): int, right: fun(func: fun(arg): int): int): int {
+	ret right(left(it))
+}
+

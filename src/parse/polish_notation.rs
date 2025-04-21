@@ -51,6 +51,7 @@ impl PolishNodeTree {
                         OperatorKind::Not => "not",
                         OperatorKind::Inc => "inc",
                         OperatorKind::Dec => "dec",
+                        OperatorKind::Negate => "negate",
                         _ => return None, // error
                     }
                     .to_string(),
@@ -93,12 +94,8 @@ impl PolishNodeTree {
                 .to_string(),
                 PolishNodeTree::from_node_vec(params).unwrap(),
             ),
-            Node::ExprMacInvoke { left, params } => PolishNodeTree::Branch(
-                format!(
-                    "macinvoke={}",
-                    PolishNodeTree::from_node(left.as_ref().clone()).unwrap()
-                )
-                .to_string(),
+            Node::ExprMacInvoke { name, params } => PolishNodeTree::Branch(
+                format!("macinvoke={}", name).to_string(),
                 PolishNodeTree::from_node_vec(params).unwrap(),
             ),
             Node::ExprList(nodes) => PolishNodeTree::Branch(

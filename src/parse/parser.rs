@@ -15,6 +15,7 @@ use super::{
     ast::Node,
     error::ParseError,
     lexer,
+    operator::OperatorKind,
     token::{Token, TokenKind},
 };
 
@@ -35,21 +36,21 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn throw_exception(&self, error: ParseError, help: Option<&str>) -> ! {
-        let line = self.prev.line;
+    fn throw_exception_at(&self, error: ParseError, help: Option<&str>, token: Token) -> ! {
+        let line = token.line;
 
         println!(
             "\x1b[31;1m{}:{}:{}:\x1b[0;1m {error}\x1b[0m",
             self.lexer.file.to_str().unwrap(),
-            self.token.line,
-            self.token.column
+            token.line,
+            token.column
         );
 
         let lines = self.lexer.get_lines(line);
         if lines.len() == 0 {
             println!("No line information available :(");
             println!("This error shouldn't happen, please report it.");
-            println!("Debug: line={line}, token={}", self.token.clone())
+            println!("Debug: token={}", token.clone())
         } else {
             // Determine the longest integer by digit so that we can make our error prettier.
             let longest_length = lines.iter().map(|it| it.0).max().unwrap().to_string().len();
@@ -60,13 +61,13 @@ impl<'a> Parser<'a> {
                 let sanitized = line_str.replace('\t', "    ");
 
                 println!("\x1b[1;34m{line_index:>longest_length$} | \x1b[0m{sanitized}");
-                if line_index == self.token.line {
+                if line_index == token.line {
                     // Determine the column that the token is on to highlight it
                     println!(
                         "\x1b[1;34m{} | {}\x1b[31m{}\x1b[0m",
                         " ".repeat(longest_length),
-                        " ".repeat((self.token.column - indents) + (indents * 4)),
-                        "~".repeat(self.token.len)
+                        " ".repeat(token.column - 1 - indents + (indents * 4)),
+                        "~".repeat(token.len)
                     );
                 }
             }
@@ -77,6 +78,14 @@ impl<'a> Parser<'a> {
         }
 
         exit(1)
+    }
+
+    fn throw_exception(&self, error: ParseError, help: Option<&str>) -> ! {
+        self.throw_exception_at(error, help, self.token.clone())
+    }
+
+    fn throw_exception_at_prev(&self, error: ParseError, help: Option<&str>) -> ! {
+        self.throw_exception_at(error, help, self.prev.clone())
     }
 
     // #region: Token Utilities
@@ -117,7 +126,7 @@ impl<'a> Parser<'a> {
 
     // #endregion: Token Utilities
 
-    // #region: Misc Parsing Utilities
+    // #region: Misc Parsing
 
     pub fn parse_type(&mut self) -> Node {
         let mut pointers = 0;
@@ -230,7 +239,39 @@ impl<'a> Parser<'a> {
         casted
     }
 
-    // #endregion: Misc Parsing Utilities
+    pub fn parse_mac_invoke(&mut self) -> Node {
+        self.expect(
+            TokenKind::Identifier,
+            "expected identifier after `@` to invoke a macro",
+        );
+        let name = self.prev.text.clone();
+        self.expect(
+            TokenKind::OpenParen,
+            "expected open parenthesis, macro syntax: `'@' <id> '(' <params> ')'`",
+        );
+        if self.accept(TokenKind::CloseParen) {
+            Node::ExprMacInvoke {
+                name,
+                params: vec![],
+            }
+        } else {
+            let mut params: Vec<Node> = vec![];
+            loop {
+                params.push(self.parse_expression());
+
+                if !self.accept(TokenKind::Comma) {
+                    break;
+                }
+            }
+            self.expect(
+                TokenKind::CloseParen,
+                "expected closed parenthesis, macro syntax: `'@' <id> '(' <params> ')'`",
+            );
+            Node::ExprMacInvoke { name, params }
+        }
+    }
+
+    // #endregion: Misc Parsing
 
     // #region: Expressions
 
@@ -252,14 +293,16 @@ impl<'a> Parser<'a> {
                 }
             }
             Node::ExprBlock(exprs)
-        } else {
+        } else if self.prev.kind == TokenKind::Arrow {
             Node::ExprBlock(vec![self.parse_statement()])
+        } else {
+            self.throw_exception_at_prev(ParseError::UnexpectedToken(self.prev.clone()), None)
         }
     }
 
     // Parses *non operator* expressions.
     pub fn parse_atom(&mut self) -> Node {
-        match *self {
+        let mut atom = match *self {
             _ if self.accept(TokenKind::OpenParen) => {
                 let node = Node::ExprGroup(Box::new(self.parse_expression()));
                 self.expect(
@@ -281,6 +324,30 @@ impl<'a> Parser<'a> {
             _ if self.accept(TokenKind::True) => Node::ExprTrue,
             _ if self.accept(TokenKind::False) => Node::ExprFalse,
             _ if self.accept(TokenKind::Identifier) => Node::ExprIdentifier(self.prev.text.clone()),
+
+            // List
+            _ if self.accept(TokenKind::OpenBracket) => {
+                if self.accept(TokenKind::CloseBracket) {
+                    Node::ExprList(vec![])
+                } else {
+                    let mut nodes: Vec<Node> = vec![];
+
+                    loop {
+                        nodes.push(self.parse_expression());
+
+                        if !self.accept(TokenKind::Comma) {
+                            break;
+                        }
+                    }
+
+                    self.expect(
+                        TokenKind::CloseBracket,
+                        "expected closed bracket (`]`) to end list expression.",
+                    );
+
+                    Node::ExprList(nodes)
+                }
+            }
 
             // Blocks
             _ if self.accept(TokenKind::OpenCurly) => self.parse_block(false),
@@ -312,8 +379,60 @@ impl<'a> Parser<'a> {
                 Node::ExprNew { id, params }
             }
 
+            // Prefix unary operators
+            _ if self.accept(TokenKind::OpNot) => Node::ExprUnaryOperator {
+                kind: OperatorKind::Not,
+                value: Box::new(self.parse_atom()),
+            },
+            _ if self.accept(TokenKind::OpSub) => Node::ExprUnaryOperator {
+                kind: OperatorKind::Negate,
+                value: Box::new(self.parse_atom()),
+            },
+            _ if self.accept(TokenKind::KwRef) => Node::ExprUnaryOperator {
+                kind: OperatorKind::Ref,
+                value: Box::new(self.parse_atom()),
+            },
+
             _ => self.throw_exception(ParseError::ExpectedExpression(self.token.clone()), None),
+        };
+
+        // Postfix operators
+        loop {
+            if self.accept(TokenKind::Pointer) {
+                atom = Node::ExprUnaryOperator {
+                    kind: OperatorKind::Deref,
+                    value: Box::new(atom),
+                }
+            } else if self.accept(TokenKind::OpenParen) {
+                if self.accept(TokenKind::CloseParen) {
+                    atom = Node::ExprInvoke {
+                        left: Box::new(atom),
+                        params: vec![],
+                    }
+                } else {
+                    let mut params: Vec<Node> = vec![];
+                    loop {
+                        params.push(self.parse_expression());
+
+                        if !self.accept(TokenKind::Comma) {
+                            break;
+                        }
+                    }
+                    self.expect(
+                        TokenKind::CloseParen,
+                        "expected closed parenthesis to end parameter list",
+                    );
+                    atom = Node::ExprInvoke {
+                        left: Box::new(atom),
+                        params,
+                    }
+                }
+            } else {
+                break;
+            }
         }
+
+        atom
     }
 
     pub fn parse_expression_inner(&mut self, left_node: Node, min_prec: u8) -> Node {
@@ -321,10 +440,12 @@ impl<'a> Parser<'a> {
         let mut left_atom = left_node.clone();
         let mut lookahead = self.token.clone();
         let mut lookahead_op = lookahead.kind.get_operator().expect("expected operator");
+
         while lookahead.kind.is_operator() && lookahead_op.prec >= min_prec {
             let op = lookahead_op;
             self.advance();
             let mut right_atom = self.parse_atom();
+
             lookahead = self.token.clone();
             if lookahead.kind.is_operator() {
                 lookahead_op = lookahead.kind.get_operator().expect("expected operator");
@@ -345,17 +466,38 @@ impl<'a> Parser<'a> {
                     }
                 }
             }
+
             left_atom = Node::join(op.kind, left_atom, right_atom);
         }
         left_atom
     }
 
     pub fn parse_expression(&mut self) -> Node {
-        let left = self.parse_atom();
-        if self.token.kind.is_operator() {
-            self.parse_expression_inner(left, 0)
+        if self.accept(TokenKind::KwVar) || self.accept(TokenKind::KwLet) {
+            let text = self.prev.text.clone();
+            let is_mutable = self.prev.kind == TokenKind::KwVar;
+            self.expect(
+                TokenKind::Identifier,
+                format!("expected identifier after {}", text).as_str(),
+            );
+            let name = self.prev.text.clone();
+            self.expect(
+                TokenKind::Eq,
+                format!("expected `=` after `{} <id>`", text).as_str(),
+            );
+            let value = Box::new(self.parse_expression());
+            if is_mutable {
+                return Node::ExprVar { name, value };
+            } else {
+                return Node::ExprLet { name, value };
+            }
         } else {
-            left
+            let left = self.parse_atom();
+            if self.token.kind.is_operator() {
+                return self.parse_expression_inner(left, 0);
+            } else {
+                return left;
+            }
         }
     }
 
@@ -431,11 +573,87 @@ impl<'a> Parser<'a> {
         Node::StatSwitch { switch, cases }
     }
 
+    pub fn parse_for(&mut self) -> Node {
+        let leftmost_expr = self.parse_expression();
+
+        // c style for loop
+        if self.accept(TokenKind::Semicolon) {
+            let cond = self.parse_expression();
+            self.expect(TokenKind::Semicolon, "C-style for loops require three expressions, separated by semicolons (i.e, `for <expr> ; <expr> ; <expr>`)");
+            let inc = self.parse_expression();
+            let expr = self.parse_block(true);
+            Node::StatForCStyle {
+                def: Box::new(leftmost_expr),
+                cond: Box::new(cond),
+                inc: Box::new(inc),
+                expr: Box::new(expr),
+            }
+        }
+        // single expr for loop
+        else if self.accept(TokenKind::OpenCurly) || self.accept(TokenKind::Arrow) {
+            let expr = self.parse_block(false);
+            Node::StatForSingleExpr {
+                cond: Box::new(leftmost_expr),
+                expr: Box::new(expr),
+            }
+        }
+        // range for loop
+        else {
+            // we get this now because if we accept a KwIn then we wouldn't be able to access this ID afterwards
+            let potentially_id = self.prev.text.clone();
+
+            // for <id> in <expr> to <expr>
+            if self.accept(TokenKind::KwIn) {
+                let from = self.parse_expression();
+                self.expect(
+                    TokenKind::KwTo,
+                    "Range for loop syntax: `for (<id> in)? <expr> to <expr>`",
+                );
+                let to = self.parse_expression();
+                let expr = self.parse_block(true);
+                Node::StatForRange {
+                    var: Some(potentially_id),
+                    from: Box::new(from),
+                    to: Box::new(to),
+                    expr: Box::new(expr),
+                }
+            }
+            // for <expr> to <expr>
+            else {
+                self.expect(
+                    TokenKind::KwTo,
+                    "Range for loop syntax: `for (<id> in)? <expr> to <expr>`",
+                );
+                let to = self.parse_atom();
+                let expr = self.parse_block(true);
+                Node::StatForRange {
+                    var: None,
+                    from: Box::new(leftmost_expr),
+                    to: Box::new(to),
+                    expr: Box::new(expr),
+                }
+            }
+        }
+    }
+
+    fn parse_raw(&mut self) -> Node {
+        // We don't need to check for brackets here since the lexer does that for us
+        self.expect(
+            TokenKind::LiteralText,
+            "internal error, literal text within raw[] block not found.",
+        );
+        let text = self.prev.text.clone();
+        Node::Raw(text)
+    }
+
     pub fn parse_statement(&mut self) -> Node {
         match *self {
             _ if self.accept(TokenKind::KwRet) => self.parse_ret(),
             _ if self.accept(TokenKind::KwIf) => self.parse_if(),
             _ if self.accept(TokenKind::KwSwitch) => self.parse_switch(),
+            _ if self.accept(TokenKind::KwFor) => self.parse_for(),
+            _ if self.accept(TokenKind::KwRaw) => self.parse_raw(),
+            _ if self.accept(TokenKind::At) => self.parse_mac_invoke(),
             // if nothing works, we'll try to parse an expression, and if *that* doesn't work, then we have a syntax error
             _ => self.parse_expression(),
         }
@@ -546,7 +764,44 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_mac(&mut self, tags: Vec<MacTags>) -> Node {
-        unimplemented!()
+        self.expect(TokenKind::Identifier, "expected identifier after `mac`");
+        let id = self.prev.text.clone();
+        let mut params: Vec<String> = vec![];
+
+        self.expect(
+            TokenKind::OpenParen,
+            "expected open parenthesis after macro name",
+        );
+        while self.accept(TokenKind::Identifier) {
+            params.push(self.prev.text.clone());
+            if !self.accept(TokenKind::Comma) {
+                // if there is no comma then we must be on the last parameter
+                break;
+            }
+        }
+        self.expect(
+            TokenKind::CloseParen,
+            "expected closed parenthesis after macro parameter list",
+        );
+
+        let rets: Option<Box<Node>> = if self.accept(TokenKind::Colon) {
+            Some(Box::new(self.parse_type()))
+        } else {
+            None
+        };
+
+        self.expect(TokenKind::Eq, "expected `=` after macro return type (or after parameter list if return type is omitted)");
+
+        self.expect(TokenKind::String, "expected string after macro `=`");
+        let expands_to = self.prev.text.clone(); //TODO: Don't require a string here
+
+        Node::TopMac {
+            tags,
+            id,
+            params,
+            rets,
+            expands_to,
+        }
     }
 
     fn parse_tag(&mut self, tags: Vec<TagTags>) -> Node {
@@ -618,42 +873,50 @@ impl<'a> Parser<'a> {
 
     pub fn parse_top_level_statement(&mut self) -> Node {
         if self.accept(TokenKind::KwUse) {
-            return self.parse_use();
+            self.parse_use()
+        } else if self.accept(TokenKind::At) {
+            self.parse_mac_invoke()
         } else if self.accept(TokenKind::Hashtag) {
             let tags = self.parse_hashtags();
             if self.accept(TokenKind::KwFun) {
-                return self.parse_fun(Parser::cast_hashtags::<FunTags>(tags));
+                self.parse_fun(Parser::cast_hashtags::<FunTags>(tags))
             } else if self.accept(TokenKind::KwRec) {
-                return self.parse_rec(Parser::cast_hashtags::<RecTags>(tags));
-            } else if self.accept(TokenKind::KwRec) {
-                return self.parse_rec(Parser::cast_hashtags::<RecTags>(tags));
+                self.parse_rec(Parser::cast_hashtags::<RecTags>(tags))
             } else if self.accept(TokenKind::KwDef) {
-                return self.parse_def(Parser::cast_hashtags::<DefTags>(tags));
+                self.parse_def(Parser::cast_hashtags::<DefTags>(tags))
             } else if self.accept(TokenKind::KwMac) {
-                return self.parse_mac(Parser::cast_hashtags::<MacTags>(tags));
+                self.parse_mac(Parser::cast_hashtags::<MacTags>(tags))
             } else if self.accept(TokenKind::KwTag) {
                 if self.accept(TokenKind::KwRec) {
-                    return self.parse_tagrec(Parser::cast_hashtags::<TagRecTags>(tags));
+                    self.parse_tagrec(Parser::cast_hashtags::<TagRecTags>(tags))
                 } else {
-                    return self.parse_tag(Parser::cast_hashtags::<TagTags>(tags));
+                    self.parse_tag(Parser::cast_hashtags::<TagTags>(tags))
                 }
+            } else {
+                self.throw_exception(
+                    ParseError::UnexpectedToken(self.token.clone()),
+                    Some("hashtags can only be applied to [fun, rec, def, mac, tag, tag rec]"),
+                )
             }
         } else if self.accept(TokenKind::KwFun) {
-            return self.parse_fun(vec![]);
+            self.parse_fun(vec![])
         } else if self.accept(TokenKind::KwRec) {
-            return self.parse_rec(vec![]);
+            self.parse_rec(vec![])
         } else if self.accept(TokenKind::KwDef) {
-            return self.parse_def(vec![]);
+            self.parse_def(vec![])
         } else if self.accept(TokenKind::KwMac) {
-            return self.parse_mac(vec![]);
+            self.parse_mac(vec![])
         } else if self.accept(TokenKind::KwTag) {
             if self.accept(TokenKind::KwRec) {
-                return self.parse_tagrec(vec![]);
+                self.parse_tagrec(vec![])
             } else {
-                return self.parse_tag(vec![]);
+                self.parse_tag(vec![])
             }
+        } else if self.accept(TokenKind::KwRaw) {
+            self.parse_raw()
+        } else {
+            self.throw_exception(ParseError::UnexpectedToken(self.token.clone()), None);
         }
-        self.throw_exception(ParseError::UnexpectedToken(self.token.clone()), None);
     }
 
     // #endregion: Top level statements

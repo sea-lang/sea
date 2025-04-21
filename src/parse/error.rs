@@ -7,8 +7,14 @@ pub enum ParseError {
     #[error("unexpected character: `{0}`")]
     UnexpectedCharacter(char),
 
+    #[error("expected character `{0}` but got `{1}`")]
+    ExpectedCharacter(char, char),
+
     #[error("unterminated string")]
     UnterminatedString,
+
+    #[error("unterminated raw block")]
+    UnterminatedRawBlock,
 
     #[error("function pointer type missing parenthesis")]
     FunPtrMissingParenthesis,

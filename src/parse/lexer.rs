@@ -13,6 +13,7 @@ pub struct Lexer<'a> {
     pub column: usize,             // column of the current token
     pub pos: usize,                // index to the current character
     pub line: usize,               // current line that the lexer is on
+    pub prev_token: Token,         // the previous token emitted
     cur: char,                     // current character
     prev: char,                    // previous character
     buffer: String,                // all characters since `start`
@@ -61,13 +62,12 @@ impl<'a> Lexer<'a> {
     // Gets the provided line, along with the one before and the one after it. Used for error messages.
     pub fn get_lines(&self, line: usize) -> Vec<(usize, &str)> {
         let mut lines: Vec<(usize, &str)> = vec![];
-        let mut itr = self.source.lines().enumerate();
+        let itr = self.source.lines().enumerate();
 
-        if line > 1 {
-            itr.nth(line - 1);
-        }
+        let line = line.checked_sub(2).unwrap_or(0);
 
-        itr.take(3)
+        itr.skip(line)
+            .take(3)
             .for_each(|(index, str_)| lines.push((index + 1, str_)));
 
         lines
@@ -119,7 +119,7 @@ impl<'a> Lexer<'a> {
                 '\n' => {
                     self.skip_no_buffer();
                     self.line += 1;
-                    self.column = 0;
+                    self.column = 1;
                 }
                 ch if ch.is_whitespace() => self.skip(),
                 _ => return,
@@ -134,7 +134,7 @@ impl<'a> Lexer<'a> {
         while self.peek() != '"' && !self.is_done() {
             if self.cur == '\n' {
                 self.line += 1;
-                self.column = 0;
+                self.column = 1;
             }
             self.skip();
         }
@@ -182,6 +182,87 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    fn lex_raw_block(&mut self) -> Result<Token, ParseError> {
+        let mut depth = 1;
+
+        // Brackets may be unbalanced if they're used in strings, character
+        // literals, or comments in the raw C code, so we have to track those
+        // I'm willing to bet there's a better way to do this
+        let mut in_string = false;
+        let mut in_char = false;
+        let mut in_single_line_comment = false;
+        let mut in_multiline_comment = false;
+
+        // The only character in the buffer right now should be an opening brace
+        // (`[`) which we don't want, so we can clear that now
+        self.buffer.clear();
+
+        loop {
+            match self.peek() {
+                '"' if !in_single_line_comment
+                    && !in_multiline_comment
+                    && !in_char
+                    && self.cur != '\\' =>
+                {
+                    println!("in string = {}", !in_string);
+                    in_string = !in_string
+                }
+                '\'' if !in_single_line_comment
+                    && !in_multiline_comment
+                    && !in_string
+                    && self.cur != '\\' =>
+                {
+                    println!("in char = {}", !in_char);
+                    in_char = !in_char
+                }
+                '/' if !in_string && !in_char => {
+                    if self.cur == '/' && !in_multiline_comment {
+                        println!("entered single line comment");
+                        in_single_line_comment = true;
+                    } else if self.cur == '*' && !in_single_line_comment {
+                        println!("ended multiline comment");
+                        in_multiline_comment = false;
+                    }
+                }
+                '*' if self.cur == '/' && !in_string && !in_char && !in_single_line_comment => {
+                    println!("entered multiline comment");
+                    in_multiline_comment = true;
+                }
+                '[' if !in_single_line_comment
+                    && !in_multiline_comment
+                    && !in_string
+                    && !in_char =>
+                {
+                    println!("depth + 1");
+                    depth += 1
+                }
+                ']' if !in_single_line_comment
+                    && !in_multiline_comment
+                    && !in_string
+                    && !in_char =>
+                {
+                    println!("depth - 1");
+                    depth -= 1;
+                    if depth == 0 {
+                        self.skip_no_buffer(); // skip the closing `]`
+                        break;
+                    }
+                }
+                '\n' => {
+                    self.line += 1;
+                    if in_single_line_comment {
+                        in_single_line_comment = false;
+                    }
+                }
+                '\0' => return Err(ParseError::UnterminatedRawBlock),
+                _ => {}
+            }
+            self.skip();
+        }
+
+        Ok(self.make_token(TokenKind::LiteralText))
+    }
+
     fn get_next_token(&mut self) -> Option<Result<Token, ParseError>> {
         self.skip_whitespace();
 
@@ -190,10 +271,14 @@ impl<'a> Lexer<'a> {
 
         let cur = self.advance();
 
-        // println!("c: {}", cur);
-
         if self.is_done() {
             None
+        } else if self.prev_token.kind == TokenKind::KwRaw {
+            if cur != '[' {
+                Some(Err(ParseError::ExpectedCharacter('[', cur)))
+            } else {
+                Some(Ok(self.lex_raw_block().unwrap()))
+            }
         } else {
             match cur {
                 // Common/misc symbols
@@ -269,7 +354,10 @@ impl<'a> Lexer<'a> {
                         let mut depth = 1;
                         while depth > 0 {
                             self.skip_no_buffer();
-                            if self.cur == '*' && self.peek() == '/' {
+                            if self.cur == '\n' {
+                                self.line += 1;
+                                self.column = 1;
+                            } else if self.cur == '*' && self.peek() == '/' {
                                 depth -= 1;
                             } else if self.cur == '/' && self.peek() == '*' {
                                 depth += 1;
@@ -296,13 +384,9 @@ impl<'a> Lexer<'a> {
 
     pub fn next_token(&mut self) -> Option<Result<Token, ParseError>> {
         let tok = self.get_next_token();
-        // println!(
-        //     "lexer debug: {:?} (at {}/{}) [{}]",
-        //     tok,
-        //     self.pos,
-        //     self.length,
-        //     self.is_done()
-        // );
+        if tok.as_ref().is_some_and(|it| it.is_ok()) {
+            self.prev_token = tok.as_ref().unwrap().as_ref().unwrap().clone();
+        }
         tok
     }
 }
@@ -316,6 +400,7 @@ pub fn make_lexer<'a>(file: PathBuf, code: &'a String) -> Lexer<'a> {
         column: 1,
         pos: 0,
         line: 1,
+        prev_token: Default::default(),
         cur: ' ',
         prev: ' ',
         buffer: Default::default(),

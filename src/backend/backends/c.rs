@@ -9,7 +9,7 @@ use std::{
 use crate::{
     backend::backend::Backend,
     compile::{compiler::Compiler, symbol::Symbol},
-    hashtags::{FunTags, RecTags},
+    hashtags::{DefTags, FunTags, RecTags, TagRecTags, TagTags},
     parse::{ast::Node, operator::OperatorKind},
 };
 
@@ -215,7 +215,7 @@ impl CBackend {
 
         self.ws(")\n");
         self.write(*expr);
-        self.ws("\n");
+        self.ws("\n\n");
         self.compiler.pop_scope();
     }
 
@@ -240,10 +240,73 @@ impl CBackend {
 
         self.ws("{\n");
         for (field_name, field_type) in fields {
+            self.ws("\t");
             self.named_typ_from_node(field_name, field_type);
             self.ws(";\n");
         }
-        self.w(format_args!("}} {id};\n"));
+        self.w(format_args!("}} {id};\n\n"));
+    }
+
+    pub fn top_def(&mut self, tags: Vec<DefTags>, id: String, typ: Node) {
+        for hashtag in tags {
+            match hashtag {
+                DefTags::Static => self.ws("static "),
+            }
+        }
+
+        self.ws("typedef ");
+        self.typ_from_node(typ);
+        self.w(format_args!("{id};\n\n"));
+    }
+
+    pub fn top_tag(&mut self, tags: Vec<TagTags>, id: String, entries: Vec<String>) {
+        for hashtag in tags {
+            match hashtag {
+                TagTags::Static => self.ws("static "),
+            }
+        }
+
+        self.ws("typedef enum {\n");
+        for entry in entries {
+            self.w(format_args!("\t{entry},\n"));
+        }
+        self.w(format_args!("}} {id};\n\n"));
+    }
+
+    pub fn top_tag_rec(
+        &mut self,
+        tags: Vec<TagRecTags>,
+        id: String,
+        entries: Vec<(String, Vec<(String, Node)>)>,
+    ) {
+        let is_static = tags.contains(&TagRecTags::Static);
+
+        if is_static {
+            self.ws("static ");
+        }
+        self.ws("typedef enum {\n");
+        for (entry_id, _entry_fields) in &entries {
+            self.w(format_args!("\t{entry_id},\n"))
+        }
+        self.w(format_args!("}} _{id}_tag;\n\n"));
+
+        if is_static {
+            self.ws("static ");
+        }
+        self.ws("typedef struct {\n");
+        self.w(format_args!("\t_{id}_tag kind;\n"));
+        self.ws("\tunion {\n");
+        for (entry_id, entry_fields) in &entries {
+            self.ws("\t\tstruct { ");
+            for (field, typ) in entry_fields {
+                // self.ws("");
+                self.named_typ_from_node(field.to_string(), typ.clone());
+                self.ws("; ");
+            }
+            self.w(format_args!("}} {entry_id};\n"));
+        }
+        self.ws("\t};\n");
+        self.w(format_args!("}} {id};\n\n"));
     }
 
     // #endregion: Top level statements
@@ -254,6 +317,19 @@ impl CBackend {
         self.ws("return ");
         node.map(|it| self.write(it));
         self.ws(";\n");
+    }
+
+    pub fn stat_if(&mut self, cond: Node, expr: Node, else_: Option<Node>) {
+        self.ws("if (");
+        self.write(cond);
+        self.ws(") {");
+        self.write(expr);
+        self.ws("}");
+        if let Some(else_) = else_ {
+            self.ws(" else {");
+            self.write(else_);
+            self.ws("}");
+        }
     }
 
     // #endregion Statements
@@ -439,7 +515,7 @@ impl Backend for CBackend {
                 expr,
             } => self.top_fun(tags, id, params, rets, expr),
             Node::TopRec { tags, id, fields } => self.top_rec(tags, id, fields),
-            Node::TopDef { tags, id, typ } => todo!(),
+            Node::TopDef { tags, id, typ } => self.top_def(tags, id, *typ),
             Node::TopMac {
                 tags,
                 id,
@@ -447,13 +523,10 @@ impl Backend for CBackend {
                 rets,
                 expands_to,
             } => todo!(),
-            Node::TopTag { tags, id, entries } => todo!(),
-            Node::TopTagRec { tags, id, entries } => todo!(),
-            Node::StatRet(node) => match node {
-                Some(it) => self.stat_ret(Some(*it)),
-                None => self.stat_ret(None),
-            },
-            Node::StatIf { cond, expr, else_ } => todo!(),
+            Node::TopTag { tags, id, entries } => self.top_tag(tags, id, entries),
+            Node::TopTagRec { tags, id, entries } => self.top_tag_rec(tags, id, entries),
+            Node::StatRet(node) => self.stat_ret(node.map(|it| *it)),
+            Node::StatIf { cond, expr, else_ } => self.stat_if(*cond, *expr, else_.map(|it| *it)),
             Node::StatSwitch { switch, cases } => todo!(),
             Node::StatForCStyle {
                 def,
@@ -489,14 +562,8 @@ impl Backend for CBackend {
             Node::ExprInvoke { left, params } => self.expr_invoke(*left, params),
             Node::ExprMacInvoke { name, params } => todo!(),
             Node::ExprList(nodes) => todo!(),
-            Node::ExprVar { name, typ, value } => match typ {
-                Some(it) => self.expr_var(name, Some(*it), *value),
-                None => self.expr_var(name, None, *value),
-            },
-            Node::ExprLet { name, typ, value } => match typ {
-                Some(it) => self.expr_let(name, Some(*it), *value),
-                None => self.expr_let(name, None, *value),
-            },
+            Node::ExprVar { name, typ, value } => self.expr_var(name, typ.map(|it| *it), *value),
+            Node::ExprLet { name, typ, value } => self.expr_let(name, typ.map(|it| *it), *value),
         }
     }
 }

@@ -1,9 +1,32 @@
 raw [
 	#include <stdlib.h>
 	#include <stdio.h>
+	#include <stdint.h>
 ]
 
 rec Box(val: ^int)
+
+#union
+rec UnBox(
+	val_int: int,
+	val_float: float,
+	val_any: ^void
+)
+
+tag Suit(
+	Hearts,
+	Diamonds,
+	Clubs,
+	Spades,
+)
+
+rec Card(suit: Suit, value: uint8_t)
+
+tag rec Action(
+	Play(card: Card),
+	Discard,
+	SomethingElse(suit: Suit, value: uint8_t)
+)
 
 fun to_heap(it: int): ^int {
 	var p: ^int = malloc(sizeof(it)) as ^int
@@ -17,4 +40,10 @@ fun box(it: int): Box -> ret new Box(echo(it))
 
 fun main(argc: int, argv: ^char[]): int {
 	printf(c"%d\n", (box(42).val)^)
+
+	if argc == 0 {
+		printf(c"No arguments provided!\n")
+	} else {
+		printf(c"Arguments provided!\n")
+	}
 }

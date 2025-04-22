@@ -1,10 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    fmt::Debug,
-    path::PathBuf,
-    process::exit,
-    str::FromStr,
-};
+use std::{fmt::Debug, path::PathBuf, process::exit, str::FromStr};
 
 use crate::{
     hashtags::{DefTags, FunTags, MacTags, RecTags, TagRecTags, TagTags},

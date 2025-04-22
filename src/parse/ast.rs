@@ -1,8 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    fmt,
-    path::PathBuf,
-};
+use std::{fmt, path::PathBuf};
 
 use crate::hashtags;
 

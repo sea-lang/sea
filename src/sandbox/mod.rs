@@ -44,7 +44,7 @@ where
 
 fn alias(text: &'static str, alias_to: &'static str) -> (&'static str, SandboxCommand) {
     cmd(text, move |sandbox, args| {
-        sandbox.eval(format!("\\{} {}", alias_to, args.join(" ")));
+        sandbox.eval_args(alias_to, args);
     })
 }
 
@@ -63,15 +63,16 @@ pub const COMMANDS: LazyLock<HashMap<&'static str, SandboxCommand>> = LazyLock::
             sandbox.recompile();
         }),
         cmd("pos", |sandbox, args| {
-            let arg = args.get(0);
-            if arg.is_none() {
+            if args.len() == 0 {
                 sandbox.throw("\\pos <arg>: no argument specified");
+                return;
             }
 
-            if *arg.unwrap() == "end" {
+            let arg = args[0];
+            if arg == "end" {
                 sandbox.line = sandbox.lines.len() + 1;
             } else {
-                let pos = arg.unwrap().parse::<usize>();
+                let pos = arg.parse::<usize>();
                 if pos.is_err() {
                     sandbox.throw("\\pos <arg>: arg must be an integer or `end`")
                 }
@@ -88,12 +89,13 @@ pub const COMMANDS: LazyLock<HashMap<&'static str, SandboxCommand>> = LazyLock::
             }
         }),
         cmd("read", |sandbox, args| {
-            let arg = args.get(0);
-            if arg.is_none() {
+            if args.len() == 0 {
                 sandbox.throw("\\read <arg>: no argument specified");
             }
 
-            let mut lines = fs::read_to_string(arg.unwrap())
+            let arg = args[0];
+
+            let mut lines = fs::read_to_string(arg)
                 .unwrap()
                 .lines()
                 .map(|it| it.to_string())
@@ -101,12 +103,13 @@ pub const COMMANDS: LazyLock<HashMap<&'static str, SandboxCommand>> = LazyLock::
             sandbox.lines.append(&mut lines);
         }),
         cmd("write", |sandbox, args| {
-            let arg = args.get(0);
-            if arg.is_none() {
-                sandbox.throw("\\read <arg>: no argument specified");
+            if args.len() == 0 {
+                sandbox.throw("\\write <arg>: no argument specified");
             }
 
-            match fs::write(arg.unwrap(), sandbox.lines.join("\n")) {
+            let arg = args[0];
+
+            match fs::write(arg, sandbox.lines.join("\n")) {
                 Ok(_) => println!("\x1b[1;35mWrote to file successfully.\x1b[0m"),
                 Err(_) => sandbox.throw("failed to write to file."),
             }
@@ -140,9 +143,9 @@ pub const COMMANDS: LazyLock<HashMap<&'static str, SandboxCommand>> = LazyLock::
         cmd("autoexec", |sandbox, _args| {
             sandbox.autoexec = !sandbox.autoexec;
             if sandbox.autoexec {
-                println!("\x1b[1;35mToggled autoexit on.\x1b[0m");
+                println!("\x1b[1;35mToggled autoexec on.\x1b[0m");
             } else {
-                println!("\x1b[1;35mToggled autoexit off.\x1b[0m");
+                println!("\x1b[1;35mToggled autoexec off.\x1b[0m");
             }
         }),
         cmd("args", |sandbox, args| {
@@ -210,16 +213,16 @@ impl Sandbox {
         let mut buf: String = Default::default();
         let mut in_str: bool = false;
         let mut prev: char = ' ';
-        let mut itr = text.chars();
+        let mut itr = text.chars().peekable();
 
         while let Some(ch) = itr.next() {
             match ch {
                 '"' if prev != '\\' => in_str = !in_str,
                 ' ' => {
                     loop {
-                        match itr.next() {
+                        match itr.peek() {
                             Some(it) => {
-                                if it != ' ' {
+                                if *it != ' ' {
                                     break;
                                 }
                             }
@@ -323,6 +326,14 @@ impl Sandbox {
         }
     }
 
+    pub fn eval_args(&mut self, cmd: &str, args: Vec<&str>) {
+        if let Some(cmd) = COMMANDS.get(cmd) {
+            (*cmd.run)(self, args);
+        } else {
+            self.throw("invalid command, see \x1b[1m\\help\x1b[0m");
+        }
+    }
+
     pub fn eval(&mut self, line: String) {
         if line.len() > 0 {
             let maybe_ch = line.chars().nth(0);
@@ -333,17 +344,15 @@ impl Sandbox {
 
                 let split = self.shlex(line);
 
+                println!("{:?}", split);
+
                 let cmd = split[0].strip_prefix('\\').unwrap();
                 let args = split[1..]
                     .iter()
                     .map(|it| it.as_str())
                     .collect::<Vec<&str>>();
 
-                if let Some(cmd) = COMMANDS.get(cmd) {
-                    (*cmd.run)(self, args);
-                } else {
-                    self.throw("invalid command, see \x1b[1m\\help\x1b[0m");
-                }
+                self.eval_args(cmd, args);
             } else {
                 let escaped = line.ends_with('\\');
 
@@ -354,10 +363,13 @@ impl Sandbox {
                 }
                 .to_string();
 
+                println!("line: {}", self.line);
+
                 if self.line >= self.lines.len() {
                     self.lines.push(line);
                 } else {
                     if self.replace_lines {
+                        println!("replacing `{}` with `{}`", self.lines[self.line], line);
                         self.lines[self.line - 1] = line;
                     } else {
                         self.lines.insert(self.line - 1, line);

@@ -1,6 +1,6 @@
 use strum::EnumString;
 
-#[derive(Debug, Clone, Copy, PartialEq, EnumString)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumString)]
 pub enum FunTags {
     #[strum(serialize = "noret")]
     NoRet,
@@ -12,7 +12,7 @@ pub enum FunTags {
     Static,
 }
 
-#[derive(Debug, Clone, Copy, EnumString)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumString)]
 pub enum RecTags {
     #[strum(serialize = "union")]
     Union,
@@ -20,25 +20,25 @@ pub enum RecTags {
     Static,
 }
 
-#[derive(Debug, Clone, Copy, EnumString)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumString)]
 pub enum DefTags {
     #[strum(serialize = "static")]
     Static,
 }
 
-#[derive(Debug, Clone, Copy, EnumString)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumString)]
 pub enum TagTags {
     #[strum(serialize = "static")]
     Static,
 }
 
-#[derive(Debug, Clone, Copy, EnumString)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumString)]
 pub enum TagRecTags {
     #[strum(serialize = "static")]
     Static,
 }
 
-#[derive(Debug, Clone, Copy, EnumString)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumString)]
 pub enum MacTags {
     #[strum(serialize = "static")]
     Static,

@@ -1,19 +1,34 @@
-use std::{collections::HashMap, fs, path::PathBuf, str::FromStr, sync::LazyLock};
+use std::{
+    collections::HashMap,
+    fs::{self, File},
+    path::PathBuf,
+    process::Command,
+    str::FromStr,
+    sync::LazyLock,
+};
 
 use text_io::read;
 
-use crate::parse::{ast::Node, lexer::make_lexer, parser::Parser};
+use crate::{
+    backend::{backend::Backend, backends::c::CBackend},
+    compile::{compiler::Compiler, symbol::SymbolTable},
+    parse::{lexer::make_lexer, parser::Parser},
+};
 
 const HELP: &'static str = r#"Sandbox Commands:
-  \h \help            - Shows this message
-  \e \echo            - Echos all lines
+  \h \help            - Show this message
+  \e \echo            - Echo all lines
   \q \quit            - Quits
-  \R \reset           - Resets the sandbox
+  \R \reset           - Reset the sandbox
   \p \pos <int|"end"> - Jump to the given line (int) or to the last line ("end")
   \u \pause           - Pause auto-compilation
   \r \read <file>     - Read from a given file
   \w \write <file>    - Write to a given file
-  \P \replace         - Toggles line replacement, when off, lines are shifted (this applies when you are editing previous lines)
+  \P \replace         - Toggle line replacement when editing previous lines, when off, lines are shifted (default: off)
+  \a \ast             - Print the AST for the sandbox's code
+  \x \exec <args>     - Execute the sandbox's code using the provided arguments, if any
+  \A \autoexec        - Toggle automatic execution after compilation (default: off)
+  \R \args <args>     - Set args to pass to the program when no others are provided
 "#;
 
 pub struct SandboxCommand {
@@ -48,7 +63,7 @@ pub const COMMANDS: LazyLock<HashMap<&'static str, SandboxCommand>> = LazyLock::
             sandbox.recompile();
         }),
         cmd("pos", |sandbox, args| {
-            let arg = args.iter().nth(0);
+            let arg = args.get(0);
             if arg.is_none() {
                 sandbox.throw("\\pos <arg>: no argument specified");
             }
@@ -70,11 +85,10 @@ pub const COMMANDS: LazyLock<HashMap<&'static str, SandboxCommand>> = LazyLock::
             } else {
                 println!("\x1b[1;35mUnpaused compilation.\x1b[0m");
                 sandbox.recompile();
-                sandbox.ast.pretty_print();
             }
         }),
         cmd("read", |sandbox, args| {
-            let arg = args.iter().nth(0);
+            let arg = args.get(0);
             if arg.is_none() {
                 sandbox.throw("\\read <arg>: no argument specified");
             }
@@ -87,7 +101,7 @@ pub const COMMANDS: LazyLock<HashMap<&'static str, SandboxCommand>> = LazyLock::
             sandbox.lines.append(&mut lines);
         }),
         cmd("write", |sandbox, args| {
-            let arg = args.iter().nth(0);
+            let arg = args.get(0);
             if arg.is_none() {
                 sandbox.throw("\\read <arg>: no argument specified");
             }
@@ -105,6 +119,38 @@ pub const COMMANDS: LazyLock<HashMap<&'static str, SandboxCommand>> = LazyLock::
                 println!("\x1b[1;35mShifting lines.\x1b[0m");
             }
         }),
+        cmd("ast", |sandbox, _args| {
+            let code = sandbox.get_code();
+            let lexer = make_lexer(PathBuf::from_str(".sandbox").unwrap(), &code);
+            let mut parser = Parser::make_parser(lexer);
+            let program = parser.parse();
+            program.pretty_print();
+        }),
+        cmd("exec", |sandbox, args| {
+            if args.len() > 0 {
+                sandbox.exec(
+                    args.iter()
+                        .map(|it| it.to_string())
+                        .collect::<Vec<String>>(),
+                );
+            } else {
+                sandbox.exec(sandbox.program_args.clone());
+            }
+        }),
+        cmd("autoexec", |sandbox, _args| {
+            sandbox.autoexec = !sandbox.autoexec;
+            if sandbox.autoexec {
+                println!("\x1b[1;35mToggled autoexit on.\x1b[0m");
+            } else {
+                println!("\x1b[1;35mToggled autoexit off.\x1b[0m");
+            }
+        }),
+        cmd("args", |sandbox, args| {
+            sandbox.program_args = args
+                .iter()
+                .map(|it| it.to_string())
+                .collect::<Vec<String>>();
+        }),
         // Aliases
         alias("h", "help"),
         alias("e", "echo"),
@@ -115,6 +161,9 @@ pub const COMMANDS: LazyLock<HashMap<&'static str, SandboxCommand>> = LazyLock::
         alias("r", "read"),
         alias("w", "write"),
         alias("P", "replace"),
+        alias("a", "ast"),
+        alias("x", "exec"),
+        alias("A", "autoexec"),
     ])
 });
 
@@ -123,8 +172,11 @@ pub struct Sandbox {
     pub line: usize,
     pub running: bool,
     pub paused: bool,
+    pub autoexec: bool,
+    pub program_args: Vec<String>,
     pub replace_lines: bool,
-    ast: Node,
+    pub output_path: PathBuf,
+    pub c_output_path: PathBuf,
 }
 
 impl Sandbox {
@@ -136,7 +188,7 @@ impl Sandbox {
         );
     }
 
-    pub fn throw(&mut self, msg: &'static str) {
+    pub fn throw(&mut self, msg: &str) {
         println!("\x1b[1;31merror:\x1b[0m {msg}");
     }
 
@@ -153,11 +205,122 @@ impl Sandbox {
         self.lines.join("\n")
     }
 
+    pub fn shlex(&mut self, text: String) -> Vec<String> {
+        let mut args: Vec<String> = vec![];
+        let mut buf: String = Default::default();
+        let mut in_str: bool = false;
+        let mut prev: char = ' ';
+        let mut itr = text.chars();
+
+        while let Some(ch) = itr.next() {
+            match ch {
+                '"' if prev != '\\' => in_str = !in_str,
+                ' ' => {
+                    loop {
+                        match itr.next() {
+                            Some(it) => {
+                                if it != ' ' {
+                                    break;
+                                }
+                            }
+                            None => break,
+                        }
+                    }
+                    if !buf.is_empty() {
+                        args.push(buf.clone());
+                        buf.clear();
+                    }
+                }
+                _ => buf.push(ch),
+            }
+            prev = ch;
+        }
+
+        if !buf.is_empty() {
+            args.push(buf);
+        }
+
+        args
+    }
+
     pub fn recompile(&mut self) {
         let code = self.get_code();
         let lexer = make_lexer(PathBuf::from_str(".sandbox").unwrap(), &code);
         let mut parser = Parser::make_parser(lexer);
-        self.ast = parser.parse();
+        let program = parser.parse();
+
+        fs::create_dir_all(self.c_output_path.clone().parent().unwrap())
+            .expect("failed to mkdirs .sea/sandbox/");
+
+        // Make compiler and backend
+        let compiler = Compiler {
+            output_path: self.output_path.clone(),
+            output_file: File::create(self.c_output_path.clone()).unwrap(),
+            scope: 0,
+            symbols: SymbolTable {},
+        };
+        let mut backend = CBackend { compiler };
+
+        // Write output C code
+        backend.write(program);
+
+        // Exec
+        if self.autoexec {
+            self.exec(self.program_args.clone())
+        }
+    }
+
+    pub fn exec(&mut self, args: Vec<String>) {
+        println!("\x1b[35m: Compiling Sea\x1b[0m");
+        self.recompile();
+
+        println!("\x1b[35m: Compiling C: \x1b[1;35mtcc -g3 -o .sea/sandbox/program .sea/sandbox/program.c\x1b[0m");
+        let mut compile_cmd: Command = Command::new("tcc");
+        compile_cmd.arg("-g3");
+        compile_cmd.arg("-o");
+        compile_cmd.arg(".sea/sandbox/program");
+        compile_cmd.arg(".sea/sandbox/program.c");
+        match compile_cmd.spawn() {
+            Ok(mut child) => {
+                let res = child.wait().expect("failed to wait for child");
+                if res.success() {
+                    println!(
+                        "\x1b[34m: Process exited with code: {}\x1b[0m",
+                        res.code().unwrap_or(-1)
+                    );
+                } else {
+                    println!(
+                        "\x1b[31m: Process exited with code: {}\x1b[0m",
+                        res.code().unwrap_or(-1)
+                    );
+                }
+            }
+            Err(err) => {
+                self.throw(format!("error during compilation: {err:?}").as_str());
+                return;
+            }
+        }
+
+        println!("\x1b[35m: Executing: \x1b[1;35m.sea/sandbox/program\x1b[0m");
+        let mut cmd = Command::new(self.output_path.clone());
+        cmd.args(args);
+        match cmd.spawn() {
+            Ok(mut child) => {
+                let res = child.wait().expect("failed to wait for child");
+                if res.success() {
+                    println!(
+                        "\x1b[34m: Process exited with code: {}\x1b[0m",
+                        res.code().unwrap_or(-1)
+                    );
+                } else {
+                    println!(
+                        "\x1b[31m: Process exited with code: {}\x1b[0m",
+                        res.code().unwrap_or(-1)
+                    );
+                }
+            }
+            Err(err) => self.throw(format!("error during execution: {err:?}").as_str()),
+        }
     }
 
     pub fn eval(&mut self, line: String) {
@@ -168,10 +331,13 @@ impl Sandbox {
                     return;
                 }
 
-                let mut split = line.split(' ');
+                let split = self.shlex(line);
 
-                let cmd = split.nth(0).unwrap().strip_prefix('\\').unwrap();
-                let args = split.collect::<Vec<&str>>();
+                let cmd = split[0].strip_prefix('\\').unwrap();
+                let args = split[1..]
+                    .iter()
+                    .map(|it| it.as_str())
+                    .collect::<Vec<&str>>();
 
                 if let Some(cmd) = COMMANDS.get(cmd) {
                     (*cmd.run)(self, args);
@@ -201,7 +367,6 @@ impl Sandbox {
 
                 if !escaped && !self.paused {
                     self.recompile();
-                    self.ast.pretty_print();
                 }
             }
         }
@@ -219,11 +384,14 @@ impl Sandbox {
     pub fn new() -> Self {
         Sandbox {
             lines: vec![],
-            ast: Node::Program(vec![]),
             line: 1,
             paused: false,
+            autoexec: false,
+            program_args: vec![],
             running: false,
             replace_lines: false,
+            output_path: PathBuf::from(".sea/sandbox/program"),
+            c_output_path: PathBuf::from(".sea/sandbox/program.c"),
         }
     }
 }

@@ -76,6 +76,7 @@ You can run this (assuming the prototype compiler is in `proto/`) using
 - [Raw C Code](#raw-c-code)
 - [Builtins](#builtins)
 - [Documentation](#documentation)
+- [Sandbox](#sandbox)
 
 ## Hello World
 
@@ -629,8 +630,7 @@ fun main(): Integer -> ret 0
 
 ```sea
 fun main(): int {
-	// You must use `raw[` **WITHOUT A SPACE** (i.e, you **cannot** use `raw [`)
-	raw[
+	raw [
 		// Notice that I am not using a c-string (c""), that's because
 		// this code is in a raw[] block, meaning that I am writing C!
 		printf("Hello, World!\n");
@@ -765,3 +765,24 @@ To write "good" doc comments, we **recommend** the following guidelines:
 - The usage of `aka` ("also known as"), `i.e.` ("that is" or "to be specific"),
   and `e.g.` ("for example") is okay! Avoid other less well-known abbreviations
   though.
+
+## Sandbox
+
+The sandbox is a fairly niche feature in Sea, it's similar to a REPL but not
+quite the same thing.
+
+> Explaining the sandbox is a bit difficult, so the docs here will take the form
+> of a tutorial more than a reference guide.
+
+To open the sandbox, use `sea sandbox` (or `sea s`). This will present you with
+a pretty underwhelming prompt:
+
+```
+[1]:
+```
+
+In this prompt, type the following (**all on one line**):
+
+```
+[1]: fun main(): int -> ret 0
+```

@@ -30,9 +30,9 @@ mod flags {
                 /// The C compiler to build with
                 optional -c, --cc cc: String
                 /// Arguments for the C compiler
-                optional -f, --ccflags ccflags: String
+                repeated -f, --ccflags ccflags: String
                 /// Paths to search for libraries
-                optional -l, --libpaths libpaths: String
+                repeated -l, --libpaths libpaths: String
                 /// Path to the standard library
                 optional -s, --std std: String
                 /// Disables implicit `use std`
@@ -51,6 +51,14 @@ mod flags {
 fn throw(msg: &str) -> ! {
     println!("\x1b[1;31merror:\x1b[0m {msg}");
     exit(1);
+}
+
+fn get_cc(is_prod: bool) -> String {
+    if is_prod {
+        "gcc".to_string()
+    } else {
+        "tcc".to_string()
+    }
 }
 
 fn compile(flags: flags::Compile) {
@@ -83,7 +91,12 @@ fn compile(flags: flags::Compile) {
 
     // Compile C code
     if !flags.nobuild {
-        let compile_res = compile::run_compile_cmds(c_output_path, executable_path.clone());
+        let compile_res = compile::run_compile_cmds(
+            c_output_path,
+            executable_path.clone(),
+            flags.cc.unwrap_or(get_cc(flags.prod)),
+            flags.ccflags,
+        );
         if compile_res.is_err() {
             throw(compile_res.err().unwrap().as_str());
         }

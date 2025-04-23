@@ -466,6 +466,17 @@ impl<'a> Parser<'a> {
                         params,
                     })
                 }
+            } else if self.accept(TokenKind::OpenBracket) {
+                let right = self.parse_atom();
+                self.expect(
+                    TokenKind::CloseBracket,
+                    "expected closed bracket (`]`) to end index operator",
+                );
+                atom = n(NodeKind::ExprBinaryOperator {
+                    kind: OperatorKind::Index,
+                    left: Box::new(atom),
+                    right: Box::new(right),
+                });
             } else {
                 break;
             }

@@ -189,7 +189,7 @@ impl<'a> CBackend<'a> {
 
     // #region: Top level statements
 
-    pub fn top_use(&mut self, path: PathBuf) {
+    pub fn top_use(&mut self, _path: PathBuf) {
         unimplemented!()
     }
 
@@ -384,6 +384,40 @@ impl<'a> CBackend<'a> {
         self.ws("}\n");
     }
 
+    pub fn stat_for_c_style(&mut self, def: Node, cond: Node, inc: Node, expr: Node) {
+        self.ws("for (");
+        self.write(def);
+        self.ws(" ; ");
+        self.write(cond);
+        self.ws(" ; ");
+        self.write(inc);
+        self.ws(") {");
+        self.write(expr);
+        self.ws("}")
+    }
+
+    pub fn stat_for_single_expr(&mut self, cond: Node, expr: Node) {
+        self.ws("while (");
+        self.write(cond);
+        self.ws(") {");
+        self.write(expr);
+        self.ws("}")
+    }
+
+    pub fn stat_for_range(&mut self, var: Option<String>, from: Node, to: Node, expr: Node) {
+        self.ws("for (");
+        let v = var.unwrap_or_else(|| "_i".to_string());
+        self.w(format_args!("int {v} = "));
+        self.write(from);
+        self.ws(" ; ");
+        self.w(format_args!("{v} < "));
+        self.write(to);
+        self.w(format_args!(" ; {v}++"));
+        self.ws(") {");
+        self.write(expr);
+        self.ws("}")
+    }
+
     // #endregion Statements
 
     // #region: Expressions
@@ -518,6 +552,7 @@ impl<'a> CBackend<'a> {
 
         self.ws("(");
         self.write(left);
+
         match kind {
             OperatorKind::Dot => self.ws("."),
             OperatorKind::Assign => self.ws("="),
@@ -534,9 +569,16 @@ impl<'a> CBackend<'a> {
             OperatorKind::Mul => self.ws("*"),
             OperatorKind::Div => self.ws("/"),
             OperatorKind::Mod => self.ws("%"),
+            OperatorKind::Index => self.ws("["),
             _ => panic!("cannot write as binary operator: {kind:?}"),
         }
+
         self.write(right);
+
+        if kind == OperatorKind::Index {
+            self.ws("]");
+        }
+
         self.ws(")");
     }
 
@@ -558,10 +600,16 @@ impl<'a> CBackend<'a> {
         self.ws("))");
     }
 
+    pub fn expr_list(&mut self, nodes: Vec<Node>) {
+        self.ws("{");
+        self.comma_separated(nodes);
+        self.ws("}");
+    }
+
     pub fn expr_var(&mut self, name: String, typ: Option<Node>, value: Node) {
         match typ {
             Some(typ) => self.named_typ_from_node(name, typ),
-            None => panic!("type inference unexpected"),
+            None => panic!("type inference unsupported"),
         }
         self.ws(" = ");
         self.write(value);
@@ -604,11 +652,11 @@ impl<'a> Backend for CBackend<'a> {
             NodeKind::TopRec { tags, id, fields } => self.top_rec(tags, id, fields),
             NodeKind::TopDef { tags, id, typ } => self.top_def(tags, id, *typ),
             NodeKind::TopMac {
-                tags,
-                id,
-                params,
-                rets,
-                expands_to,
+                tags: _tags,
+                id: _id,
+                params: _params,
+                rets: _rets,
+                expands_to: _expands_to,
             } => todo!(),
             NodeKind::TopTag { tags, id, entries } => self.top_tag(tags, id, entries),
             NodeKind::TopTagRec { tags, id, entries } => self.top_tag_rec(tags, id, entries),
@@ -622,14 +670,14 @@ impl<'a> Backend for CBackend<'a> {
                 cond,
                 inc,
                 expr,
-            } => todo!(),
-            NodeKind::StatForSingleExpr { cond, expr } => todo!(),
+            } => self.stat_for_c_style(*def, *cond, *inc, *expr),
+            NodeKind::StatForSingleExpr { cond, expr } => self.stat_for_single_expr(*cond, *expr),
             NodeKind::StatForRange {
                 var,
                 from,
                 to,
                 expr,
-            } => todo!(),
+            } => self.stat_for_range(var, *from, *to, *expr),
             NodeKind::StatExpr(node) => {
                 self.write(*node);
                 self.ws(";\n");
@@ -649,8 +697,11 @@ impl<'a> Backend for CBackend<'a> {
                 self.expr_binary_operator(kind, *left, *right)
             }
             NodeKind::ExprInvoke { left, params } => self.expr_invoke(*left, params),
-            NodeKind::ExprMacInvoke { name, params } => todo!(),
-            NodeKind::ExprList(nodes) => todo!(),
+            NodeKind::ExprMacInvoke {
+                name: _name,
+                params: _parser,
+            } => todo!(),
+            NodeKind::ExprList(nodes) => self.expr_list(nodes),
             NodeKind::ExprVar { name, typ, value } => {
                 self.expr_var(name, typ.map(|it| *it), *value)
             }

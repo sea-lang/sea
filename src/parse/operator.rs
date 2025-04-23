@@ -26,6 +26,7 @@ pub enum OperatorKind {
     Inc,
     Dec,
     Negate,
+    Index,
 }
 
 #[derive(Clone, Copy)]
@@ -52,6 +53,8 @@ pub enum Associativity {
 // Pulled from https://en.cppreference.com/w/c/language/operator_precedence
 pub const OPERATORS: LazyLock<HashMap<TokenKind, Operator>> = LazyLock::new(|| {
     HashMap::from([
+        // =
+        TokenKind::Eq.ri(0), // expr = expr
         // . as
         TokenKind::OpDot.li(1), // expr.expr
         TokenKind::KwAs.ri(1),  // expr as type
@@ -73,8 +76,6 @@ pub const OPERATORS: LazyLock<HashMap<TokenKind, Operator>> = LazyLock::new(|| {
         // and or
         TokenKind::OpAnd.li(11), // expr and expr
         TokenKind::OpOr.li(12),  // expr or expr
-        // =
-        TokenKind::Eq.ri(14), // expr = expr
     ])
 });
 

@@ -268,6 +268,8 @@ impl Sandbox {
         let compile_res = compile::run_compile_cmds(
             PathBuf::from(".sea/sandbox/program.c"),
             PathBuf::from(".sea/sandbox/program"),
+            "tcc".to_string(),
+            vec![],
         );
         if compile_res.is_err() {
             self.throw(compile_res.err().unwrap().as_str());

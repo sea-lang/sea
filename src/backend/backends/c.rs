@@ -1,5 +1,5 @@
 use core::{fmt, panic};
-use std::{io::Write, path::PathBuf};
+use std::{fs, io::Write, path::PathBuf};
 
 use crate::{
     backend::backend::Backend,
@@ -7,7 +7,9 @@ use crate::{
     hashtags::{DefTags, FunTags, RecTags, TagRecTags, TagTags},
     parse::{
         ast::{Node, NodeKind},
+        lexer::Lexer,
         operator::OperatorKind,
+        parser::Parser,
     },
 };
 
@@ -189,8 +191,19 @@ impl<'a> CBackend<'a> {
 
     // #region: Top level statements
 
-    pub fn top_use(&mut self, _path: PathBuf) {
-        unimplemented!()
+    pub fn top_use(&mut self, path: PathBuf, selections: Option<Vec<String>>) {
+        println!("use {path:?} {selections:?}");
+        let file_paths = self.compiler.get_use_paths(path.clone(), selections);
+        println!("fp: {file_paths:?}");
+        if let Ok(file_paths) = file_paths {
+            for path in file_paths {
+                let code = fs::read_to_string(path.clone()).unwrap();
+                let mut parser = Parser::new(Lexer::new(path, &code));
+                self.write(parser.parse());
+            }
+        } else {
+            self.throw(CompilerError::ImportError(file_paths.err().unwrap()), None)
+        }
     }
 
     pub fn top_fun(
@@ -277,7 +290,7 @@ impl<'a> CBackend<'a> {
 
         self.ws("typedef ");
         self.typ_from_node(typ);
-        self.w(format_args!("{id};\n\n"));
+        self.w(format_args!(" {id};\n\n"));
 
         self.compiler.add_def(id);
     }
@@ -641,7 +654,7 @@ impl<'a> Backend for CBackend<'a> {
                 funptr_args,
                 funptr_rets,
             } => self.typ(pointers, name, arrays, funptr_args, funptr_rets),
-            NodeKind::TopUse(path_buf) => self.top_use(path_buf),
+            NodeKind::TopUse(path_buf, selections) => self.top_use(path_buf, selections),
             NodeKind::TopFun {
                 tags,
                 id,

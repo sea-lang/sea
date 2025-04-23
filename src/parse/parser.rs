@@ -21,7 +21,7 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    pub fn make_parser(lexer: lexer::Lexer<'a>) -> Self {
+    pub fn new(lexer: lexer::Lexer<'a>) -> Self {
         Parser {
             lexer,
             token: Default::default(),
@@ -329,6 +329,56 @@ impl<'a> Parser<'a> {
         }
     }
 
+    pub fn parse_let(&mut self) -> Node {
+        let line = self.prev.line;
+        let column = self.prev.column;
+
+        self.expect(TokenKind::Identifier, "expected identifier after `let`");
+
+        let name = self.prev.text.clone();
+
+        let typ: Option<Box<Node>> = if self.accept(TokenKind::Colon) {
+            Some(Box::new(self.parse_type()))
+        } else {
+            None
+        };
+
+        self.expect(TokenKind::Eq, "expected `=` after `let <id>`");
+
+        let value = Box::new(self.parse_expression());
+
+        return Node {
+            line,
+            column,
+            node: NodeKind::ExprLet { name, typ, value },
+        };
+    }
+
+    pub fn parse_var(&mut self) -> Node {
+        let line = self.prev.line;
+        let column = self.prev.column;
+
+        self.expect(TokenKind::Identifier, "expected identifier after `var`");
+
+        let name = self.prev.text.clone();
+
+        let typ: Option<Box<Node>> = if self.accept(TokenKind::Colon) {
+            Some(Box::new(self.parse_type()))
+        } else {
+            None
+        };
+
+        self.expect(TokenKind::Eq, "expected `=` after `var <id>`");
+
+        let value = Box::new(self.parse_expression());
+
+        return Node {
+            line,
+            column,
+            node: NodeKind::ExprVar { name, typ, value },
+        };
+    }
+
     // Parses *non operator* expressions.
     pub fn parse_atom(&mut self) -> Node {
         let line = self.token.line;
@@ -531,46 +581,10 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_expression(&mut self) -> Node {
-        let line = self.token.line;
-        let column = self.token.column;
-
-        if self.accept(TokenKind::KwVar) || self.accept(TokenKind::KwLet) {
-            let text = self.prev.text.clone();
-            let is_mutable = self.prev.kind == TokenKind::KwVar;
-
-            self.expect(
-                TokenKind::Identifier,
-                format!("expected identifier after {}", text).as_str(),
-            );
-
-            let name = self.prev.text.clone();
-
-            let typ: Option<Box<Node>> = if self.accept(TokenKind::Colon) {
-                Some(Box::new(self.parse_type()))
-            } else {
-                None
-            };
-
-            self.expect(
-                TokenKind::Eq,
-                format!("expected `=` after `{} <id>`", text).as_str(),
-            );
-
-            let value = Box::new(self.parse_expression());
-
-            if is_mutable {
-                return Node {
-                    line,
-                    column,
-                    node: NodeKind::ExprVar { name, typ, value },
-                };
-            } else {
-                return Node {
-                    line,
-                    column,
-                    node: NodeKind::ExprLet { name, typ, value },
-                };
-            }
+        if self.accept(TokenKind::KwLet) {
+            self.parse_let()
+        } else if self.accept(TokenKind::KwVar) {
+            self.parse_var()
         } else {
             let left = self.parse_atom();
             if self.token.kind.is_operator() {
@@ -814,10 +828,33 @@ impl<'a> Parser<'a> {
             path.push(self.prev.text.clone());
         }
 
+        let selections = if self.accept(TokenKind::OpenBracket) {
+            let mut s: Vec<String> = vec![];
+            loop {
+                self.expect(
+                    TokenKind::Identifier,
+                    "expected identifier in selective `use` statement",
+                );
+
+                s.push(self.prev.text.clone());
+
+                if !self.accept(TokenKind::Comma) {
+                    break;
+                }
+            }
+            self.expect(
+                TokenKind::CloseBracket,
+                "expected closed bracket (`]`) to end selective `use` statement",
+            );
+            Some(s)
+        } else {
+            None
+        };
+
         Node {
             line,
             column,
-            node: NodeKind::TopUse(path),
+            node: NodeKind::TopUse(path, selections),
         }
     }
 
@@ -1101,6 +1138,20 @@ impl<'a> Parser<'a> {
             }
         } else if self.accept(TokenKind::KwRaw) {
             self.parse_raw()
+        } else if self.accept(TokenKind::KwVar) {
+            let it = self.parse_var();
+            Node {
+                line: it.line,
+                column: it.line,
+                node: NodeKind::StatExpr(Box::new(it)),
+            }
+        } else if self.accept(TokenKind::KwLet) {
+            let it = self.parse_let();
+            Node {
+                line: it.line,
+                column: it.line,
+                node: NodeKind::StatExpr(Box::new(it)),
+            }
         } else {
             self.throw_exception(ParseError::UnexpectedToken(self.token.clone()), None);
         }

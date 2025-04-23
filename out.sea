@@ -1,3 +1,5 @@
+use std [lib, io]
+
 raw [
 	#include <stdlib.h>
 	#include <stdio.h>
@@ -50,9 +52,9 @@ fun main(argc: int, argv: ^char[]): int {
 	printf(c"%d\n", (box(42).val)^)
 
 	if argc == 1 {
-		printf(c"No arguments provided!\n")
+		println("No arguments provided!")
 	} else {
-		printf(c"Arguments provided!\n")
+		println("Arguments provided!")
 	}
 
 	let actions: Action[3] = [

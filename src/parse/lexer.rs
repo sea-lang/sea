@@ -59,6 +59,22 @@ fn is_valid_id(ch: char) -> bool {
 }
 
 impl<'a> Lexer<'a> {
+    pub fn new(file: PathBuf, code: &'a String) -> Self {
+        Lexer {
+            file,
+            source: code,
+            code: code.chars().peekable(),
+            start: 0,
+            column: 1,
+            pos: 0,
+            line: 1,
+            prev_token: Default::default(),
+            cur: ' ',
+            prev: ' ',
+            buffer: Default::default(),
+        }
+    }
+
     // Gets the provided line, along with the one before and the one after it. Used for error messages.
     pub fn get_lines(&self, line: usize) -> Vec<(usize, &str)> {
         let mut lines: Vec<(usize, &str)> = vec![];
@@ -396,21 +412,5 @@ impl<'a> Lexer<'a> {
             self.prev_token = tok.as_ref().unwrap().as_ref().unwrap().clone();
         }
         tok
-    }
-}
-
-pub fn make_lexer<'a>(file: PathBuf, code: &'a String) -> Lexer<'a> {
-    Lexer {
-        file,
-        source: code,
-        code: code.chars().peekable(),
-        start: 0,
-        column: 1,
-        pos: 0,
-        line: 1,
-        prev_token: Default::default(),
-        cur: ' ',
-        prev: ' ',
-        buffer: Default::default(),
     }
 }

@@ -10,19 +10,28 @@ use super::{
 pub struct Compiler<'a> {
     pub output_path: PathBuf,
     pub output_file: File,
+    pub libpaths: Vec<PathBuf>,
     pub scope: usize,
     pub symbols: SymbolTable,
     pub parser: Parser<'a>,
+    pub usages: Vec<PathBuf>,
 }
 
 impl<'a> Compiler<'a> {
-    pub fn new(output_path: PathBuf, output_file: PathBuf, parser: Parser<'a>) -> Self {
+    pub fn new(
+        output_path: PathBuf,
+        output_file: PathBuf,
+        libpaths: Vec<PathBuf>,
+        parser: Parser<'a>,
+    ) -> Self {
         Compiler {
             output_path,
             output_file: File::create(output_file).unwrap(),
+            libpaths,
             scope: 0,
             symbols: SymbolTable::new(),
             parser,
+            usages: vec![],
         }
     }
 
@@ -68,6 +77,52 @@ impl<'a> Compiler<'a> {
     pub fn pop_scope(&mut self) {
         self.symbols.remove_symbols_from_scopes(self.scope);
         self.scope -= 1;
+    }
+
+    // Get the paths to each file in a given module
+    pub fn get_use_paths(
+        &mut self,
+        path: PathBuf,
+        selections: Option<Vec<String>>,
+    ) -> Result<Vec<PathBuf>, String> {
+        let mut paths: Vec<PathBuf> = vec![];
+
+        for libpath in &self.libpaths {
+            let p = libpath.join(&path);
+            if p.exists() && p.is_dir() {
+                println!("found libpath for {path:?}: {p:?}");
+
+                if let Some(selections) = selections {
+                    for s in selections {
+                        let file_path = p.join(s).with_extension("sea");
+
+                        if !file_path.is_file() || file_path.extension().unwrap() != "sea" {
+                            return Err(format!(
+                                "{file_path:?} is either a folder or not a Sea file."
+                            ));
+                        }
+
+                        paths.push(file_path.clone());
+                    }
+                } else {
+                    // Import each file in the module
+                    for file in p.read_dir().unwrap() {
+                        let file_path = file.unwrap().path();
+                        println!("path: {file_path:?}");
+
+                        if file_path.is_file() && file_path.extension().unwrap() == "sea" {
+                            println!("  found file {file_path:?}");
+                            paths.push(file_path.clone());
+                        }
+                    }
+                }
+
+                self.usages.push(p);
+                return Ok(paths);
+            }
+        }
+
+        Err(format!("no such module: {path:?}"))
     }
 
     pub fn add_fun(&mut self, name: String) {

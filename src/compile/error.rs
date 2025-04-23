@@ -12,4 +12,7 @@ pub enum CompilerError {
 
     #[error("tag rec instantiation requires a kind")]
     TagRecInstantiateWithoutKind,
+
+    #[error("import error: {0}")]
+    ImportError(String),
 }

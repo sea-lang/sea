@@ -2,7 +2,7 @@ use std::{fs, path::PathBuf, process::exit};
 
 use backend::{backend::Backend, backends::c::CBackend};
 use compile::compiler::Compiler;
-use parse::{lexer::make_lexer, parser::Parser};
+use parse::{lexer::Lexer, parser::Parser};
 
 pub mod backend;
 pub mod compile;
@@ -68,13 +68,20 @@ fn compile(flags: flags::Compile) {
         .output
         .unwrap_or_else(|| PathBuf::from(".sea/build/main"));
 
+    let mut libpaths: Vec<PathBuf> = vec![];
+    let stdpath = PathBuf::from(flags.std.unwrap_or_else(|| "~/.sea/std/".to_string()));
+    libpaths.push(stdpath);
+    for it in flags.libpaths {
+        libpaths.push(PathBuf::from(it))
+    }
+
     println!("\x1b[35m: Compiling Sea\x1b[0m");
 
     // Load the source code
     let code = fs::read_to_string(path()).unwrap();
 
     // Parse
-    let mut parser = Parser::make_parser(make_lexer(path(), &code));
+    let mut parser = Parser::new(Lexer::new(path(), &code));
     let program = parser.parse();
 
     if flags.print_ast {
@@ -83,7 +90,7 @@ fn compile(flags: flags::Compile) {
     }
 
     // Make compiler and backend
-    let compiler = Compiler::new(path(), c_output_path.clone(), parser);
+    let compiler = Compiler::new(path(), c_output_path.clone(), libpaths, parser);
     let mut backend = CBackend::new(compiler);
 
     // Write output C code

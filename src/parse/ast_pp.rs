@@ -99,7 +99,9 @@ impl Node {
                     println!("");
                 }
             }
-            NodeKind::TopUse(path_buf) => println!("{TOP_LEVEL_STAT}use: {TEXT}{path_buf:?}"),
+            NodeKind::TopUse(path_buf, selections) => {
+                println!("{TOP_LEVEL_STAT}use: {TEXT}{path_buf:?} [{selections:?}]")
+            }
             NodeKind::TopFun {
                 tags,
                 id,

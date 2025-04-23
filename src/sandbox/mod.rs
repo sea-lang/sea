@@ -5,7 +5,7 @@ use text_io::read;
 use crate::{
     backend::{backend::Backend, backends::c::CBackend},
     compile::{self, compiler::Compiler},
-    parse::{lexer::make_lexer, parser::Parser},
+    parse::{lexer::Lexer, parser::Parser},
 };
 
 const HELP: &'static str = r#"Sandbox Commands:
@@ -117,8 +117,8 @@ pub const COMMANDS: LazyLock<HashMap<&'static str, SandboxCommand>> = LazyLock::
         }),
         cmd("ast", |sandbox, _args| {
             let code = sandbox.get_code();
-            let lexer = make_lexer(PathBuf::from_str(".sandbox").unwrap(), &code);
-            let mut parser = Parser::make_parser(lexer);
+            let lexer = Lexer::new(PathBuf::from_str(".sandbox").unwrap(), &code);
+            let mut parser = Parser::new(lexer);
             let program = parser.parse();
             program.pretty_print();
         }),
@@ -241,15 +241,20 @@ impl Sandbox {
 
     pub fn recompile(&mut self) {
         let code = self.get_code();
-        let lexer = make_lexer(PathBuf::from_str(".sandbox").unwrap(), &code);
-        let mut parser = Parser::make_parser(lexer);
+        let lexer = Lexer::new(PathBuf::from_str(".sandbox").unwrap(), &code);
+        let mut parser = Parser::new(lexer);
         let program = parser.parse();
 
         fs::create_dir_all(self.c_output_path.clone().parent().unwrap())
             .expect("failed to mkdirs .sea/sandbox/");
 
         // Make compiler and backend
-        let compiler = Compiler::new(self.output_path.clone(), self.c_output_path.clone(), parser);
+        let compiler = Compiler::new(
+            self.output_path.clone(),
+            self.c_output_path.clone(),
+            vec![], //TODO
+            parser,
+        );
         let mut backend = CBackend::new(compiler);
 
         // Write output C code

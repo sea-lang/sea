@@ -30,12 +30,12 @@ pub fn run_compile_cmds(
         Ok(mut child) => {
             let res = child.wait().expect("failed to wait for child");
             if !res.success() {
-                println!(
-                    "\x1b[31m: Process exited with code: {}\x1b[0m",
-                    res.code().unwrap_or(-1)
-                );
+                let code = res.code().unwrap_or(-1);
+                println!("\x1b[31m: Process exited with code: {code}\x1b[0m",);
+                Err(format!("process exited with code: {code}").to_string())
+            } else {
+                Ok(())
             }
-            Ok(())
         }
         Err(err) => match err.kind() {
             ErrorKind::NotFound => Err(format!("command not found: `{cc}`")),

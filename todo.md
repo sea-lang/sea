@@ -1,6 +1,6 @@
 # To Do
 
-- [ ] Rewrite the compiler in Sea
+- [ ] Rewrite the compiler in Rust
 - [ ] Built-in documentation generator
 - [ ] Built-in code formatter
 - [ ] Emit ASM instead of C?
@@ -20,6 +20,7 @@
 - [ ] Contracts
 
 - [ ] Make the compiler mean!
+
   - [ ] Throw errors when a user doesn't return something in a non-void function
   - [ ] Prevent implicit type conversions
   - [ ] Non-nil pointers (syntax subject to change)

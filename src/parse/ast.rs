@@ -5,7 +5,14 @@ use crate::hashtags;
 use super::operator::OperatorKind;
 
 #[derive(Debug, Clone)]
-pub enum Node {
+pub struct Node {
+    pub line: usize,
+    pub column: usize,
+    pub node: NodeKind,
+}
+
+#[derive(Debug, Clone)]
+pub enum NodeKind {
     Program(Vec<Node>),
     Raw(String),
     Type {
@@ -132,21 +139,29 @@ impl fmt::Display for Node {
 }
 
 impl Node {
-    pub fn get_void_type() -> Self {
-        Node::Type {
-            pointers: 0,
-            name: "void".to_string(),
-            arrays: vec![],
-            funptr_args: None,
-            funptr_rets: None,
+    pub fn get_void_type(line: usize, column: usize) -> Node {
+        Node {
+            line,
+            column,
+            node: NodeKind::Type {
+                pointers: 0,
+                name: "void".to_string(),
+                arrays: vec![],
+                funptr_args: None,
+                funptr_rets: None,
+            },
         }
     }
 
     pub fn join(kind: OperatorKind, left: Node, right: Node) -> Self {
-        Node::ExprBinaryOperator {
-            kind,
-            left: Box::new(left),
-            right: Box::new(right),
+        Node {
+            line: left.line,
+            column: left.column,
+            node: NodeKind::ExprBinaryOperator {
+                kind,
+                left: Box::new(left),
+                right: Box::new(right),
+            },
         }
     }
 }

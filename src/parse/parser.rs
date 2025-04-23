@@ -6,7 +6,7 @@ use crate::{
 };
 
 use super::{
-    ast::Node,
+    ast::{Node, NodeKind},
     error::ParseError,
     lexer,
     operator::OperatorKind,
@@ -123,6 +123,9 @@ impl<'a> Parser<'a> {
     // #region: Misc Parsing
 
     pub fn parse_type(&mut self) -> Node {
+        let line = self.token.line;
+        let column = self.token.column;
+
         let mut pointers = 0;
         while self.accept(TokenKind::Pointer) {
             pointers += 1
@@ -157,7 +160,7 @@ impl<'a> Parser<'a> {
             if self.accept(TokenKind::Colon) {
                 funptr_rets = Some(Box::new(self.parse_type().clone()));
             } else {
-                funptr_rets = Some(Box::new(Node::get_void_type()));
+                funptr_rets = Some(Box::new(Node::get_void_type(line, column)));
             }
         } else {
             self.expect(TokenKind::Identifier, "expected type identifier");
@@ -189,12 +192,16 @@ impl<'a> Parser<'a> {
             );
         }
 
-        Node::Type {
-            pointers,
-            name,
-            arrays,
-            funptr_args,
-            funptr_rets,
+        Node {
+            line,
+            column,
+            node: NodeKind::Type {
+                pointers,
+                name,
+                arrays,
+                funptr_args,
+                funptr_rets,
+            },
         }
     }
 
@@ -234,6 +241,9 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_mac_invoke(&mut self) -> Node {
+        let line = self.prev.line;
+        let column = self.prev.column;
+
         self.expect(
             TokenKind::Identifier,
             "expected identifier after `@` to invoke a macro",
@@ -243,10 +253,15 @@ impl<'a> Parser<'a> {
             TokenKind::OpenParen,
             "expected open parenthesis, macro syntax: `'@' <id> '(' <params> ')'`",
         );
+
         if self.accept(TokenKind::CloseParen) {
-            Node::ExprMacInvoke {
-                name,
-                params: vec![],
+            Node {
+                line,
+                column,
+                node: NodeKind::ExprMacInvoke {
+                    name,
+                    params: vec![],
+                },
             }
         } else {
             let mut params: Vec<Node> = vec![];
@@ -261,7 +276,12 @@ impl<'a> Parser<'a> {
                 TokenKind::CloseParen,
                 "expected closed parenthesis, macro syntax: `'@' <id> '(' <params> ')'`",
             );
-            Node::ExprMacInvoke { name, params }
+
+            Node {
+                line,
+                column,
+                node: NodeKind::ExprMacInvoke { name, params },
+            }
         }
     }
 
@@ -274,9 +294,16 @@ impl<'a> Parser<'a> {
             self.advance();
         }
 
+        let line = self.prev.line;
+        let column = self.prev.column;
+
         if self.prev.kind == TokenKind::OpenCurly {
             if self.accept(TokenKind::CloseCurly) {
-                return Node::ExprBlock(vec![]);
+                return Node {
+                    line,
+                    column,
+                    node: NodeKind::ExprBlock(vec![]),
+                };
             }
 
             let mut exprs: Vec<Node> = vec![];
@@ -286,9 +313,17 @@ impl<'a> Parser<'a> {
                     break;
                 }
             }
-            Node::ExprBlock(exprs)
+            Node {
+                line,
+                column,
+                node: NodeKind::ExprBlock(exprs),
+            }
         } else if self.prev.kind == TokenKind::Arrow {
-            Node::ExprBlock(vec![self.parse_statement()])
+            Node {
+                line,
+                column,
+                node: NodeKind::ExprBlock(vec![self.parse_statement()]),
+            }
         } else {
             self.throw_exception_at_prev(ParseError::UnexpectedToken(self.prev.clone()), None)
         }
@@ -296,9 +331,14 @@ impl<'a> Parser<'a> {
 
     // Parses *non operator* expressions.
     pub fn parse_atom(&mut self) -> Node {
+        let line = self.token.line;
+        let column = self.token.column;
+
+        let n = |node| Node { line, column, node };
+
         let mut atom = match *self {
             _ if self.accept(TokenKind::OpenParen) => {
-                let node = Node::ExprGroup(Box::new(self.parse_expression()));
+                let node = n(NodeKind::ExprGroup(Box::new(self.parse_expression())));
                 self.expect(
                     TokenKind::CloseParen,
                     "expected closed parenthesis to match open parenthesis in expression group",
@@ -307,23 +347,27 @@ impl<'a> Parser<'a> {
             }
 
             // Literals
-            _ if self.accept(TokenKind::Int) => Node::ExprNumber(self.prev.text.clone()),
-            _ if self.accept(TokenKind::Float) => Node::ExprNumber(self.prev.text.clone()),
-            _ if self.accept(TokenKind::Hex) => Node::ExprNumber(self.prev.text.clone()),
-            _ if self.accept(TokenKind::Binary) => Node::ExprNumber(self.prev.text.clone()),
-            _ if self.accept(TokenKind::String) => Node::ExprString(self.prev.text.clone()),
-            _ if self.accept(TokenKind::CString) => Node::ExprCString(self.prev.text.clone()),
-            _ if self.accept(TokenKind::Character) => {
-                Node::ExprChar(self.prev.text.clone().chars().nth(1).unwrap())
+            _ if self.accept(TokenKind::Int) => n(NodeKind::ExprNumber(self.prev.text.clone())),
+            _ if self.accept(TokenKind::Float) => n(NodeKind::ExprNumber(self.prev.text.clone())),
+            _ if self.accept(TokenKind::Hex) => n(NodeKind::ExprNumber(self.prev.text.clone())),
+            _ if self.accept(TokenKind::Binary) => n(NodeKind::ExprNumber(self.prev.text.clone())),
+            _ if self.accept(TokenKind::String) => n(NodeKind::ExprString(self.prev.text.clone())),
+            _ if self.accept(TokenKind::CString) => {
+                n(NodeKind::ExprCString(self.prev.text.clone()))
             }
-            _ if self.accept(TokenKind::True) => Node::ExprTrue,
-            _ if self.accept(TokenKind::False) => Node::ExprFalse,
-            _ if self.accept(TokenKind::Identifier) => Node::ExprIdentifier(self.prev.text.clone()),
+            _ if self.accept(TokenKind::Character) => n(NodeKind::ExprChar(
+                self.prev.text.clone().chars().nth(1).unwrap(),
+            )),
+            _ if self.accept(TokenKind::True) => n(NodeKind::ExprTrue),
+            _ if self.accept(TokenKind::False) => n(NodeKind::ExprFalse),
+            _ if self.accept(TokenKind::Identifier) => {
+                n(NodeKind::ExprIdentifier(self.prev.text.clone()))
+            }
 
             // List
             _ if self.accept(TokenKind::OpenBracket) => {
                 if self.accept(TokenKind::CloseBracket) {
-                    Node::ExprList(vec![])
+                    n(NodeKind::ExprList(vec![]))
                 } else {
                     let mut nodes: Vec<Node> = vec![];
 
@@ -340,7 +384,7 @@ impl<'a> Parser<'a> {
                         "expected closed bracket (`]`) to end list expression.",
                     );
 
-                    Node::ExprList(nodes)
+                    n(NodeKind::ExprList(nodes))
                 }
             }
 
@@ -371,22 +415,22 @@ impl<'a> Parser<'a> {
                     "expected closed parenthesis to end `new` expression",
                 );
 
-                Node::ExprNew { id, params }
+                n(NodeKind::ExprNew { id, params })
             }
 
             // Prefix unary operators
-            _ if self.accept(TokenKind::OpNot) => Node::ExprUnaryOperator {
+            _ if self.accept(TokenKind::OpNot) => n(NodeKind::ExprUnaryOperator {
                 kind: OperatorKind::Not,
                 value: Box::new(self.parse_atom()),
-            },
-            _ if self.accept(TokenKind::OpSub) => Node::ExprUnaryOperator {
+            }),
+            _ if self.accept(TokenKind::OpSub) => n(NodeKind::ExprUnaryOperator {
                 kind: OperatorKind::Negate,
                 value: Box::new(self.parse_atom()),
-            },
-            _ if self.accept(TokenKind::KwRef) => Node::ExprUnaryOperator {
+            }),
+            _ if self.accept(TokenKind::KwRef) => n(NodeKind::ExprUnaryOperator {
                 kind: OperatorKind::Ref,
                 value: Box::new(self.parse_atom()),
-            },
+            }),
 
             _ => self.throw_exception(ParseError::ExpectedExpression(self.token.clone()), None),
         };
@@ -394,16 +438,16 @@ impl<'a> Parser<'a> {
         // Postfix operators
         loop {
             if self.accept(TokenKind::Pointer) {
-                atom = Node::ExprUnaryOperator {
+                atom = n(NodeKind::ExprUnaryOperator {
                     kind: OperatorKind::Deref,
                     value: Box::new(atom),
-                }
+                })
             } else if self.accept(TokenKind::OpenParen) {
                 if self.accept(TokenKind::CloseParen) {
-                    atom = Node::ExprInvoke {
+                    atom = n(NodeKind::ExprInvoke {
                         left: Box::new(atom),
                         params: vec![],
-                    }
+                    })
                 } else {
                     let mut params: Vec<Node> = vec![];
                     loop {
@@ -417,10 +461,10 @@ impl<'a> Parser<'a> {
                         TokenKind::CloseParen,
                         "expected closed parenthesis to end parameter list",
                     );
-                    atom = Node::ExprInvoke {
+                    atom = n(NodeKind::ExprInvoke {
                         left: Box::new(atom),
                         params,
-                    }
+                    })
                 }
             } else {
                 break;
@@ -476,6 +520,9 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_expression(&mut self) -> Node {
+        let line = self.token.line;
+        let column = self.token.column;
+
         if self.accept(TokenKind::KwVar) || self.accept(TokenKind::KwLet) {
             let text = self.prev.text.clone();
             let is_mutable = self.prev.kind == TokenKind::KwVar;
@@ -501,9 +548,17 @@ impl<'a> Parser<'a> {
             let value = Box::new(self.parse_expression());
 
             if is_mutable {
-                return Node::ExprVar { name, typ, value };
+                return Node {
+                    line,
+                    column,
+                    node: NodeKind::ExprVar { name, typ, value },
+                };
             } else {
-                return Node::ExprLet { name, typ, value };
+                return Node {
+                    line,
+                    column,
+                    node: NodeKind::ExprLet { name, typ, value },
+                };
             }
         } else {
             let left = self.parse_atom();
@@ -520,10 +575,17 @@ impl<'a> Parser<'a> {
     // #region: Statements
 
     pub fn parse_ret(&mut self) -> Node {
-        Node::StatRet(Some(Box::new(self.parse_expression())))
+        Node {
+            line: self.prev.line,
+            column: self.prev.column,
+            node: NodeKind::StatRet(Some(Box::new(self.parse_expression()))),
+        }
     }
 
     pub fn parse_if(&mut self) -> Node {
+        let line = self.token.line;
+        let column = self.token.column;
+
         let cond = self.parse_expression();
         let expr = self.parse_block(true);
         let mut else_: Option<Box<Node>> = None;
@@ -535,14 +597,22 @@ impl<'a> Parser<'a> {
                 else_ = Some(Box::new(self.parse_block(true)));
             }
         }
-        Node::StatIf {
-            cond: Box::new(cond),
-            expr: Box::new(expr),
-            else_,
+
+        Node {
+            line,
+            column,
+            node: NodeKind::StatIf {
+                cond: Box::new(cond),
+                expr: Box::new(expr),
+                else_,
+            },
         }
     }
 
     pub fn parse_switch(&mut self) -> Node {
+        let line = self.token.line;
+        let column = self.token.column;
+
         let switch = Box::new(self.parse_expression());
         self.expect(
             TokenKind::OpenCurly,
@@ -584,10 +654,17 @@ impl<'a> Parser<'a> {
             }
         }
 
-        Node::StatSwitch { switch, cases }
+        Node {
+            line,
+            column,
+            node: NodeKind::StatSwitch { switch, cases },
+        }
     }
 
     pub fn parse_for(&mut self) -> Node {
+        let line = self.token.line;
+        let column = self.token.column;
+
         let leftmost_expr = self.parse_expression();
 
         // c style for loop
@@ -596,19 +673,28 @@ impl<'a> Parser<'a> {
             self.expect(TokenKind::Semicolon, "C-style for loops require three expressions, separated by semicolons (i.e, `for <expr> ; <expr> ; <expr>`)");
             let inc = self.parse_expression();
             let expr = self.parse_block(true);
-            Node::StatForCStyle {
-                def: Box::new(leftmost_expr),
-                cond: Box::new(cond),
-                inc: Box::new(inc),
-                expr: Box::new(expr),
+
+            Node {
+                line,
+                column,
+                node: NodeKind::StatForCStyle {
+                    def: Box::new(leftmost_expr),
+                    cond: Box::new(cond),
+                    inc: Box::new(inc),
+                    expr: Box::new(expr),
+                },
             }
         }
         // single expr for loop
         else if self.accept(TokenKind::OpenCurly) || self.accept(TokenKind::Arrow) {
             let expr = self.parse_block(false);
-            Node::StatForSingleExpr {
-                cond: Box::new(leftmost_expr),
-                expr: Box::new(expr),
+            Node {
+                line,
+                column,
+                node: NodeKind::StatForSingleExpr {
+                    cond: Box::new(leftmost_expr),
+                    expr: Box::new(expr),
+                },
             }
         }
         // range for loop
@@ -625,11 +711,16 @@ impl<'a> Parser<'a> {
                 );
                 let to = self.parse_expression();
                 let expr = self.parse_block(true);
-                Node::StatForRange {
-                    var: Some(potentially_id),
-                    from: Box::new(from),
-                    to: Box::new(to),
-                    expr: Box::new(expr),
+
+                Node {
+                    line,
+                    column,
+                    node: NodeKind::StatForRange {
+                        var: Some(potentially_id),
+                        from: Box::new(from),
+                        to: Box::new(to),
+                        expr: Box::new(expr),
+                    },
                 }
             }
             // for <expr> to <expr>
@@ -640,24 +731,37 @@ impl<'a> Parser<'a> {
                 );
                 let to = self.parse_atom();
                 let expr = self.parse_block(true);
-                Node::StatForRange {
-                    var: None,
-                    from: Box::new(leftmost_expr),
-                    to: Box::new(to),
-                    expr: Box::new(expr),
+
+                Node {
+                    line,
+                    column,
+                    node: NodeKind::StatForRange {
+                        var: None,
+                        from: Box::new(leftmost_expr),
+                        to: Box::new(to),
+                        expr: Box::new(expr),
+                    },
                 }
             }
         }
     }
 
     fn parse_raw(&mut self) -> Node {
+        let line = self.token.line;
+        let column = self.token.column;
+
         // We don't need to check for brackets here since the lexer does that for us
         self.expect(
             TokenKind::LiteralText,
             "internal error, literal text within raw[] block not found.",
         );
         let text = self.prev.text.clone();
-        Node::Raw(text)
+
+        Node {
+            line,
+            column,
+            node: NodeKind::Raw(text),
+        }
     }
 
     pub fn parse_statement(&mut self) -> Node {
@@ -669,7 +773,14 @@ impl<'a> Parser<'a> {
             _ if self.accept(TokenKind::KwRaw) => self.parse_raw(),
             _ if self.accept(TokenKind::At) => self.parse_mac_invoke(),
             // if nothing works, we'll try to parse an expression, and if *that* doesn't work, then we have a syntax error
-            _ => Node::StatExpr(Box::new(self.parse_expression())),
+            _ => {
+                let expr = self.parse_expression();
+                Node {
+                    line: expr.line,
+                    column: expr.column,
+                    node: NodeKind::StatExpr(Box::new(expr)),
+                }
+            }
         }
     }
 
@@ -678,6 +789,9 @@ impl<'a> Parser<'a> {
     // #region: Top level statements
 
     pub fn parse_use(&mut self) -> Node {
+        let line = self.prev.line;
+        let column = self.prev.column;
+
         let mut path = PathBuf::new();
         self.expect(TokenKind::Identifier, "expected identifier after `use`");
         path.push(self.prev.text.clone());
@@ -688,10 +802,18 @@ impl<'a> Parser<'a> {
             );
             path.push(self.prev.text.clone());
         }
-        Node::TopUse(path)
+
+        Node {
+            line,
+            column,
+            node: NodeKind::TopUse(path),
+        }
     }
 
     pub fn parse_fun(&mut self, tags: Vec<FunTags>) -> Node {
+        let line = self.prev.line;
+        let column = self.prev.column;
+
         self.expect(TokenKind::Identifier, "expected identifier after `fun`");
         let id = self.prev.text.clone();
         let mut params: Vec<(String, Node)> = vec![];
@@ -721,21 +843,28 @@ impl<'a> Parser<'a> {
         let rets: Box<Node> = if self.accept(TokenKind::Colon) {
             Box::new(self.parse_type())
         } else {
-            Box::new(Node::get_void_type())
+            Box::new(Node::get_void_type(line, column))
         };
 
         let expr = Box::new(self.parse_block(true));
 
-        Node::TopFun {
-            tags,
-            id,
-            params,
-            rets,
-            expr,
+        Node {
+            line,
+            column,
+            node: NodeKind::TopFun {
+                tags,
+                id,
+                params,
+                rets,
+                expr,
+            },
         }
     }
 
     pub fn parse_rec(&mut self, tags: Vec<RecTags>) -> Node {
+        let line = self.prev.line;
+        let column = self.prev.column;
+
         self.expect(TokenKind::Identifier, "expected identifier after `rec`");
         let id = self.prev.text.clone();
         let mut fields: Vec<(String, Node)> = vec![];
@@ -762,22 +891,37 @@ impl<'a> Parser<'a> {
             "expected closed parenthesis after record field list",
         );
 
-        Node::TopRec { tags, id, fields }
+        Node {
+            line,
+            column,
+            node: NodeKind::TopRec { tags, id, fields },
+        }
     }
 
     fn parse_def(&mut self, tags: Vec<DefTags>) -> Node {
+        let line = self.prev.line;
+        let column = self.prev.column;
+
         self.expect(TokenKind::Identifier, "expected identifier after `def`");
         let id = self.prev.text.clone();
         self.expect(TokenKind::Eq, "expected `=` after `def <identifier>`");
         let typ = self.parse_type();
-        Node::TopDef {
-            tags,
-            id,
-            typ: Box::new(typ),
+
+        Node {
+            line,
+            column,
+            node: NodeKind::TopDef {
+                tags,
+                id,
+                typ: Box::new(typ),
+            },
         }
     }
 
     fn parse_mac(&mut self, tags: Vec<MacTags>) -> Node {
+        let line = self.prev.line;
+        let column = self.prev.column;
+
         self.expect(TokenKind::Identifier, "expected identifier after `mac`");
         let id = self.prev.text.clone();
         let mut params: Vec<String> = vec![];
@@ -809,16 +953,23 @@ impl<'a> Parser<'a> {
         self.expect(TokenKind::String, "expected string after macro `=`");
         let expands_to = self.prev.text.clone(); //TODO: Don't require a string here
 
-        Node::TopMac {
-            tags,
-            id,
-            params,
-            rets,
-            expands_to,
+        Node {
+            line,
+            column,
+            node: NodeKind::TopMac {
+                tags,
+                id,
+                params,
+                rets,
+                expands_to,
+            },
         }
     }
 
     fn parse_tag(&mut self, tags: Vec<TagTags>) -> Node {
+        let line = self.prev.line;
+        let column = self.prev.column;
+
         self.expect(TokenKind::Identifier, "expected identifier after `tag`");
         let id = self.prev.text.clone();
         let mut entries: Vec<String> = vec![];
@@ -837,10 +988,17 @@ impl<'a> Parser<'a> {
             "expected closed parenthesis after tag entry list",
         );
 
-        Node::TopTag { tags, id, entries }
+        Node {
+            line,
+            column,
+            node: NodeKind::TopTag { tags, id, entries },
+        }
     }
 
     fn parse_tagrec(&mut self, tags: Vec<TagRecTags>) -> Node {
+        let line = self.prev.line;
+        let column = self.prev.column;
+
         self.expect(TokenKind::Identifier, "expected identifier after `tag`");
         let id = self.prev.text.clone();
         let mut entries: Vec<(String, Vec<(String, Node)>)> = vec![];
@@ -882,7 +1040,11 @@ impl<'a> Parser<'a> {
             "expected closed parenthesis after tag entry list",
         );
 
-        Node::TopTagRec { tags, id, entries }
+        Node {
+            line,
+            column,
+            node: NodeKind::TopTagRec { tags, id, entries },
+        }
     }
 
     pub fn parse_top_level_statement(&mut self) -> Node {
@@ -941,6 +1103,10 @@ impl<'a> Parser<'a> {
         while !self.done {
             nodes.push(self.parse_top_level_statement());
         }
-        Node::Program(nodes)
+        Node {
+            line: 0,
+            column: 0,
+            node: NodeKind::Program(nodes),
+        }
     }
 }

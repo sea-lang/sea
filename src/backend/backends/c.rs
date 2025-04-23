@@ -1,23 +1,42 @@
 use core::{fmt, panic};
-use std::{
-    collections::HashMap,
-    fs::File,
-    io::{self, Write},
-    path::PathBuf,
-};
+use std::{io::Write, path::PathBuf};
 
 use crate::{
     backend::backend::Backend,
-    compile::{compiler::Compiler, symbol::Symbol},
+    compile::{compiler::Compiler, error::CompilerError, symbol::Symbol},
     hashtags::{DefTags, FunTags, RecTags, TagRecTags, TagTags},
-    parse::{ast::Node, operator::OperatorKind},
+    parse::{
+        ast::{Node, NodeKind},
+        operator::OperatorKind,
+    },
 };
 
-pub struct CBackend {
-    pub compiler: Compiler,
+pub struct CBackend<'a> {
+    pub node: Box<Node>, // reference to current node
+    pub compiler: Compiler<'a>,
 }
 
-impl CBackend {
+impl<'a> CBackend<'a> {
+    pub fn new(compiler: Compiler<'a>) -> Self {
+        CBackend {
+            node: Box::new(Node {
+                line: 0,
+                column: 0,
+                node: NodeKind::Raw(Default::default()),
+            }),
+            compiler,
+        }
+    }
+
+    pub fn throw(&self, error: CompilerError, help: Option<&str>) -> ! {
+        self.compiler
+            .throw_exception(error, help, *self.node.clone())
+    }
+
+    pub fn get_symbol(&self, symbol: String) -> Option<&Symbol> {
+        self.compiler.symbols.get_symbol(symbol)
+    }
+
     pub fn w(&mut self, fmt: fmt::Arguments<'_>) {
         self.compiler
             .output_file
@@ -106,8 +125,8 @@ impl CBackend {
     }
 
     pub fn typ_from_node(&mut self, node: Node) {
-        match node {
-            Node::Type {
+        match node.node {
+            NodeKind::Type {
                 pointers,
                 name,
                 arrays,
@@ -156,8 +175,8 @@ impl CBackend {
     }
 
     pub fn named_typ_from_node(&mut self, id: String, node: Node) {
-        match node {
-            Node::Type {
+        match node.node {
+            NodeKind::Type {
                 pointers,
                 name,
                 arrays,
@@ -194,7 +213,7 @@ impl CBackend {
         self.typ_from_node(*rets);
         self.w(format_args!(" {id}("));
         self.compiler.push_scope();
-        self.compiler.symbols.add_symbol(id, Symbol::Fun);
+        self.compiler.add_fun(id);
 
         if params.len() > 0 {
             let len = params.len() - 1;
@@ -207,7 +226,7 @@ impl CBackend {
                 self.compiler.symbols.add_scoped_symbol(
                     param_id.to_string(),
                     self.compiler.scope,
-                    Symbol::FunParam,
+                    Symbol::Var,
                 );
                 index += 1;
             }
@@ -245,6 +264,8 @@ impl CBackend {
             self.ws(";\n");
         }
         self.w(format_args!("}} {id};\n\n"));
+
+        self.compiler.add_rec(id);
     }
 
     pub fn top_def(&mut self, tags: Vec<DefTags>, id: String, typ: Node) {
@@ -257,6 +278,8 @@ impl CBackend {
         self.ws("typedef ");
         self.typ_from_node(typ);
         self.w(format_args!("{id};\n\n"));
+
+        self.compiler.add_def(id);
     }
 
     pub fn top_tag(&mut self, tags: Vec<TagTags>, id: String, entries: Vec<String>) {
@@ -271,6 +294,8 @@ impl CBackend {
             self.w(format_args!("\t{entry},\n"));
         }
         self.w(format_args!("}} {id};\n\n"));
+
+        self.compiler.add_tag(id);
     }
 
     pub fn top_tag_rec(
@@ -307,6 +332,8 @@ impl CBackend {
         }
         self.ws("\t};\n");
         self.w(format_args!("}} {id};\n\n"));
+
+        self.compiler.add_tag_rec(id);
     }
 
     // #endregion: Top level statements
@@ -330,6 +357,31 @@ impl CBackend {
             self.write(else_);
             self.ws("}");
         }
+    }
+
+    pub fn stat_switch(&mut self, switch: Node, cases: Vec<(Option<Box<Node>>, bool, Box<Node>)>) {
+        self.ws("switch (");
+        self.write(switch);
+        self.ws(") {\n");
+        for (case, fall, expr) in cases {
+            match case {
+                Some(case) => {
+                    self.ws("case (");
+                    self.write(*case);
+                    self.ws("): "); // aww it's sad :(
+                }
+                None => {
+                    self.ws("default: "); // this one isn't sad :)
+                }
+            }
+            self.ws("{");
+            self.write(*expr);
+            if fall {
+                self.ws("break;");
+            }
+            self.ws("}")
+        }
+        self.ws("}\n");
     }
 
     // #endregion Statements
@@ -384,8 +436,42 @@ impl CBackend {
 
     pub fn expr_new(&mut self, id: String, params: Vec<Node>) {
         self.w(format_args!("({id}){{"));
-        self.comma_separated(params);
-        self.ws("}")
+        let symbol = self.get_symbol(id.clone());
+
+        if symbol.is_some_and(|it| it.instantiatable()) {
+            // When instantiating tag recs, we want to explicitly specify which union we are instantiating
+            if symbol.unwrap() == &Symbol::TagRec {
+                if params.len() == 0 {
+                    self.throw(CompilerError::TagRecInstantiateWithoutKind, None);
+                }
+                let kind = &params[0];
+                let kind_str = match &kind.node {
+                    NodeKind::ExprIdentifier(id) => id,
+                    _ => self.throw(
+                        CompilerError::TagRecInstantiateWithoutKind,
+                        Some("the first parameter must be an entry in the tag rec (it currently is not)"),
+                    ),
+                };
+                self.write(kind.clone());
+                if params.len() > 1 {
+                    self.w(format_args!(", .{kind_str}={{"));
+                    self.comma_separated(params[1..].to_vec());
+                    self.ws("}");
+                }
+            } else {
+                self.comma_separated(params);
+            }
+            self.ws("}")
+        } else {
+            if symbol.is_none() {
+                self.throw(CompilerError::UnknownSymbol(id), None);
+            } else {
+                self.throw(
+                    CompilerError::Uninstantiatable(id, symbol.unwrap().clone()),
+                    None,
+                );
+            }
+        }
     }
 
     pub fn expr_unary_operator(&mut self, kind: OperatorKind, value: Node) {
@@ -494,76 +580,83 @@ impl CBackend {
     // #endregion Expressions
 }
 
-impl Backend for CBackend {
+impl<'a> Backend for CBackend<'a> {
     fn write(&mut self, node: Node) {
-        match node {
-            Node::Program(nodes) => self.program(nodes),
-            Node::Raw(text) => self.raw(text),
-            Node::Type {
+        self.node = Box::new(node.clone());
+        match node.node {
+            NodeKind::Program(nodes) => self.program(nodes),
+            NodeKind::Raw(text) => self.raw(text),
+            NodeKind::Type {
                 pointers,
                 name,
                 arrays,
                 funptr_args,
                 funptr_rets,
             } => self.typ(pointers, name, arrays, funptr_args, funptr_rets),
-            Node::TopUse(path_buf) => self.top_use(path_buf),
-            Node::TopFun {
+            NodeKind::TopUse(path_buf) => self.top_use(path_buf),
+            NodeKind::TopFun {
                 tags,
                 id,
                 params,
                 rets,
                 expr,
             } => self.top_fun(tags, id, params, rets, expr),
-            Node::TopRec { tags, id, fields } => self.top_rec(tags, id, fields),
-            Node::TopDef { tags, id, typ } => self.top_def(tags, id, *typ),
-            Node::TopMac {
+            NodeKind::TopRec { tags, id, fields } => self.top_rec(tags, id, fields),
+            NodeKind::TopDef { tags, id, typ } => self.top_def(tags, id, *typ),
+            NodeKind::TopMac {
                 tags,
                 id,
                 params,
                 rets,
                 expands_to,
             } => todo!(),
-            Node::TopTag { tags, id, entries } => self.top_tag(tags, id, entries),
-            Node::TopTagRec { tags, id, entries } => self.top_tag_rec(tags, id, entries),
-            Node::StatRet(node) => self.stat_ret(node.map(|it| *it)),
-            Node::StatIf { cond, expr, else_ } => self.stat_if(*cond, *expr, else_.map(|it| *it)),
-            Node::StatSwitch { switch, cases } => todo!(),
-            Node::StatForCStyle {
+            NodeKind::TopTag { tags, id, entries } => self.top_tag(tags, id, entries),
+            NodeKind::TopTagRec { tags, id, entries } => self.top_tag_rec(tags, id, entries),
+            NodeKind::StatRet(node) => self.stat_ret(node.map(|it| *it)),
+            NodeKind::StatIf { cond, expr, else_ } => {
+                self.stat_if(*cond, *expr, else_.map(|it| *it))
+            }
+            NodeKind::StatSwitch { switch, cases } => self.stat_switch(*switch, cases),
+            NodeKind::StatForCStyle {
                 def,
                 cond,
                 inc,
                 expr,
             } => todo!(),
-            Node::StatForSingleExpr { cond, expr } => todo!(),
-            Node::StatForRange {
+            NodeKind::StatForSingleExpr { cond, expr } => todo!(),
+            NodeKind::StatForRange {
                 var,
                 from,
                 to,
                 expr,
             } => todo!(),
-            Node::StatExpr(node) => {
+            NodeKind::StatExpr(node) => {
                 self.write(*node);
                 self.ws(";\n");
             }
-            Node::ExprGroup(node) => self.expr_group(*node),
-            Node::ExprNumber(number) => self.expr_number(number),
-            Node::ExprString(string) => self.expr_string(string),
-            Node::ExprCString(string) => self.expr_c_string(string),
-            Node::ExprChar(ch) => self.expr_char(ch),
-            Node::ExprTrue => self.expr_true(),
-            Node::ExprFalse => self.expr_false(),
-            Node::ExprIdentifier(id) => self.expr_id(id),
-            Node::ExprBlock(nodes) => self.expr_block(nodes),
-            Node::ExprNew { id, params } => self.expr_new(id, params),
-            Node::ExprUnaryOperator { kind, value } => self.expr_unary_operator(kind, *value),
-            Node::ExprBinaryOperator { kind, left, right } => {
+            NodeKind::ExprGroup(node) => self.expr_group(*node),
+            NodeKind::ExprNumber(number) => self.expr_number(number),
+            NodeKind::ExprString(string) => self.expr_string(string),
+            NodeKind::ExprCString(string) => self.expr_c_string(string),
+            NodeKind::ExprChar(ch) => self.expr_char(ch),
+            NodeKind::ExprTrue => self.expr_true(),
+            NodeKind::ExprFalse => self.expr_false(),
+            NodeKind::ExprIdentifier(id) => self.expr_id(id),
+            NodeKind::ExprBlock(nodes) => self.expr_block(nodes),
+            NodeKind::ExprNew { id, params } => self.expr_new(id, params),
+            NodeKind::ExprUnaryOperator { kind, value } => self.expr_unary_operator(kind, *value),
+            NodeKind::ExprBinaryOperator { kind, left, right } => {
                 self.expr_binary_operator(kind, *left, *right)
             }
-            Node::ExprInvoke { left, params } => self.expr_invoke(*left, params),
-            Node::ExprMacInvoke { name, params } => todo!(),
-            Node::ExprList(nodes) => todo!(),
-            Node::ExprVar { name, typ, value } => self.expr_var(name, typ.map(|it| *it), *value),
-            Node::ExprLet { name, typ, value } => self.expr_let(name, typ.map(|it| *it), *value),
+            NodeKind::ExprInvoke { left, params } => self.expr_invoke(*left, params),
+            NodeKind::ExprMacInvoke { name, params } => todo!(),
+            NodeKind::ExprList(nodes) => todo!(),
+            NodeKind::ExprVar { name, typ, value } => {
+                self.expr_var(name, typ.map(|it| *it), *value)
+            }
+            NodeKind::ExprLet { name, typ, value } => {
+                self.expr_let(name, typ.map(|it| *it), *value)
+            }
         }
     }
 }

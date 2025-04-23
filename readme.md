@@ -10,14 +10,12 @@
 
 > _C for the modern world._
 
+> _Pronounced /see-uh/ (IPA: \[siə\])_
+
 ---
 
 Sea is a general-purpose language made to allow programmers to write low-level,
 performant, and portable code without needing to write C.
-
-> If you are conversing about Sea and C, then you may want to pronounce Sea as
-> `see-uh` instead of `see` to prevent ambiguity. You could also call it
-> `fish c` or any other random thing that helps to fix the ambiguity.
 
 **Features:**
 
@@ -34,12 +32,13 @@ performant, and portable code without needing to write C.
 - [Cyclone](https://cyclone.thelanguage.org), partially
 - [Go](https://go.dev)
 
-## Installation
+## Usage
 
-Sea is currently very unfinished. If you still want to use it, you can use the
-prototype implementation with `python3 -m proto path/to/input/file.sea -rs .`
+At the moment, Sea is not in a feature-complete state, however if you want to
+try it, you can build the compiler using `cargo build --release`.
 
-You can also build the new compiler using `python3 -m proto src/main.sea -s .`
+To build Sea code, use `sea compile --run ./path/to/input.sea` (or
+`sea c -r ./path/to/input.sea`).
 
 ## Why?
 
@@ -53,8 +52,13 @@ and a more... usable standard library.
 > code practices from the 70s.
 
 Of note, the Sea standard library can be 100% ignored and you can use solely the
-C standard library if you wish.
+C standard library if you wish. Or you can also use no standard libraries, if
+you so chose.
 
 ## Developers and Contributors
 
 Read this! [doc/developers.md](doc/developers.md)
+
+## License
+
+MIT License, see [here](license.txt) for license text.

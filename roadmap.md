@@ -8,9 +8,8 @@
 - [ ] Namespaces?
 - [ ] Traits/interfaces?
 - [x] Type inference
-- [ ] Generic inference
 - [ ] Contracts
-- [ ] Rewrite the compiler in Sea
+- [ ] Rewrite the compiler in Rust
 
 ## 0.1 - Humuhumunukunukuapau'a
 

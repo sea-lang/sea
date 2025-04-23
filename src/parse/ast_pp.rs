@@ -1,6 +1,6 @@
 // Pretty printer for AST nodes
 
-use super::ast::Node;
+use super::ast::{Node, NodeKind};
 
 const RESET: &'static str = "\x1b[0m";
 const TYPE: &'static str = "\x1b[33m";
@@ -33,16 +33,16 @@ impl Node {
             print!("{}", spacing);
         }
 
-        match self {
-            Node::Program(nodes) => {
+        match &self.node {
+            NodeKind::Program(nodes) => {
                 println!("\x1b[1mprogram:\x1b[0m");
                 for node in nodes {
                     node.pretty_print_inner(indent + 1, true);
                 }
                 print!("\x1b[0m");
             }
-            Node::Raw(code) => println!("raw code: '{TEXT}{code}{RESET}'"),
-            Node::Type {
+            NodeKind::Raw(code) => println!("raw code: '{TEXT}{code}{RESET}'"),
+            NodeKind::Type {
                 pointers,
                 name,
                 arrays,
@@ -99,8 +99,8 @@ impl Node {
                     println!("");
                 }
             }
-            Node::TopUse(path_buf) => println!("{TOP_LEVEL_STAT}use: {TEXT}{path_buf:?}"),
-            Node::TopFun {
+            NodeKind::TopUse(path_buf) => println!("{TOP_LEVEL_STAT}use: {TEXT}{path_buf:?}"),
+            NodeKind::TopFun {
                 tags,
                 id,
                 params,
@@ -125,7 +125,7 @@ impl Node {
                 println!("{TOP_LEVEL_STAT}{spacing}  code:");
                 expr.pretty_print_inner(indent + 2, true);
             }
-            Node::TopRec { tags, id, fields } => {
+            NodeKind::TopRec { tags, id, fields } => {
                 println!("{TOP_LEVEL_STAT}rec '{TEXT}{id}{TOP_LEVEL_STAT}'");
 
                 if tags.iter().count() > 0 {
@@ -138,7 +138,7 @@ impl Node {
                     field_node.pretty_print_inner(indent + 2, false);
                 }
             }
-            Node::TopDef { tags, id, typ } => {
+            NodeKind::TopDef { tags, id, typ } => {
                 print!("{TOP_LEVEL_STAT}def '{TEXT}{id}{TOP_LEVEL_STAT}' = ");
                 typ.pretty_print_inner(indent + 1, false);
 
@@ -146,7 +146,7 @@ impl Node {
                     println!("{spacing}  tags: {TEXT}#{tags:?}{TOP_LEVEL_STAT}");
                 }
             }
-            Node::TopMac {
+            NodeKind::TopMac {
                 tags,
                 id,
                 params,
@@ -173,7 +173,7 @@ impl Node {
                     "{TOP_LEVEL_STAT}{spacing}  expansion = '{TEXT}{expands_to}{TOP_LEVEL_STAT}'"
                 );
             }
-            Node::TopTag { tags, id, entries } => {
+            NodeKind::TopTag { tags, id, entries } => {
                 println!("{TOP_LEVEL_STAT}tag '{TEXT}{id}{TOP_LEVEL_STAT}':");
 
                 if tags.iter().count() > 0 {
@@ -185,7 +185,7 @@ impl Node {
                     println!("{spacing}    - '{TEXT}{entry}{TOP_LEVEL_STAT}'");
                 }
             }
-            Node::TopTagRec { tags, id, entries } => {
+            NodeKind::TopTagRec { tags, id, entries } => {
                 println!("{TOP_LEVEL_STAT}tag rec '{TEXT}{id}{TOP_LEVEL_STAT}':");
 
                 if tags.iter().count() > 0 {
@@ -206,11 +206,11 @@ impl Node {
                     }
                 }
             }
-            Node::StatRet(node) => {
+            NodeKind::StatRet(node) => {
                 println!("{STAT}ret:");
                 node.as_ref().unwrap().pretty_print_inner(indent + 1, true);
             }
-            Node::StatIf { cond, expr, else_ } => {
+            NodeKind::StatIf { cond, expr, else_ } => {
                 println!("{STAT}if:");
                 println!("{spacing}  cond:");
                 cond.pretty_print_inner(indent + 2, true);
@@ -221,7 +221,7 @@ impl Node {
                     it.pretty_print_inner(indent + 2, true);
                 }
             }
-            Node::StatSwitch { switch, cases } => {
+            NodeKind::StatSwitch { switch, cases } => {
                 println!("{STAT}switch:");
                 println!("{spacing}  expr:");
                 switch.pretty_print_inner(indent + 2, true);
@@ -242,7 +242,7 @@ impl Node {
                     block.pretty_print_inner(indent + 4, true);
                 }
             }
-            Node::StatForCStyle {
+            NodeKind::StatForCStyle {
                 def,
                 cond,
                 inc,
@@ -258,14 +258,14 @@ impl Node {
                 println!("{STAT}{spacing}  expr:");
                 expr.pretty_print_inner(indent + 2, true);
             }
-            Node::StatForSingleExpr { cond, expr } => {
+            NodeKind::StatForSingleExpr { cond, expr } => {
                 println!("{STAT}for (single expr):");
                 println!("{spacing}  cond: ");
                 cond.pretty_print_inner(indent + 2, true);
                 println!("{STAT}{spacing}  expr:");
                 expr.pretty_print_inner(indent + 2, true);
             }
-            Node::StatForRange {
+            NodeKind::StatForRange {
                 var,
                 from,
                 to,
@@ -282,46 +282,46 @@ impl Node {
                 println!("{STAT}{spacing}  expr:");
                 expr.pretty_print_inner(indent + 2, true);
             }
-            Node::StatExpr(node) => {
+            NodeKind::StatExpr(node) => {
                 println!("{EXPR}expr:");
                 node.pretty_print_inner(indent + 1, true);
             }
-            Node::ExprGroup(node) => {
+            NodeKind::ExprGroup(node) => {
                 println!("{EXPR}group:");
                 node.pretty_print_inner(indent + 1, true);
             }
-            Node::ExprNumber(value) => println!("{EXPR}number: '{TEXT}{value}{EXPR}'"),
-            Node::ExprString(value) => println!("{EXPR}string: '{TEXT}{value}{EXPR}'"),
-            Node::ExprCString(value) => println!("{EXPR}cstring: c'{TEXT}{value}{EXPR}'"),
-            Node::ExprChar(value) => println!("{EXPR}char: '{TEXT}{value}{EXPR}'"),
-            Node::ExprTrue => println!("{EXPR}true"),
-            Node::ExprFalse => println!("{EXPR}false"),
-            Node::ExprIdentifier(value) => println!("{EXPR}id: '{TEXT}{value}{EXPR}'"),
-            Node::ExprBlock(nodes) => {
+            NodeKind::ExprNumber(value) => println!("{EXPR}number: '{TEXT}{value}{EXPR}'"),
+            NodeKind::ExprString(value) => println!("{EXPR}string: '{TEXT}{value}{EXPR}'"),
+            NodeKind::ExprCString(value) => println!("{EXPR}cstring: c'{TEXT}{value}{EXPR}'"),
+            NodeKind::ExprChar(value) => println!("{EXPR}char: '{TEXT}{value}{EXPR}'"),
+            NodeKind::ExprTrue => println!("{EXPR}true"),
+            NodeKind::ExprFalse => println!("{EXPR}false"),
+            NodeKind::ExprIdentifier(value) => println!("{EXPR}id: '{TEXT}{value}{EXPR}'"),
+            NodeKind::ExprBlock(nodes) => {
                 println!("{EXPR}block:");
                 for node in nodes {
                     node.pretty_print_inner(indent + 1, true);
                 }
             }
-            Node::ExprNew { id, params } => {
+            NodeKind::ExprNew { id, params } => {
                 println!("{EXPR}new: '{TEXT}{id}{EXPR}', params:");
                 for param in params {
                     param.pretty_print_inner(indent + 1, true);
                 }
             }
-            Node::ExprUnaryOperator { kind, value } => {
+            NodeKind::ExprUnaryOperator { kind, value } => {
                 println!("{EXPR}unary op: '{TEXT}{kind:?}{EXPR}'");
                 print!("{spacing}  value: ");
                 value.pretty_print_inner(indent + 1, false);
             }
-            Node::ExprBinaryOperator { kind, left, right } => {
+            NodeKind::ExprBinaryOperator { kind, left, right } => {
                 println!("{EXPR}binary op: '{TEXT}{kind:?}{EXPR}'");
                 print!("{spacing}  left: ");
                 left.pretty_print_inner(indent + 1, false);
                 print!("{EXPR}{spacing}  right: ");
                 right.pretty_print_inner(indent + 1, false);
             }
-            Node::ExprInvoke { left, params } => {
+            NodeKind::ExprInvoke { left, params } => {
                 println!("{EXPR}invoke:");
                 left.pretty_print_inner(indent + 1, true);
                 println!("{EXPR}{spacing}  params:");
@@ -330,7 +330,7 @@ impl Node {
                     param.pretty_print_inner(indent + 2, false);
                 }
             }
-            Node::ExprMacInvoke { name, params } => {
+            NodeKind::ExprMacInvoke { name, params } => {
                 println!("mac invoke: '{TEXT}{name}{RESET}'");
                 println!("{spacing}  params:");
                 for param in params {
@@ -338,14 +338,14 @@ impl Node {
                     param.pretty_print_inner(indent + 2, false);
                 }
             }
-            Node::ExprList(nodes) => {
+            NodeKind::ExprList(nodes) => {
                 println!("{EXPR}list:");
                 for node in nodes {
                     print!("{EXPR}{spacing}  - ");
                     node.pretty_print_inner(indent + 1, false);
                 }
             }
-            Node::ExprVar { name, typ, value } => match typ {
+            NodeKind::ExprVar { name, typ, value } => match typ {
                 Some(it) => {
                     println!("{EXPR}var '{TEXT}{name}{EXPR}':");
                     print!("{EXPR}{spacing}  type: ");
@@ -358,7 +358,7 @@ impl Node {
                     value.pretty_print_inner(indent + 1, true);
                 }
             },
-            Node::ExprLet { name, typ, value } => match typ {
+            NodeKind::ExprLet { name, typ, value } => match typ {
                 Some(it) => {
                     println!("{EXPR}let '{TEXT}{name}{EXPR}':");
                     print!("{EXPR}{spacing}  type: ");

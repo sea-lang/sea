@@ -1,17 +1,12 @@
 use std::{
-    collections::HashMap,
-    fs::{self, File},
-    path::PathBuf,
-    process::Command,
-    str::FromStr,
-    sync::LazyLock,
+    collections::HashMap, fs, path::PathBuf, process::Command, str::FromStr, sync::LazyLock,
 };
 
 use text_io::read;
 
 use crate::{
     backend::{backend::Backend, backends::c::CBackend},
-    compile::{compiler::Compiler, symbol::SymbolTable},
+    compile::compiler::Compiler,
     parse::{lexer::make_lexer, parser::Parser},
 };
 
@@ -256,13 +251,8 @@ impl Sandbox {
             .expect("failed to mkdirs .sea/sandbox/");
 
         // Make compiler and backend
-        let compiler = Compiler {
-            output_path: self.output_path.clone(),
-            output_file: File::create(self.c_output_path.clone()).unwrap(),
-            scope: 0,
-            symbols: SymbolTable {},
-        };
-        let mut backend = CBackend { compiler };
+        let compiler = Compiler::new(self.output_path.clone(), self.c_output_path.clone(), parser);
+        let mut backend = CBackend::new(compiler);
 
         // Write output C code
         backend.write(program);

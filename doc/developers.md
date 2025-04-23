@@ -1,5 +1,22 @@
 # Notes for Sea Developers
 
+## File/Folder Structure
+
+```
+doc/          - Documentation, guides, etc
+proto/        - Prototype compiler, this will be removed eventually.
+res/          - Resources (images and such)
+samples/      - Sea samples
+src/          - Compiler source code
+  backend/    - Backend trait
+    backends/ - Backends
+  compile/    - Compiler (not the backend!)
+  parse/      - Lexer and parser
+  sandbox/    - Sea sandbox code
+std/          - Sea standard library
+tests/        - Tests for the lexer/parser/backend/compiler/whatever
+```
+
 ## IDE/Editor
 
 If you're using VSCode, I highly recommend adding these two extensions:

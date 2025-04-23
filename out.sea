@@ -23,10 +23,18 @@ tag Suit(
 rec Card(suit: Suit, value: uint8_t)
 
 tag rec Action(
-	Play(card: Card),
-	Discard,
+	Play(card: Card)
+	Discard
 	SomethingElse(suit: Suit, value: uint8_t)
 )
+
+fun play(action: Action) {
+	switch action.kind {
+		case Play -> printf(c"Playing a card: %d of %d s\n", action.Play.card.value, action.Play.card.suit)
+		case Discard -> printf(c"Discarding a card\n")
+		case SomethingElse -> printf(c"Something else: %d of %d s\n", action.SomethingElse.value, action.SomethingElse.suit)
+	}
+}
 
 fun to_heap(it: int): ^int {
 	var p: ^int = malloc(sizeof(it)) as ^int
@@ -46,4 +54,8 @@ fun main(argc: int, argv: ^char[]): int {
 	} else {
 		printf(c"Arguments provided!\n")
 	}
+
+	play(new Action(Play, new Card(Spades, 4)))
+	play(new Action(Discard))
+	play(new Action(SomethingElse, Spades, 4))
 }

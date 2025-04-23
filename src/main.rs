@@ -1,10 +1,7 @@
-use std::{
-    fs::{self, File},
-    path::PathBuf,
-};
+use std::{fs, path::PathBuf};
 
 use backend::{backend::Backend, backends::c::CBackend};
-use compile::{compiler::Compiler, symbol::SymbolTable};
+use compile::compiler::Compiler;
 use parse::{lexer::make_lexer, parser::Parser};
 
 pub mod backend;
@@ -46,7 +43,7 @@ mod flags {
 }
 
 fn compile(flags: flags::Compile) {
-    let path = || flags.input.clone();
+    let path = || flags.input.clone(); // TODO: this is hacky and there's absolutely a better way to do it
     let c_output_path = PathBuf::from(".sea/build/output.c");
 
     // Load the source code
@@ -60,13 +57,8 @@ fn compile(flags: flags::Compile) {
     program.pretty_print();
 
     // Make compiler and backend
-    let compiler = Compiler {
-        output_path: path(),
-        output_file: File::create(c_output_path).unwrap(),
-        scope: 0,
-        symbols: SymbolTable {},
-    };
-    let mut backend = CBackend { compiler };
+    let compiler = Compiler::new(path(), c_output_path, parser);
+    let mut backend = CBackend::new(compiler);
 
     // Write output C code
     backend.write(program);

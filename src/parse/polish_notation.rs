@@ -2,7 +2,10 @@
 
 use core::fmt;
 
-use super::{ast::Node, operator::OperatorKind};
+use super::{
+    ast::{Node, NodeKind},
+    operator::OperatorKind,
+};
 
 const RESET: &'static str = "\x1b[0m";
 const NAME: &'static str = "\x1b[34m";
@@ -26,24 +29,24 @@ impl PolishNodeTree {
     }
 
     pub fn from_node(node: Node) -> Option<Self> {
-        Some(match node {
-            Node::ExprGroup(node) => PolishNodeTree::Branch(
+        Some(match node.node {
+            NodeKind::ExprGroup(node) => PolishNodeTree::Branch(
                 "group".to_string(),
-                vec![PolishNodeTree::from_node(node.as_ref().clone()).unwrap()],
+                vec![PolishNodeTree::from_node(*node.clone()).unwrap()],
             ),
-            Node::ExprNumber(value) => PolishNodeTree::Leaf(value),
-            Node::ExprString(value) => PolishNodeTree::Leaf(value),
-            Node::ExprChar(value) => PolishNodeTree::Leaf(value.to_string()),
-            Node::ExprTrue => PolishNodeTree::Leaf("true".to_string()),
-            Node::ExprFalse => PolishNodeTree::Leaf("false".to_string()),
-            Node::ExprIdentifier(value) => PolishNodeTree::Leaf(value),
-            Node::ExprBlock(_) => PolishNodeTree::Leaf("block".to_string()),
-            Node::ExprNew { id, params } => {
+            NodeKind::ExprNumber(value) => PolishNodeTree::Leaf(value),
+            NodeKind::ExprString(value) => PolishNodeTree::Leaf(value),
+            NodeKind::ExprChar(value) => PolishNodeTree::Leaf(value.to_string()),
+            NodeKind::ExprTrue => PolishNodeTree::Leaf("true".to_string()),
+            NodeKind::ExprFalse => PolishNodeTree::Leaf("false".to_string()),
+            NodeKind::ExprIdentifier(value) => PolishNodeTree::Leaf(value),
+            NodeKind::ExprBlock(_) => PolishNodeTree::Leaf("block".to_string()),
+            NodeKind::ExprNew { id, params } => {
                 let mut nodes = PolishNodeTree::from_node_vec(params).unwrap();
                 nodes.insert(0, PolishNodeTree::Leaf(id));
                 PolishNodeTree::Branch("new".to_string(), nodes)
             }
-            Node::ExprUnaryOperator { kind, value } => {
+            NodeKind::ExprUnaryOperator { kind, value } => {
                 PolishNodeTree::Branch(
                     match kind {
                         OperatorKind::Ref => "ref",
@@ -55,10 +58,10 @@ impl PolishNodeTree {
                         _ => return None, // error
                     }
                     .to_string(),
-                    vec![PolishNodeTree::from_node(value.as_ref().clone()).unwrap()],
+                    vec![PolishNodeTree::from_node(*value.clone()).unwrap()],
                 )
             }
-            Node::ExprBinaryOperator { kind, left, right } => {
+            NodeKind::ExprBinaryOperator { kind, left, right } => {
                 PolishNodeTree::Branch(
                     match kind {
                         OperatorKind::Dot => ".",
@@ -81,28 +84,28 @@ impl PolishNodeTree {
                     }
                     .to_string(),
                     vec![
-                        PolishNodeTree::from_node(left.as_ref().clone()).unwrap(),
-                        PolishNodeTree::from_node(right.as_ref().clone()).unwrap(),
+                        PolishNodeTree::from_node(*left.clone()).unwrap(),
+                        PolishNodeTree::from_node(*right.clone()).unwrap(),
                     ],
                 )
             }
-            Node::ExprInvoke { left, params } => PolishNodeTree::Branch(
+            NodeKind::ExprInvoke { left, params } => PolishNodeTree::Branch(
                 format!(
                     "invoke={}",
-                    PolishNodeTree::from_node(left.as_ref().clone()).unwrap()
+                    PolishNodeTree::from_node(*left.clone()).unwrap()
                 )
                 .to_string(),
                 PolishNodeTree::from_node_vec(params).unwrap(),
             ),
-            Node::ExprMacInvoke { name, params } => PolishNodeTree::Branch(
+            NodeKind::ExprMacInvoke { name, params } => PolishNodeTree::Branch(
                 format!("macinvoke={}", name).to_string(),
                 PolishNodeTree::from_node_vec(params).unwrap(),
             ),
-            Node::ExprList(nodes) => PolishNodeTree::Branch(
+            NodeKind::ExprList(nodes) => PolishNodeTree::Branch(
                 "list".to_string(),
                 PolishNodeTree::from_node_vec(nodes).unwrap(),
             ),
-            Node::ExprVar {
+            NodeKind::ExprVar {
                 name,
                 typ: _typ,
                 value,
@@ -110,10 +113,10 @@ impl PolishNodeTree {
                 "var".to_string(),
                 vec![
                     PolishNodeTree::Leaf(name),
-                    PolishNodeTree::from_node(value.as_ref().clone()).unwrap(),
+                    PolishNodeTree::from_node(*value.clone()).unwrap(),
                 ],
             ),
-            Node::ExprLet {
+            NodeKind::ExprLet {
                 name,
                 typ: _typ,
                 value,
@@ -121,7 +124,7 @@ impl PolishNodeTree {
                 "let".to_string(),
                 vec![
                     PolishNodeTree::Leaf(name),
-                    PolishNodeTree::from_node(value.as_ref().clone()).unwrap(),
+                    PolishNodeTree::from_node(*value.clone()).unwrap(),
                 ],
             ),
             _ => return None,

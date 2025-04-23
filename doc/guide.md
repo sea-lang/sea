@@ -40,15 +40,13 @@ fun main(): int {
 }
 ```
 
-You can run this (assuming the prototype compiler is in `proto/`) using
-`python3 -m proto -rs path/to/stdlib ./main.sea`
-
-> This will get more simple, don't worry!
+You can run this using `sea compile --run main.sea` (or `sea c -r main.sea`).
 
 ## Table of Contents
 
 - [Hello, World](#hello-world)
 - [Comments](#comments)
+- [Blocks](#blocks)
 - [Functions](#functions)
 - [Symbol Visibility](#symbol-visibility)
 - [Variables](#variables)
@@ -98,6 +96,18 @@ fun main(): int {
 
 /* /* You can nest multi-line comments too. */ */
 ```
+
+## Blocks
+
+You're probably used to braces for blocks (`{}`), that isn't different in Sea,
+but there is a shorthand you should be aware of:
+
+```sea
+fun main(): int -> ret 0
+```
+
+The `->` can be thought of as taking the next statement and wrapping it in
+braces, nifty!
 
 ## Functions
 
@@ -768,21 +778,4 @@ To write "good" doc comments, we **recommend** the following guidelines:
 
 ## Sandbox
 
-The sandbox is a fairly niche feature in Sea, it's similar to a REPL but not
-quite the same thing.
-
-> Explaining the sandbox is a bit difficult, so the docs here will take the form
-> of a tutorial more than a reference guide.
-
-To open the sandbox, use `sea sandbox` (or `sea s`). This will present you with
-a pretty underwhelming prompt:
-
-```
-[1]:
-```
-
-In this prompt, type the following (**all on one line**):
-
-```
-[1]: fun main(): int -> ret 0
-```
+See [sandbox.md](./sandbox.md), there's a lot to the sandbox :P

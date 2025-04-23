@@ -297,8 +297,6 @@ impl Sandbox {
 
                 let split = self.shlex(line);
 
-                println!("{:?}", split);
-
                 let cmd = split[0].strip_prefix('\\').unwrap();
                 let args = split[1..]
                     .iter()
@@ -316,13 +314,10 @@ impl Sandbox {
                 }
                 .to_string();
 
-                println!("line: {}", self.line);
-
-                if self.line >= self.lines.len() {
+                if self.line > self.lines.len() {
                     self.lines.push(line);
                 } else {
                     if self.replace_lines {
-                        println!("replacing `{}` with `{}`", self.lines[self.line], line);
                         self.lines[self.line - 1] = line;
                     } else {
                         self.lines.insert(self.line - 1, line);

@@ -49,7 +49,7 @@ fun box(it: int): Box -> ret new Box(echo(it))
 fun main(argc: int, argv: ^char[]): int {
 	printf(c"%d\n", (box(42).val)^)
 
-	if argc == 0 {
+	if argc == 1 {
 		printf(c"No arguments provided!\n")
 	} else {
 		printf(c"Arguments provided!\n")

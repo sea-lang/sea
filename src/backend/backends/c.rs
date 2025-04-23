@@ -376,10 +376,10 @@ impl<'a> CBackend<'a> {
             }
             self.ws("{");
             self.write(*expr);
-            if fall {
+            if !fall {
                 self.ws("break;");
             }
-            self.ws("}")
+            self.ws("}\n")
         }
         self.ws("}\n");
     }

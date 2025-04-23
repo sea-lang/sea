@@ -218,7 +218,6 @@ impl<'a> Lexer<'a> {
                     && !in_char
                     && self.cur != '\\' =>
                 {
-                    println!("in string = {}", !in_string);
                     in_string = !in_string
                 }
                 '\'' if !in_single_line_comment
@@ -226,20 +225,16 @@ impl<'a> Lexer<'a> {
                     && !in_string
                     && self.cur != '\\' =>
                 {
-                    println!("in char = {}", !in_char);
                     in_char = !in_char
                 }
                 '/' if !in_string && !in_char => {
                     if self.cur == '/' && !in_multiline_comment {
-                        println!("entered single line comment");
                         in_single_line_comment = true;
                     } else if self.cur == '*' && !in_single_line_comment {
-                        println!("ended multiline comment");
                         in_multiline_comment = false;
                     }
                 }
                 '*' if self.cur == '/' && !in_string && !in_char && !in_single_line_comment => {
-                    println!("entered multiline comment");
                     in_multiline_comment = true;
                 }
                 '[' if !in_single_line_comment
@@ -247,7 +242,6 @@ impl<'a> Lexer<'a> {
                     && !in_string
                     && !in_char =>
                 {
-                    println!("depth + 1");
                     depth += 1
                 }
                 ']' if !in_single_line_comment
@@ -255,7 +249,6 @@ impl<'a> Lexer<'a> {
                     && !in_string
                     && !in_char =>
                 {
-                    println!("depth - 1");
                     depth -= 1;
                     if depth == 0 {
                         self.skip_no_buffer(); // skip the closing `]`

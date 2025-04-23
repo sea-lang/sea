@@ -1,12 +1,10 @@
-use std::{
-    collections::HashMap, fs, path::PathBuf, process::Command, str::FromStr, sync::LazyLock,
-};
+use std::{collections::HashMap, fs, path::PathBuf, str::FromStr, sync::LazyLock};
 
 use text_io::read;
 
 use crate::{
     backend::{backend::Backend, backends::c::CBackend},
-    compile::compiler::Compiler,
+    compile::{self, compiler::Compiler},
     parse::{lexer::make_lexer, parser::Parser},
 };
 
@@ -267,52 +265,17 @@ impl Sandbox {
         println!("\x1b[35m: Compiling Sea\x1b[0m");
         self.recompile();
 
-        println!("\x1b[35m: Compiling C: \x1b[1;35mtcc -g3 -o .sea/sandbox/program .sea/sandbox/program.c\x1b[0m");
-        let mut compile_cmd: Command = Command::new("tcc");
-        compile_cmd.arg("-g3");
-        compile_cmd.arg("-o");
-        compile_cmd.arg(".sea/sandbox/program");
-        compile_cmd.arg(".sea/sandbox/program.c");
-        match compile_cmd.spawn() {
-            Ok(mut child) => {
-                let res = child.wait().expect("failed to wait for child");
-                if res.success() {
-                    println!(
-                        "\x1b[34m: Process exited with code: {}\x1b[0m",
-                        res.code().unwrap_or(-1)
-                    );
-                } else {
-                    println!(
-                        "\x1b[31m: Process exited with code: {}\x1b[0m",
-                        res.code().unwrap_or(-1)
-                    );
-                }
-            }
-            Err(err) => {
-                self.throw(format!("error during compilation: {err:?}").as_str());
-                return;
-            }
+        let compile_res = compile::run_compile_cmds(
+            PathBuf::from(".sea/sandbox/program.c"),
+            PathBuf::from(".sea/sandbox/program"),
+        );
+        if compile_res.is_err() {
+            self.throw(compile_res.err().unwrap().as_str());
         }
 
-        println!("\x1b[35m: Executing: \x1b[1;35m.sea/sandbox/program\x1b[0m");
-        let mut cmd = Command::new(self.output_path.clone());
-        cmd.args(args);
-        match cmd.spawn() {
-            Ok(mut child) => {
-                let res = child.wait().expect("failed to wait for child");
-                if res.success() {
-                    println!(
-                        "\x1b[34m: Process exited with code: {}\x1b[0m",
-                        res.code().unwrap_or(-1)
-                    );
-                } else {
-                    println!(
-                        "\x1b[31m: Process exited with code: {}\x1b[0m",
-                        res.code().unwrap_or(-1)
-                    );
-                }
-            }
-            Err(err) => self.throw(format!("error during execution: {err:?}").as_str()),
+        let run_res = compile::run_executable(PathBuf::from(".sea/sandbox/program"), args);
+        if run_res.is_err() {
+            self.throw(run_res.err().unwrap().as_str());
         }
     }
 

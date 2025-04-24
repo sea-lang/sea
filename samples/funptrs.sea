@@ -1,3 +1,5 @@
+use std
+
 def IntConsumer = fun (int)
 def IntSupplier = fun (): int
 

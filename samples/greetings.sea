@@ -1,3 +1,5 @@
+use std
+
 rec User(name: String, age: int)
 
 fun greet(user: User) -> printf(c"Hello, %.*s!\n", user.name.len, user.name.str)
@@ -5,11 +7,11 @@ fun greet(user: User) -> printf(c"Hello, %.*s!\n", user.name.len, user.name.str)
 fun main(): int {
 	let users = [
 		new User("Frodo", 50),
-		new User("Gandalf", 50000),
+		new User("Gandalf", 50000)
 	]
 
 	let end: int = sizeof(users) / sizeof(User)
-	for var i = 0; i < end; i++ {
+	for var i = 0; i < end; i = i + 1 {
 		greet(users[i])
 	}
 

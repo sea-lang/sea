@@ -1,5 +1,3 @@
-use std/io
-
 #noret
 fun panic(message: String) {
 	print("panic: ")

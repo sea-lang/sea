@@ -1,4 +1,4 @@
-use std [lib, io]
+use std[io]
 
 raw [
 	#include <stdlib.h>
@@ -51,11 +51,8 @@ fun box(it: int): Box -> ret new Box(echo(it))
 fun main(argc: int, argv: ^char[]): int {
 	printf(c"%d\n", (box(42).val)^)
 
-	if argc == 1 {
-		println("No arguments provided!")
-	} else {
-		println("Arguments provided!")
-	}
+	if argc == 1 ->println("No arguments provided!")
+	else -> println("Arguments provided!")
 
 	let actions: Action[3] = [
 		new Action(Play, new Card(Spades, 4)),
@@ -70,4 +67,8 @@ fun main(argc: int, argv: ^char[]): int {
 	for 0 to 10 -> printf(c"A")
 	for var i: int = 0 ; i < 3 ; i = i + 1 -> printf(c"!")
 	printf(c"\n")
+
+	for true -> break
+
+	let something = 0
 }

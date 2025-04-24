@@ -1,5 +1,4 @@
-use std/io
-use std/str
+use std[io, str]
 
 fun main(argc: int, argv: ^char[]): int {
 	var arg: ^char = nil

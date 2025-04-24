@@ -1020,7 +1020,7 @@ impl<'a> Parser<'a> {
 
         self.expect(TokenKind::Identifier, "expected identifier after `tag`");
         let id = self.prev.text.clone();
-        let mut entries: Vec<String> = vec![];
+        let mut entries: Vec<(String, Option<Box<Node>>)> = vec![];
 
         self.expect(
             TokenKind::OpenParen,
@@ -1028,7 +1028,17 @@ impl<'a> Parser<'a> {
         );
         while self.accept(TokenKind::Identifier) {
             let entry_id = self.prev.text.clone();
-            entries.push(entry_id);
+            if self.accept(TokenKind::Eq) {
+                let atom = self.parse_atom();
+                match atom.node {
+                    NodeKind::ExprNumber(_) => entries.push((entry_id, Some(Box::new(atom)))),
+                    _ => {
+                        self.throw_exception(ParseError::ExpectedTokenOfKind(TokenKind::Int), None)
+                    }
+                }
+            } else {
+                entries.push((entry_id, None))
+            }
             self.accept(TokenKind::Comma); // commas are optional for enums
         }
         self.expect(

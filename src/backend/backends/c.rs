@@ -70,20 +70,22 @@ impl<'a> CBackend<'a> {
     }
 
     pub fn program(&mut self, program: Vec<Node>) {
-        let file_path = self.compiler.output_path.clone();
-        self.w(format_args!(
-            "#pragma region \"file: {}\"\n",
-            file_path.to_str().unwrap()
-        ));
+        let file_path = self
+            .compiler
+            .module_stack
+            .last()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_string();
+
+        self.w(format_args!("#pragma region \"file: {file_path}\"\n"));
 
         for node in program {
             self.write(node);
         }
 
-        self.w(format_args!(
-            "#pragma region \"end file: {}\"\n",
-            file_path.to_str().unwrap()
-        ));
+        self.w(format_args!("#pragma region \"end file: {file_path}\"\n"));
     }
 
     pub fn raw(&mut self, text: String) {
@@ -197,9 +199,11 @@ impl<'a> CBackend<'a> {
         println!("fp: {file_paths:?}");
         if let Ok(file_paths) = file_paths {
             for path in file_paths {
+                self.compiler.module_stack.push(path.clone());
                 let code = fs::read_to_string(path.clone()).unwrap();
                 let mut parser = Parser::new(Lexer::new(path, &code));
                 self.write(parser.parse());
+                self.compiler.module_stack.pop();
             }
         } else {
             self.throw(CompilerError::ImportError(file_paths.err().unwrap()), None)
@@ -289,13 +293,20 @@ impl<'a> CBackend<'a> {
         }
 
         self.ws("typedef ");
-        self.typ_from_node(typ);
-        self.w(format_args!(" {id};\n\n"));
+        self.named_typ_from_node(id.clone(), typ);
+        self.ws(";\n\n");
+        // self.typ_from_node(typ);
+        // self.w(format_args!(" {id};\n\n"));
 
         self.compiler.add_def(id);
     }
 
-    pub fn top_tag(&mut self, tags: Vec<TagTags>, id: String, entries: Vec<String>) {
+    pub fn top_tag(
+        &mut self,
+        tags: Vec<TagTags>,
+        id: String,
+        entries: Vec<(String, Option<Box<Node>>)>,
+    ) {
         for hashtag in tags {
             match hashtag {
                 TagTags::Static => self.ws("static "),
@@ -303,8 +314,13 @@ impl<'a> CBackend<'a> {
         }
 
         self.ws("typedef enum {\n");
-        for entry in entries {
-            self.w(format_args!("\t{entry},\n"));
+        for (entry, value) in entries {
+            self.w(format_args!("\t{entry}"));
+            if value.is_some() {
+                self.ws(" = ");
+                self.write(*value.unwrap());
+            }
+            self.ws(",\n");
         }
         self.w(format_args!("}} {id};\n\n"));
 
@@ -632,7 +648,7 @@ impl<'a> CBackend<'a> {
         self.ws("const ");
         match typ {
             Some(typ) => self.named_typ_from_node(name, typ),
-            None => panic!("type inference unexpected"),
+            None => panic!("type inference unsupported"),
         }
         self.ws(" = ");
         self.write(value);

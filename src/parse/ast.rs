@@ -51,7 +51,7 @@ pub enum NodeKind {
     TopTag {
         tags: Vec<hashtags::TagTags>,
         id: String,
-        entries: Vec<String>,
+        entries: Vec<(String, Option<Box<Node>>)>,
     },
     TopTagRec {
         tags: Vec<hashtags::TagRecTags>,

@@ -183,8 +183,16 @@ impl Node {
                 }
 
                 println!("{spacing}  entries:");
-                for entry in entries {
-                    println!("{spacing}    - '{TEXT}{entry}{TOP_LEVEL_STAT}'");
+                for (entry, value) in entries {
+                    print!("{spacing}    - '{TEXT}{entry}{TOP_LEVEL_STAT}'");
+                    match value {
+                        Some(value) => {
+                            print!(" = ");
+                            value.pretty_print_inner(indent + 3, false);
+                        }
+                        None => {}
+                    }
+                    println!("");
                 }
             }
             NodeKind::TopTagRec { tags, id, entries } => {

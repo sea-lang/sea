@@ -15,6 +15,7 @@ pub struct Compiler<'a> {
     pub symbols: SymbolTable,
     pub parser: Parser<'a>,
     pub usages: Vec<PathBuf>,
+    pub module_stack: Vec<PathBuf>,
 }
 
 impl<'a> Compiler<'a> {
@@ -32,6 +33,7 @@ impl<'a> Compiler<'a> {
             symbols: SymbolTable::new(),
             parser,
             usages: vec![],
+            module_stack: vec![PathBuf::from("main")],
         }
     }
 
@@ -93,21 +95,43 @@ impl<'a> Compiler<'a> {
                 println!("found libpath for {path:?}: {p:?}");
 
                 if let Some(selections) = selections {
-                    for s in selections {
-                        let file_path = p.join(s).with_extension("sea");
+                    // Check if lib.sea exists, if so we'll import that first
+                    if p.join("lib.sea").exists() {
+                        paths.push(p.join("lib.sea"))
+                    }
 
-                        if !file_path.is_file() || file_path.extension().unwrap() != "sea" {
-                            return Err(format!(
-                                "{file_path:?} is either a folder or not a Sea file."
-                            ));
+                    for s in selections {
+                        if s == "lib" {
+                            continue; // Handled above
                         }
 
-                        paths.push(file_path.clone());
+                        let file_path = p.join(s);
+
+                        if file_path.with_extension("sea").is_file() {
+                            paths.push(file_path.clone());
+                        } else if file_path.is_dir() {
+                            match self.get_use_paths(file_path, None) {
+                                Ok(mut p) => paths.append(&mut p),
+                                Err(err) => return Err(err),
+                            }
+                        } else {
+                            return Err(format!("{file_path:?} is not a valid module"));
+                        }
                     }
                 } else {
+                    // Check if lib.sea exists, if so we'll import that first
+                    if p.join("lib.sea").exists() {
+                        paths.push(p.join("lib.sea"))
+                    }
+
                     // Import each file in the module
                     for file in p.read_dir().unwrap() {
                         let file_path = file.unwrap().path();
+
+                        if file_path.file_name().unwrap() == "lib.sea" {
+                            continue; // Handled above
+                        }
+
                         println!("path: {file_path:?}");
 
                         if file_path.is_file() && file_path.extension().unwrap() == "sea" {

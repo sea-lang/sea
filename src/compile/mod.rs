@@ -2,7 +2,9 @@ use std::{io::ErrorKind, path::PathBuf, process::Command};
 
 pub mod compiler;
 pub mod error;
+pub mod infer;
 pub mod symbol;
+pub mod type_;
 
 pub fn run_compile_cmds(
     c_source_path: PathBuf,

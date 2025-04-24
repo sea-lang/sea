@@ -1,4 +1,4 @@
-use std/fs
+use std[fs]
 
 fun main(): int {
 	var file = open_file("hello.txt", Write)

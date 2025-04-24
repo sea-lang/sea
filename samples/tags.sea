@@ -1,4 +1,4 @@
-use std/io
+use std[io]
 
 tag Suit(SPADE, HEART, CLUB, DIAMOND)
 
@@ -23,13 +23,14 @@ tag rec Move(
 		Play,
 		Draw,
 		SomethingElse,
-	} Move$Kind;
+	} _Move_tag;
 
 	typedef struct {
-		Move$Kind kind;
+		_Move_tag kind;
 		union {
-			struct { Card card; };
-			struct { Suit suit; u8 card_value; };
+			struct { Card card; } Play;
+			struct { } Draw;
+			struct { Suit suit; u8 card_value; } SomethingElse;
 		};
 	} Move;
 */
@@ -45,9 +46,9 @@ fun play_card(suit: Suit) ->
 fun play(move: Move) ->
 	// TODO: When I implement type inference, I should be able to check if I am switching over a tagged union, and if so, make `.kind` implicit.
 	switch move.kind {
-		case Play -> play_card(move.card.suit)
+		case Play -> play_card(move.Play.card.suit)
 		case Draw -> println("You drew a card!")
-		case SomethingElse -> printf(c"SomethingElse: %d\n", move.card_value)
+		case SomethingElse -> printf(c"SomethingElse: %d\n", move.SomethingElse.card_value)
 	}
 
 fun main(): int {

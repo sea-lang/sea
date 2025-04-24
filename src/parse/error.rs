@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use super::token;
+use super::token::{Token, TokenKind};
 
 #[derive(Debug, Clone, Error)]
 pub enum ParseError {
@@ -23,17 +23,20 @@ pub enum ParseError {
     FunPtrWithArrays,
 
     #[error("unexpected token: `{}`", .0.text)]
-    UnexpectedToken(token::Token),
+    UnexpectedToken(Token),
 
     #[error("expected token but got `{}`", .0.text)]
-    ExpectedToken(token::Token),
+    ExpectedToken(Token),
 
     #[error("expected expression but got `{}`", .0.text)]
-    ExpectedExpression(token::Token),
+    ExpectedExpression(Token),
 
     #[error("expected statement but got `{}`", .0.text)]
-    ExpectedStatement(token::Token),
+    ExpectedStatement(Token),
 
     #[error("(internal error) advance error (caused by: {0})")]
     AdvanceError(Box<ParseError>),
+
+    #[error("expected token of kind `{0:?}`")]
+    ExpectedTokenOfKind(TokenKind),
 }

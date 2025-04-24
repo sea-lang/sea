@@ -63,6 +63,13 @@ impl SeaType {
         }
     }
 
+    pub fn unpointer(&self) -> Self {
+        SeaType {
+            pointers: self.pointers - 1,
+            ..self.clone()
+        }
+    }
+
     pub fn array(&self) -> Self {
         let mut arrays = self.arrays.clone();
         arrays.push((None, None));

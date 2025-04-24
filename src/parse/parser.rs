@@ -386,7 +386,7 @@ impl<'a> Parser<'a> {
 
         let n = |node| Node { line, column, node };
 
-        let mut atom = match *self {
+        let atom = match *self {
             _ if self.accept(TokenKind::OpenParen) => {
                 let node = n(NodeKind::ExprGroup(Box::new(self.parse_expression())));
                 self.expect(
@@ -483,6 +483,16 @@ impl<'a> Parser<'a> {
             _ => self.throw_exception(ParseError::ExpectedExpression(self.token.clone()), None),
         };
 
+        self.parse_postfix(atom)
+    }
+
+    pub fn parse_postfix(&mut self, node: Node) -> Node {
+        let line = node.line;
+        let column = node.column;
+        let n = |node| Node { line, column, node };
+
+        let mut atom = node;
+
         // Postfix operators
         loop {
             if self.accept(TokenKind::Pointer) {
@@ -525,6 +535,13 @@ impl<'a> Parser<'a> {
                     left: Box::new(atom),
                     right: Box::new(right),
                 });
+            } else if self.accept(TokenKind::KwAs) {
+                let typ = self.parse_type();
+                atom = n(NodeKind::ExprBinaryOperator {
+                    kind: OperatorKind::As,
+                    left: Box::new(atom),
+                    right: Box::new(typ),
+                })
             } else {
                 break;
             }
@@ -542,6 +559,7 @@ impl<'a> Parser<'a> {
         while lookahead.kind.is_operator() && lookahead_op.prec >= min_prec {
             let op = lookahead_op;
             self.advance();
+            // let mut right_atom = self.parse_atom();
             let mut right_atom = if op.kind == OperatorKind::As {
                 self.parse_type()
             } else {
@@ -575,7 +593,8 @@ impl<'a> Parser<'a> {
 
             left_atom = Node::join(op.kind, left_atom, right_atom);
         }
-        left_atom
+
+        self.parse_postfix(left_atom)
     }
 
     pub fn parse_expression(&mut self) -> Node {
@@ -585,11 +604,12 @@ impl<'a> Parser<'a> {
             self.parse_var()
         } else {
             let left = self.parse_atom();
-            if self.token.kind.is_operator() {
-                return self.parse_expression_inner(left, 0);
+            let it = if self.token.kind.is_operator() {
+                self.parse_expression_inner(left, 0)
             } else {
-                return left;
-            }
+                left
+            };
+            return self.parse_postfix(it);
         }
     }
 

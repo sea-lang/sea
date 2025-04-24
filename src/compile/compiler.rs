@@ -175,6 +175,7 @@ impl<'a> Compiler<'a> {
     }
 
     pub fn add_var(&mut self, name: String, typ: SeaType, mutable: bool) {
-        self.symbols.add_symbol(name, Symbol::Var { typ, mutable });
+        self.symbols
+            .add_scoped_symbol(name, self.scope, Symbol::Var { typ, mutable });
     }
 }

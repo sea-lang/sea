@@ -1,9 +1,15 @@
-use crate::parse::ast::{Node, NodeKind};
+use crate::{
+    compile::symbol::Symbol,
+    parse::{
+        ast::{Node, NodeKind},
+        operator::OperatorKind,
+    },
+};
 
 use super::{compiler::Compiler, symbol, type_::SeaType};
 
-pub fn infer_type_of_node(compiler: &Compiler, node: &Node) -> Option<SeaType> {
-    Some(match &node.node {
+pub fn infer_type_of_node(compiler: &Compiler, node: &Node) -> Result<SeaType, String> {
+    Ok(match &node.node {
         NodeKind::ExprGroup(node) => infer_type_of_node(compiler, &node)?,
         NodeKind::ExprNumber(value) => {
             if value.contains('.') {
@@ -20,21 +26,68 @@ pub fn infer_type_of_node(compiler: &Compiler, node: &Node) -> Option<SeaType> {
         NodeKind::ExprIdentifier(id) => match compiler.symbols.get_symbol(id.clone()) {
             Some(symbol) => match symbol {
                 symbol::Symbol::Var { typ, mutable: _ } => typ.clone(),
-                _ => return None,
+                _ => {
+                    return Err(format!(
+                        "cannot infer type for non-variable symbol: {symbol:?}"
+                    ))
+                }
             },
-            None => return None,
+            None => return Err(format!("symbol undefined or unbound: {id}")),
         },
-        NodeKind::ExprBlock(nodes) => todo!(),
+        NodeKind::ExprBlock(nodes) => {
+            return Err("cannot infer type for block expressions".to_string())
+        }
         NodeKind::ExprNew {
             id,
             params: _params,
         } => SeaType::named_type(&id),
-        NodeKind::ExprUnaryOperator { kind: _kind, value } => infer_type_of_node(compiler, &value)?,
-        NodeKind::ExprBinaryOperator {
-            kind: _kind,
-            left,
-            right: _right,
-        } => infer_type_of_node(compiler, &left)?,
+        NodeKind::ExprUnaryOperator { kind, value } => match *kind {
+            OperatorKind::Ref => infer_type_of_node(compiler, value)?.pointer(),
+            OperatorKind::Deref => infer_type_of_node(compiler, value)?.unpointer(),
+            _ => infer_type_of_node(compiler, node)?,
+        },
+        NodeKind::ExprBinaryOperator { kind, left, right } => match kind {
+            OperatorKind::Dot => {
+                // The right side of a dot operator will always be an identifier
+                let id = match &right.node {
+                    NodeKind::ExprIdentifier(id) => id,
+                    _ => unreachable!(),
+                };
+
+                let typ = infer_type_of_node(compiler, left)?;
+                let name = typ.name;
+                let sym = compiler.symbols.get_symbol(name.clone());
+                if sym.is_none() {
+                    return Err(format!("struct not found: {name}"));
+                }
+                let sym = sym.unwrap();
+                match sym {
+                    symbol::Symbol::Rec { fields } => {
+                        for (field_name, field_type) in fields {
+                            if *field_name == *id {
+                                return Ok(field_type.clone());
+                            }
+                        }
+                        return Err(format!("struct `{name}` has no field `{id}`"));
+                    }
+                    symbol::Symbol::TagRec { entries: _ } => SeaType {
+                        pointers: 0,
+                        name: format!("_{name}_{id}"),
+                        arrays: vec![],
+                        funptr_args: None,
+                        funptr_rets: None,
+                    },
+                    _ => {
+                        return Err(format!(
+                            "type of left side of dot (`.`) operator does not exist"
+                        ))
+                    }
+                }
+            }
+            OperatorKind::As => SeaType::from_node(right.as_ref().clone()).unwrap(),
+            OperatorKind::Assign => infer_type_of_node(compiler, right)?,
+            _ => infer_type_of_node(compiler, left)?,
+        },
         NodeKind::ExprInvoke { left, params: _ } => match &left.node {
             NodeKind::ExprIdentifier(id) => {
                 let sym = compiler.symbols.get_symbol(id.clone()).unwrap();
@@ -42,12 +95,18 @@ pub fn infer_type_of_node(compiler: &Compiler, node: &Node) -> Option<SeaType> {
                     symbol::Symbol::Fun { params: _, rets } => rets.clone(),
                     symbol::Symbol::Var { typ, mutable: _ } => {
                         if typ.funptr_rets.is_some() {
-                            return Some(typ.funptr_rets.as_ref().unwrap().as_ref().clone());
+                            return Ok(typ.funptr_rets.as_ref().unwrap().as_ref().clone());
                         } else {
-                            return None;
+                            return Err(format!(
+                                "cannot invoke a non-function pointer variable: {id}"
+                            ));
                         }
                     }
-                    _ => return None,
+                    _ => {
+                        return Err(format!(
+                            "cannot invoke a non-function (or function pointer): {node}"
+                        ))
+                    }
                 }
             }
             _ => todo!(),
@@ -55,13 +114,13 @@ pub fn infer_type_of_node(compiler: &Compiler, node: &Node) -> Option<SeaType> {
         NodeKind::ExprMacInvoke { name, params } => todo!(),
         NodeKind::ExprList(nodes) => {
             if nodes.len() == 0 {
-                return None;
+                return Err("cannot infer type of empty list".to_string());
             } else {
                 infer_type_of_node(compiler, &nodes[0])?.array_of_size(nodes.len())
             }
         }
         NodeKind::ExprVar { name, typ, value } => todo!(),
         NodeKind::ExprLet { name, typ, value } => todo!(),
-        _ => return None,
+        _ => return Err(format!("cannot infer type for node {node}")),
     })
 }

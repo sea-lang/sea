@@ -414,42 +414,42 @@ impl<'a> CBackend<'a> {
         }
         self.w(format_args!("}} _{id}_tag;\n\n"));
 
+        let mut mapped_entries: Vec<(String, Vec<(String, SeaType)>)> = vec![];
+
+        for (entry_id, entry_fields) in &entries {
+            self.ws("typedef struct { ");
+            let name = format!("_{id}_{entry_id}");
+            for (field, typ) in entry_fields {
+                self.named_typ_from_node(field.to_string(), typ.clone());
+                self.ws("; ");
+            }
+            self.w(format_args!("}} {name};\n"));
+            let mapped_fields = entry_fields
+                .iter()
+                .map(|(field_name, field_typ)| {
+                    (
+                        field_name.clone(),
+                        SeaType::from_node(field_typ.clone()).unwrap(),
+                    )
+                })
+                .collect::<Vec<(String, SeaType)>>();
+            mapped_entries.push((entry_id.clone(), mapped_fields.clone()));
+            self.compiler.add_rec(name, mapped_fields);
+        }
+
         if is_static {
             self.ws("static ");
         }
         self.ws("typedef struct {\n");
         self.w(format_args!("\t_{id}_tag kind;\n"));
         self.ws("\tunion {\n");
-        for (entry_id, entry_fields) in &entries {
-            self.ws("\t\tstruct { ");
-            for (field, typ) in entry_fields {
-                // self.ws("");
-                self.named_typ_from_node(field.to_string(), typ.clone());
-                self.ws("; ");
-            }
-            self.w(format_args!("}} {entry_id};\n"));
+        for (entry_id, _) in &entries {
+            self.w(format_args!("_{id}_{entry_id} {entry_id};"));
         }
         self.ws("\t};\n");
         self.w(format_args!("}} {id};\n\n"));
 
-        // Ready for some really messy code?
-        self.compiler.add_tag_rec(
-            id,
-            entries
-                .iter()
-                .map(|(entry_id, entry_fields)| {
-                    (
-                        entry_id.clone(),
-                        entry_fields
-                            .iter()
-                            .map(|(field, typ)| {
-                                (field.clone(), SeaType::from_node(typ.clone()).unwrap())
-                            })
-                            .collect::<Vec<(String, SeaType)>>(),
-                    )
-                })
-                .collect::<Vec<(String, Vec<(String, SeaType)>)>>(),
-        );
+        self.compiler.add_tag_rec(id, mapped_entries);
     }
 
     // #endregion: Top level statements
@@ -726,24 +726,38 @@ impl<'a> CBackend<'a> {
     }
 
     pub fn expr_var(&mut self, name: String, typ: Option<Node>, value: Node) {
-        match typ {
-            Some(typ) => self.named_typ_from_node(name, typ),
-            None => self
-                .named_typ_from_seatype(name, infer_type_of_node(&self.compiler, &value).unwrap()),
-        }
+        let seatyp = match typ {
+            Some(typ) => {
+                self.named_typ_from_node(name.clone(), typ.clone());
+                SeaType::from_node(typ).unwrap()
+            }
+            None => {
+                let t = infer_type_of_node(&self.compiler, &value).unwrap();
+                self.named_typ_from_seatype(name.clone(), t.clone());
+                t
+            }
+        };
         self.ws(" = ");
         self.write(value);
+        self.compiler.add_var(name, seatyp, true);
     }
 
     pub fn expr_let(&mut self, name: String, typ: Option<Node>, value: Node) {
         self.ws("const ");
-        match typ {
-            Some(typ) => self.named_typ_from_node(name, typ),
-            None => self
-                .named_typ_from_seatype(name, infer_type_of_node(&self.compiler, &value).unwrap()),
-        }
+        let seatyp = match typ {
+            Some(typ) => {
+                self.named_typ_from_node(name.clone(), typ.clone());
+                SeaType::from_node(typ).unwrap()
+            }
+            None => {
+                let t = infer_type_of_node(&self.compiler, &value).unwrap();
+                self.named_typ_from_seatype(name.clone(), t.clone());
+                t
+            }
+        };
         self.ws(" = ");
         self.write(value);
+        self.compiler.add_var(name, seatyp, false);
     }
 
     // #endregion Expressions

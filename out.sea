@@ -22,7 +22,7 @@ tag Suit(
 	Spades,
 )
 
-rec Card(suit: Suit, value: uint8_t)
+rec Card(suit: Suit, value: u8)
 
 tag rec Action(
 	Play(card: Card)
@@ -78,4 +78,14 @@ fun main(argc: int, argv: ^char[]): int {
 	let somethingString = "Hello, World!"
 	let somethingCString = c"Hello, World!"
 	let somethingBox = box(12)
+	let referentialSomethingBox = ref somethingBox
+	let dereferentialSomethingBox = referentialSomethingBox^
+	let somethingArray = [ 0, 1, 2, 3 ]
+	let somethingArrayDefined: i32[4] = []
+	let somethingCard = new Card(Hearts, 12)
+	let somethingCardSuit = somethingCard.suit
+	let somethingAction = new Action(Play, somethingCard)
+	let somethingActionValue = somethingAction.Play.card.value
+
+	let somethingComplex = (box(42).val)^
 }

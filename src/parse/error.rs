@@ -13,6 +13,9 @@ pub enum ParseError {
     #[error("unterminated string")]
     UnterminatedString,
 
+    #[error("unterminated char")]
+    UnterminatedChar,
+
     #[error("unterminated raw block")]
     UnterminatedRawBlock,
 

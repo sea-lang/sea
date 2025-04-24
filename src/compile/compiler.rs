@@ -5,6 +5,7 @@ use crate::parse::{ast::Node, parser::Parser};
 use super::{
     error::CompilerError,
     symbol::{Symbol, SymbolTable},
+    type_::SeaType,
 };
 
 pub struct Compiler<'a> {
@@ -149,31 +150,31 @@ impl<'a> Compiler<'a> {
         Err(format!("no such module: {path:?}"))
     }
 
-    pub fn add_fun(&mut self, name: String) {
-        self.symbols.add_symbol(name, Symbol::Fun);
+    pub fn add_fun(&mut self, name: String, params: Vec<SeaType>, rets: SeaType) {
+        self.symbols.add_symbol(name, Symbol::Fun { params, rets });
     }
 
-    pub fn add_rec(&mut self, name: String) {
-        self.symbols.add_symbol(name, Symbol::Rec);
+    pub fn add_rec(&mut self, name: String, fields: Vec<(String, SeaType)>) {
+        self.symbols.add_symbol(name, Symbol::Rec { fields });
     }
 
-    pub fn add_def(&mut self, name: String) {
-        self.symbols.add_symbol(name, Symbol::Def);
+    pub fn add_def(&mut self, name: String, typ: SeaType) {
+        self.symbols.add_symbol(name, Symbol::Def { typ });
     }
 
     pub fn add_mac(&mut self, name: String) {
         self.symbols.add_symbol(name, Symbol::Mac);
     }
 
-    pub fn add_tag(&mut self, name: String) {
-        self.symbols.add_symbol(name, Symbol::Tag);
+    pub fn add_tag(&mut self, name: String, entries: Vec<String>) {
+        self.symbols.add_symbol(name, Symbol::Tag { entries });
     }
 
-    pub fn add_tag_rec(&mut self, name: String) {
-        self.symbols.add_symbol(name, Symbol::TagRec);
+    pub fn add_tag_rec(&mut self, name: String, entries: Vec<(String, Vec<(String, SeaType)>)>) {
+        self.symbols.add_symbol(name, Symbol::TagRec { entries });
     }
 
-    pub fn add_var(&mut self, name: String) {
-        self.symbols.add_symbol(name, Symbol::Var);
+    pub fn add_var(&mut self, name: String, typ: SeaType, mutable: bool) {
+        self.symbols.add_symbol(name, Symbol::Var { typ, mutable });
     }
 }

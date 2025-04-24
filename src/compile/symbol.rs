@@ -1,23 +1,47 @@
 use std::collections::HashMap;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+use super::type_::SeaType;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Symbol {
-    Fun,
-    Rec,
-    Def,
+    Fun {
+        params: Vec<SeaType>,
+        rets: SeaType,
+    },
+    Rec {
+        fields: Vec<(String, SeaType)>,
+    },
+    Def {
+        typ: SeaType,
+    },
     Mac,
-    Tag,
-    TagRec,
-    Var,
+    Tag {
+        entries: Vec<String>,
+    },
+    TagRec {
+        entries: Vec<(String, Vec<(String, SeaType)>)>,
+    },
+    Var {
+        typ: SeaType,
+        mutable: bool,
+    },
 }
 
 impl Symbol {
     pub fn instantiatable(&self) -> bool {
-        self == &Symbol::Rec || self == &Symbol::TagRec
+        match self {
+            Symbol::Rec { fields: _ } => true,
+            Symbol::TagRec { entries: _ } => true,
+            _ => false,
+        }
     }
 
     pub fn invocable(&self) -> bool {
-        self == &Symbol::Fun || self == &Symbol::Var //TODO: Check if variable type is function pointer
+        match self {
+            Symbol::Fun { params: _, rets: _ } => true,
+            Symbol::Var { typ, mutable: _ } => typ.funptr_rets.is_some(),
+            _ => false,
+        }
     }
 }
 

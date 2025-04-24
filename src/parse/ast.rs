@@ -93,7 +93,7 @@ pub enum NodeKind {
     ExprNumber(String),
     ExprString(String),
     ExprCString(String),
-    ExprChar(char),
+    ExprChar(String), // We use a string here so that I don't have to do any specific handlers for escape sequences
     ExprTrue,
     ExprFalse,
     ExprIdentifier(String),

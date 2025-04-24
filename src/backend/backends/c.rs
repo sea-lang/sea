@@ -3,7 +3,10 @@ use std::{fs, io::Write, path::PathBuf};
 
 use crate::{
     backend::backend::Backend,
-    compile::{compiler::Compiler, error::CompilerError, symbol::Symbol},
+    compile::{
+        compiler::Compiler, error::CompilerError, infer::infer_type_of_node, symbol::Symbol,
+        type_::SeaType,
+    },
     hashtags::{DefTags, FunTags, RecTags, TagRecTags, TagTags},
     parse::{
         ast::{Node, NodeKind},
@@ -128,6 +131,19 @@ impl<'a> CBackend<'a> {
         }
     }
 
+    pub fn typ_from_seatype(&mut self, typ: SeaType) {
+        if typ.funptr_rets.is_some() {
+            panic!("error: function pointers must be named types")
+        } else {
+            self.w(format_args!(
+                "{}{}{}",
+                typ.name,
+                "*".repeat(typ.pointers.into()),
+                CBackend::get_type_array_str(typ.arrays)
+            ))
+        }
+    }
+
     pub fn typ_from_node(&mut self, node: Node) {
         match node.node {
             NodeKind::Type {
@@ -174,6 +190,39 @@ impl<'a> CBackend<'a> {
                 "*".repeat(pointers.into()),
                 id,
                 CBackend::get_type_array_str(arrays)
+            ))
+        }
+    }
+
+    pub fn named_typ_from_seatype(&mut self, id: String, typ: SeaType) {
+        if typ.funptr_rets.is_some() {
+            self.typ_from_seatype(*typ.funptr_rets.unwrap());
+            self.w(format_args!(
+                "(*{} {})(",
+                "*".repeat(typ.pointers.into()),
+                id
+            ));
+            let funptr_args = typ.funptr_args.unwrap();
+            if funptr_args.len() > 0 {
+                let end = funptr_args.len() - 1;
+                let mut index = 0;
+                for arg in funptr_args {
+                    self.typ_from_seatype(arg);
+                    if end != index {
+                        self.ws(", ")
+                    }
+                    index += 1
+                }
+            }
+            self.ws(")");
+            self.ws(CBackend::get_type_array_str(typ.arrays).as_str());
+        } else {
+            self.w(format_args!(
+                "{} {}{}{}",
+                typ.name,
+                "*".repeat(typ.pointers.into()),
+                id,
+                CBackend::get_type_array_str(typ.arrays)
             ))
         }
     }
@@ -227,10 +276,18 @@ impl<'a> CBackend<'a> {
             }
         }
 
-        self.typ_from_node(*rets);
+        self.typ_from_node((*rets).clone());
         self.w(format_args!(" {id}("));
         self.compiler.push_scope();
-        self.compiler.add_fun(id);
+
+        self.compiler.add_fun(
+            id,
+            params
+                .iter()
+                .map(|(_, it)| SeaType::from_node(it.clone()).unwrap())
+                .collect::<Vec<SeaType>>(),
+            SeaType::from_node(*rets).unwrap(),
+        );
 
         if params.len() > 0 {
             let len = params.len() - 1;
@@ -243,7 +300,10 @@ impl<'a> CBackend<'a> {
                 self.compiler.symbols.add_scoped_symbol(
                     param_id.to_string(),
                     self.compiler.scope,
-                    Symbol::Var,
+                    Symbol::Var {
+                        typ: SeaType::from_node(param_type).unwrap(),
+                        mutable: true,
+                    },
                 );
                 index += 1;
             }
@@ -275,14 +335,20 @@ impl<'a> CBackend<'a> {
         self.ws(id.as_str());
 
         self.ws("{\n");
-        for (field_name, field_type) in fields {
+        for (field_name, field_type) in &fields {
             self.ws("\t");
-            self.named_typ_from_node(field_name, field_type);
+            self.named_typ_from_node(field_name.clone(), field_type.clone());
             self.ws(";\n");
         }
         self.w(format_args!("}} {id};\n\n"));
 
-        self.compiler.add_rec(id);
+        self.compiler.add_rec(
+            id,
+            fields
+                .iter()
+                .map(|(name, typ)| (name.clone(), SeaType::from_node(typ.clone()).unwrap()))
+                .collect::<Vec<(String, SeaType)>>(),
+        );
     }
 
     pub fn top_def(&mut self, tags: Vec<DefTags>, id: String, typ: Node) {
@@ -293,12 +359,10 @@ impl<'a> CBackend<'a> {
         }
 
         self.ws("typedef ");
-        self.named_typ_from_node(id.clone(), typ);
+        self.named_typ_from_node(id.clone(), typ.clone());
         self.ws(";\n\n");
-        // self.typ_from_node(typ);
-        // self.w(format_args!(" {id};\n\n"));
 
-        self.compiler.add_def(id);
+        self.compiler.add_def(id, SeaType::from_node(typ).unwrap());
     }
 
     pub fn top_tag(
@@ -314,17 +378,23 @@ impl<'a> CBackend<'a> {
         }
 
         self.ws("typedef enum {\n");
-        for (entry, value) in entries {
+        for (entry, value) in &entries {
             self.w(format_args!("\t{entry}"));
             if value.is_some() {
                 self.ws(" = ");
-                self.write(*value.unwrap());
+                self.write(*value.clone().unwrap());
             }
             self.ws(",\n");
         }
         self.w(format_args!("}} {id};\n\n"));
 
-        self.compiler.add_tag(id);
+        self.compiler.add_tag(
+            id,
+            entries
+                .iter()
+                .map(|it| it.0.clone())
+                .collect::<Vec<String>>(),
+        );
     }
 
     pub fn top_tag_rec(
@@ -362,7 +432,24 @@ impl<'a> CBackend<'a> {
         self.ws("\t};\n");
         self.w(format_args!("}} {id};\n\n"));
 
-        self.compiler.add_tag_rec(id);
+        // Ready for some really messy code?
+        self.compiler.add_tag_rec(
+            id,
+            entries
+                .iter()
+                .map(|(entry_id, entry_fields)| {
+                    (
+                        entry_id.clone(),
+                        entry_fields
+                            .iter()
+                            .map(|(field, typ)| {
+                                (field.clone(), SeaType::from_node(typ.clone()).unwrap())
+                            })
+                            .collect::<Vec<(String, SeaType)>>(),
+                    )
+                })
+                .collect::<Vec<(String, Vec<(String, SeaType)>)>>(),
+        );
     }
 
     // #endregion: Top level statements
@@ -473,7 +560,7 @@ impl<'a> CBackend<'a> {
         self.w(format_args!("\"{}\"", string));
     }
 
-    pub fn expr_char(&mut self, ch: char) {
+    pub fn expr_char(&mut self, ch: String) {
         self.w(format_args!("'{ch}'"));
     }
 
@@ -503,26 +590,29 @@ impl<'a> CBackend<'a> {
 
         if symbol.is_some_and(|it| it.instantiatable()) {
             // When instantiating tag recs, we want to explicitly specify which union we are instantiating
-            if symbol.unwrap() == &Symbol::TagRec {
-                if params.len() == 0 {
-                    self.throw(CompilerError::TagRecInstantiateWithoutKind, None);
+            match symbol.unwrap() {
+                Symbol::TagRec { entries: _ } => {
+                    if params.len() == 0 {
+                        self.throw(CompilerError::TagRecInstantiateWithoutKind, None);
+                    }
+                    let kind = &params[0];
+                    let kind_str = match &kind.node {
+                        NodeKind::ExprIdentifier(id) => id,
+                        _ => self.throw(
+                            CompilerError::TagRecInstantiateWithoutKind,
+                            Some("the first parameter must be an entry in the tag rec (it currently is not)"),
+                        ),
+                    };
+                    self.write(kind.clone());
+                    if params.len() > 1 {
+                        self.w(format_args!(", .{kind_str}={{"));
+                        self.comma_separated(params[1..].to_vec());
+                        self.ws("}");
+                    }
                 }
-                let kind = &params[0];
-                let kind_str = match &kind.node {
-                    NodeKind::ExprIdentifier(id) => id,
-                    _ => self.throw(
-                        CompilerError::TagRecInstantiateWithoutKind,
-                        Some("the first parameter must be an entry in the tag rec (it currently is not)"),
-                    ),
-                };
-                self.write(kind.clone());
-                if params.len() > 1 {
-                    self.w(format_args!(", .{kind_str}={{"));
-                    self.comma_separated(params[1..].to_vec());
-                    self.ws("}");
+                _ => {
+                    self.comma_separated(params);
                 }
-            } else {
-                self.comma_separated(params);
             }
             self.ws("}")
         } else {
@@ -638,7 +728,8 @@ impl<'a> CBackend<'a> {
     pub fn expr_var(&mut self, name: String, typ: Option<Node>, value: Node) {
         match typ {
             Some(typ) => self.named_typ_from_node(name, typ),
-            None => panic!("type inference unsupported"),
+            None => self
+                .named_typ_from_seatype(name, infer_type_of_node(&self.compiler, &value).unwrap()),
         }
         self.ws(" = ");
         self.write(value);
@@ -648,7 +739,8 @@ impl<'a> CBackend<'a> {
         self.ws("const ");
         match typ {
             Some(typ) => self.named_typ_from_node(name, typ),
-            None => panic!("type inference unsupported"),
+            None => self
+                .named_typ_from_seatype(name, infer_type_of_node(&self.compiler, &value).unwrap()),
         }
         self.ws(" = ");
         self.write(value);

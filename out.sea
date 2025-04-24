@@ -70,5 +70,12 @@ fun main(argc: int, argv: ^char[]): int {
 
 	for true -> break
 
-	let something = 0
+	let somethingI32 = 0
+	let somethingF32 = 42.0
+	let somethingFalse = false
+	let somethingTrue = true
+	let somethingChar = `\0`
+	let somethingString = "Hello, World!"
+	let somethingCString = c"Hello, World!"
+	let somethingBox = box(12)
 }

@@ -405,9 +405,7 @@ impl<'a> Parser<'a> {
             _ if self.accept(TokenKind::CString) => {
                 n(NodeKind::ExprCString(self.prev.text.clone()))
             }
-            _ if self.accept(TokenKind::Character) => n(NodeKind::ExprChar(
-                self.prev.text.clone().chars().nth(1).unwrap(),
-            )),
+            _ if self.accept(TokenKind::Character) => n(NodeKind::ExprChar(self.prev.text.clone())),
             _ if self.accept(TokenKind::True) => n(NodeKind::ExprTrue),
             _ if self.accept(TokenKind::False) => n(NodeKind::ExprFalse),
             _ if self.accept(TokenKind::Identifier) => {

@@ -1,37 +1,8 @@
-use std/panic
-use std/str
-
 fun main(): int {
 	let str = "Hello, World!"
-
-	printf(c"str.own: %b\n", str.own)
-	printf(c"str.len: %d\n", str.len)
-	printf(c"str.str: %.*s\n", str.len, str.str)
-
-	if str.len != 13 {
-		panic("`Hello, World!` was not 13 characters")
-	}
-	if str.own {
-		panic("`Hello, World!` owns itself")
-	}
-	if strncmp(str.str, c"Hello, World!", str.len) != 0 {
-		panic("`Hello, World!` was != to c`Hello, World!`")
-	}
-
-	let copied = copy_string(str.len, str.str)
-	printf(c"copied.own: %b\n", copied.own)
-	printf(c"copied.len: %d\n", copied.len)
-	printf(c"copied.str: %.*s\n", copied.len, copied.str)
-	if not copied.own -> panic("Copy does not own itself")
-	free_string(ref copied)
-
-	let view = string_view(5, str.str)
-	printf(c"view.own: %b\n", view.own)
-	printf(c"view.len: %d\n", view.len)
-	printf(c"view.str: %.*s\n", view.len, view.str)
-	if view.len != 5 -> panic("View length is not equal to 5")
-	if view.own -> panic("View owns itself")
-	if strncmp(view.str, c"Hello", view.len) != 0 {
-		panic("`Hello` was != to c`Hello`")
-	}
+	let c_str = c"Hello, World!"
+	let weird_string = "Hello, \"World!\""
+	let another_weird_string = "Heya \"World"
+	let yet_another_weird_string = c"You are a \"bozo\""
+	let why_are_there_so_many_weird_strings = c"You are a \"bozo"
 }

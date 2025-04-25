@@ -1,6 +1,9 @@
 use std::{fs::File, path::PathBuf, process::exit};
 
-use crate::parse::{ast::Node, parser::Parser};
+use crate::{
+    parse::{ast::Node, parser::Parser},
+    util,
+};
 
 use super::{
     error::CompilerError,
@@ -17,6 +20,7 @@ pub struct Compiler<'a> {
     pub parser: Parser<'a>,
     pub usages: Vec<PathBuf>,
     pub module_stack: Vec<PathBuf>,
+    pub file_stack: Vec<PathBuf>,
 }
 
 impl<'a> Compiler<'a> {
@@ -38,15 +42,19 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    pub fn throw_exception(&self, error: CompilerError, help: Option<&str>, node: Node) -> ! {
+    pub fn throw_exception(
+        &self,
+        source_file: String,
+        error: CompilerError,
+        help: Option<&str>,
+        node: Node,
+    ) -> ! {
         println!(
-            "\x1b[31;1m{}:{}:{}:\x1b[0;1m {error}\x1b[0m",
-            self.parser.lexer.file.to_str().unwrap(),
-            node.line,
-            node.column
+            "\x1b[31;1m{source_file}:{}:{}:\x1b[0;1m {error}\x1b[0m",
+            node.line, node.column
         );
 
-        let lines = self.parser.lexer.get_lines(node.line);
+        let lines = util::get_lines_from(&source_file, node.line);
         if lines.len() == 0 {
             println!("No line information available :(");
             println!("This error shouldn't happen, please report it.");
@@ -93,8 +101,6 @@ impl<'a> Compiler<'a> {
         for libpath in &self.libpaths {
             let p = libpath.join(&path);
             if p.exists() && p.is_dir() {
-                println!("found libpath for {path:?}: {p:?}");
-
                 if let Some(selections) = selections {
                     // Check if lib.sea exists, if so we'll import that first
                     if p.join("lib.sea").exists() {
@@ -133,10 +139,7 @@ impl<'a> Compiler<'a> {
                             continue; // Handled above
                         }
 
-                        println!("path: {file_path:?}");
-
                         if file_path.is_file() && file_path.extension().unwrap() == "sea" {
-                            println!("  found file {file_path:?}");
                             paths.push(file_path.clone());
                         }
                     }

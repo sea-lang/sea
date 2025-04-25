@@ -10,6 +10,7 @@ pub mod error;
 pub mod hashtags;
 pub mod parse;
 pub mod sandbox;
+pub mod util;
 
 mod flags {
     use std::path::PathBuf;
@@ -82,7 +83,7 @@ fn compile(flags: flags::Compile) {
 
     // Parse
     let mut parser = Parser::new(Lexer::new(path(), &code));
-    let program = parser.parse();
+    let program = parser.parse(!flags.nostd);
 
     if flags.print_ast {
         // Print AST

@@ -243,15 +243,13 @@ impl<'a> CBackend<'a> {
     // #region: Top level statements
 
     pub fn top_use(&mut self, path: PathBuf, selections: Option<Vec<String>>) {
-        println!("use {path:?} {selections:?}");
         let file_paths = self.compiler.get_use_paths(path.clone(), selections);
-        println!("fp: {file_paths:?}");
         if let Ok(file_paths) = file_paths {
             for path in file_paths {
                 self.compiler.module_stack.push(path.clone());
                 let code = fs::read_to_string(path.clone()).unwrap();
                 let mut parser = Parser::new(Lexer::new(path, &code));
-                self.write(parser.parse());
+                self.write(parser.parse(false));
                 self.compiler.module_stack.pop();
             }
         } else {

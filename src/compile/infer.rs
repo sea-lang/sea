@@ -1,14 +1,14 @@
-use crate::{
-    compile::symbol::Symbol,
-    parse::{
-        ast::{Node, NodeKind},
-        operator::OperatorKind,
-    },
+use crate::parse::{
+    ast::{Node, NodeKind},
+    operator::OperatorKind,
 };
 
 use super::{compiler::Compiler, symbol, type_::SeaType};
 
 pub fn infer_type_of_node(compiler: &Compiler, node: &Node) -> Result<SeaType, String> {
+    println!("inferring type of:");
+    node.pretty_print();
+
     Ok(match &node.node {
         NodeKind::ExprGroup(node) => infer_type_of_node(compiler, &node)?,
         NodeKind::ExprNumber(value) => {

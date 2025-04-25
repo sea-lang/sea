@@ -119,7 +119,7 @@ pub const COMMANDS: LazyLock<HashMap<&'static str, SandboxCommand>> = LazyLock::
             let code = sandbox.get_code();
             let lexer = Lexer::new(PathBuf::from_str(".sandbox").unwrap(), &code);
             let mut parser = Parser::new(lexer);
-            let program = parser.parse();
+            let program = parser.parse(true);
             program.pretty_print();
         }),
         cmd("exec", |sandbox, args| {
@@ -243,7 +243,7 @@ impl Sandbox {
         let code = self.get_code();
         let lexer = Lexer::new(PathBuf::from_str(".sandbox").unwrap(), &code);
         let mut parser = Parser::new(lexer);
-        let program = parser.parse();
+        let program = parser.parse(true);
 
         fs::create_dir_all(self.c_output_path.clone().parent().unwrap())
             .expect("failed to mkdirs .sea/sandbox/");

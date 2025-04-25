@@ -1,5 +1,7 @@
 use std::{collections::HashMap, iter::Peekable, path::PathBuf, str::Chars, sync::LazyLock};
 
+use crate::util;
+
 use super::{
     error::ParseError,
     token::{Token, TokenKind},
@@ -45,6 +47,7 @@ static KEYWORDS: LazyLock<HashMap<&str, TokenKind>> = LazyLock::new(|| {
         ("switch", TokenKind::KwSwitch),
         ("case", TokenKind::KwCase),
         ("fall", TokenKind::KwFall),
+        ("not", TokenKind::OpNot),
         ("true", TokenKind::True),
         ("false", TokenKind::False),
     ])
@@ -76,17 +79,8 @@ impl<'a> Lexer<'a> {
     }
 
     // Gets the provided line, along with the one before and the one after it. Used for error messages.
-    pub fn get_lines(&self, line: usize) -> Vec<(usize, &str)> {
-        let mut lines: Vec<(usize, &str)> = vec![];
-        let itr = self.source.lines().enumerate();
-
-        let line = line.checked_sub(2).unwrap_or(0);
-
-        itr.skip(line)
-            .take(3)
-            .for_each(|(index, str_)| lines.push((index + 1, str_)));
-
-        lines
+    pub fn get_lines(&self, line: usize) -> Vec<(usize, String)> {
+        util::get_lines_from(self.source, line)
     }
 
     fn skip_no_buffer(&mut self) {
@@ -148,6 +142,9 @@ impl<'a> Lexer<'a> {
         self.buffer.remove(0); // remove the opening quote from the buffer
 
         while self.peek() != '"' && !self.is_done() {
+            if self.peek() == '\\' {
+                self.skip();
+            }
             if self.cur == '\n' {
                 self.line += 1;
                 self.column = 1;

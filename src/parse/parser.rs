@@ -467,10 +467,13 @@ impl<'a> Parser<'a> {
             }
 
             // Prefix unary operators
-            _ if self.accept(TokenKind::OpNot) => n(NodeKind::ExprUnaryOperator {
-                kind: OperatorKind::Not,
-                value: Box::new(self.parse_atom()),
-            }),
+            _ if self.accept(TokenKind::OpNot) => {
+                println!("opnot");
+                n(NodeKind::ExprUnaryOperator {
+                    kind: OperatorKind::Not,
+                    value: Box::new(self.parse_atom()),
+                })
+            }
             _ if self.accept(TokenKind::OpSub) => n(NodeKind::ExprUnaryOperator {
                 kind: OperatorKind::Negate,
                 value: Box::new(self.parse_atom()),
@@ -1187,8 +1190,15 @@ impl<'a> Parser<'a> {
 
     // #endregion: Top level statements
 
-    pub fn parse(&mut self) -> Node {
+    pub fn parse(&mut self, add_implicit_use_std: bool) -> Node {
         let mut nodes: Vec<Node> = vec![];
+        if add_implicit_use_std {
+            nodes.push(Node {
+                line: 0,
+                column: 0,
+                node: NodeKind::TopUse(PathBuf::from("std"), None),
+            })
+        }
         self.advance();
         while !self.done {
             nodes.push(self.parse_top_level_statement());

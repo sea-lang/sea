@@ -55,9 +55,6 @@ pub const OPERATORS: LazyLock<HashMap<TokenKind, Operator>> = LazyLock::new(|| {
     HashMap::from([
         // =
         TokenKind::Eq.ri(0), // expr = expr
-        // . as
-        TokenKind::OpDot.li(1), // expr.expr
-        TokenKind::KwAs.ri(1),  // expr as type
         // + -
         TokenKind::OpAdd.ri(2), // expr + expr
         TokenKind::OpSub.ri(2), // expr - expr
@@ -76,6 +73,9 @@ pub const OPERATORS: LazyLock<HashMap<TokenKind, Operator>> = LazyLock::new(|| {
         // and or
         TokenKind::OpAnd.li(11), // expr and expr
         TokenKind::OpOr.li(12),  // expr or expr
+        // . as
+        TokenKind::OpDot.li(13), // expr.expr
+        TokenKind::KwAs.ri(13),  // expr as type
     ])
 });
 

@@ -1,12 +1,14 @@
-use std/log
+use std[log, fs]
 
 fun main(): int {
-	var my_log = new Log(true, fopen(c"logging.log", c"wb"))
+	var my_log = new Log(true, open_file("logging.log", Write))
+
+	let it = not true
 
 	debug(ref my_log, "Hello, Debug!")
 	info(ref my_log, "Hello, Info!")
 	warn(ref my_log, "Hello, Warn!")
 	error(ref my_log, "Hello, Error!")
 
-	fclose(my_log.file)
+	close_file(my_log.file)
 }

@@ -467,13 +467,10 @@ impl<'a> Parser<'a> {
             }
 
             // Prefix unary operators
-            _ if self.accept(TokenKind::OpNot) => {
-                println!("opnot");
-                n(NodeKind::ExprUnaryOperator {
-                    kind: OperatorKind::Not,
-                    value: Box::new(self.parse_atom()),
-                })
-            }
+            _ if self.accept(TokenKind::OpNot) => n(NodeKind::ExprUnaryOperator {
+                kind: OperatorKind::Not,
+                value: Box::new(self.parse_atom()),
+            }),
             _ if self.accept(TokenKind::OpSub) => n(NodeKind::ExprUnaryOperator {
                 kind: OperatorKind::Negate,
                 value: Box::new(self.parse_atom()),

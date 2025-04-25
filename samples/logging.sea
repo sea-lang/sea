@@ -1,9 +1,7 @@
-use std[log, fs]
+use std/log
 
 fun main(): int {
 	var my_log = new Log(true, open_file("logging.log", Write))
-
-	let it = not true
 
 	debug(ref my_log, "Hello, Debug!")
 	info(ref my_log, "Hello, Info!")

@@ -1,5 +1,4 @@
-use std/io
-use std/fs
+use std[io, fs]
 
 rec Log(log_to_stdout: bool, file: File)
 

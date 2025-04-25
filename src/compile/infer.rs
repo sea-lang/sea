@@ -6,8 +6,8 @@ use crate::parse::{
 use super::{compiler::Compiler, symbol, type_::SeaType};
 
 pub fn infer_type_of_node(compiler: &Compiler, node: &Node) -> Result<SeaType, String> {
-    println!("inferring type of:");
-    node.pretty_print();
+    // println!("inferring type of:");
+    // node.pretty_print();
 
     Ok(match &node.node {
         NodeKind::ExprGroup(node) => infer_type_of_node(compiler, &node)?,

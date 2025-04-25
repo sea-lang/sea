@@ -74,7 +74,7 @@ impl<'a> CBackend<'a> {
     pub fn program(&mut self, program: Vec<Node>) {
         let file_path = self
             .compiler
-            .module_stack
+            .file_stack
             .last()
             .unwrap()
             .to_str()
@@ -251,12 +251,19 @@ impl<'a> CBackend<'a> {
                         None,
                     );
                 }
-                self.compiler.module_stack.push(path.clone());
+
+                if self.compiler.uses(&path) {
+                    continue;
+                }
+
                 self.compiler.file_stack.push(path.clone());
+
+                self.compiler.usages.push(path.clone());
                 let code = fs::read_to_string(path.clone()).unwrap();
                 let mut parser = Parser::new(Lexer::new(path, &code));
-                self.write(parser.parse(false));
-                self.compiler.module_stack.pop();
+                let program = parser.parse(false);
+                self.write(program);
+
                 self.compiler.file_stack.pop();
             }
         } else {

@@ -19,7 +19,6 @@ pub struct Compiler<'a> {
     pub symbols: SymbolTable,
     pub parser: Parser<'a>,
     pub usages: Vec<PathBuf>,
-    pub module_stack: Vec<PathBuf>,
     pub file_stack: Vec<PathBuf>,
 }
 
@@ -39,7 +38,6 @@ impl<'a> Compiler<'a> {
             symbols: SymbolTable::new(),
             parser,
             usages: vec![],
-            module_stack: vec![PathBuf::from("main")],
             file_stack: vec![p],
         }
     }
@@ -132,21 +130,16 @@ impl<'a> Compiler<'a> {
                     let file_path = p.join(s);
                     let file_path_ext = file_path.with_extension("sea");
 
-                    println!("selective import: {file_path:?} ({file_path_ext:?})");
-                    println!("  usages: {:?}", self.usages);
-
                     if self.uses(&file_path_ext) {
                         continue;
                     }
 
                     // Import individual files
                     if file_path_ext.is_file() {
-                        println!("  file_path_ext");
                         paths.push(file_path_ext);
                     }
                     // Import submodules
                     else if file_path.is_dir() {
-                        println!("  dir");
                         match self.get_use_paths(file_path, None) {
                             Ok(mut p) => paths.append(&mut p),
                             Err(err) => return Err(err),
@@ -183,7 +176,6 @@ impl<'a> Compiler<'a> {
                 }
             }
 
-            self.usages.append(&mut paths.clone());
             return Ok(paths);
         }
 

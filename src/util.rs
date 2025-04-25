@@ -4,7 +4,7 @@
 use std::fs;
 
 // Gets the provided line, along with the one before and the one after it. Used for error messages.
-pub fn get_lines_from(source: &str, line: usize) -> Vec<(usize, String)> {
+pub fn get_lines_from_str(source: &str, line: usize) -> Vec<(usize, String)> {
     let itr = source.lines().enumerate();
 
     let mut lines: Vec<(usize, String)> = vec![];
@@ -19,8 +19,8 @@ pub fn get_lines_from(source: &str, line: usize) -> Vec<(usize, String)> {
 }
 
 // Gets the provided line, along with the one before and the one after it. Used for error messages.
-pub fn get_lines(file_path: &str, line: usize) -> Vec<(usize, String)> {
-    get_lines_from(
+pub fn get_lines_from_file(file_path: &str, line: usize) -> Vec<(usize, String)> {
+    get_lines_from_str(
         fs::read_to_string(file_path)
             .expect(format!("failed to read file {file_path}").as_str())
             .as_str(),

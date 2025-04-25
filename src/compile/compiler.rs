@@ -30,6 +30,7 @@ impl<'a> Compiler<'a> {
         libpaths: Vec<PathBuf>,
         parser: Parser<'a>,
     ) -> Self {
+        let p = parser.lexer.file.clone();
         Compiler {
             output_path,
             output_file: File::create(output_file).unwrap(),
@@ -39,38 +40,41 @@ impl<'a> Compiler<'a> {
             parser,
             usages: vec![],
             module_stack: vec![PathBuf::from("main")],
+            file_stack: vec![p],
         }
     }
 
-    pub fn throw_exception(
-        &self,
-        source_file: String,
-        error: CompilerError,
-        help: Option<&str>,
-        node: Node,
-    ) -> ! {
+    pub fn throw(&self, error: CompilerError, help: Option<&str>, node: Node) -> ! {
+        let source_file = self.file_stack.last().unwrap().to_str().unwrap();
+
         println!(
             "\x1b[31;1m{source_file}:{}:{}:\x1b[0;1m {error}\x1b[0m",
             node.line, node.column
         );
 
-        let lines = util::get_lines_from(&source_file, node.line);
+        let lines = util::get_lines_from_file(&source_file, node.line);
         if lines.len() == 0 {
             println!("No line information available :(");
             println!("This error shouldn't happen, please report it.");
-            println!("Debug: node={}", node.clone())
+            println!("Debug: source_file={source_file}, node={}", node.clone())
         } else {
             // Determine the longest integer by digit so that we can make our error prettier.
             let longest_length = lines.iter().map(|it| it.0).max().unwrap().to_string().len();
 
             for (line_index, line_str) in lines {
                 // We replace `\t` with ` ` so that no matter the terminal indentation, the underline will be aligned
-                // let indents = line_str.chars().filter(|it| *it == '\t').count();
+                let indents = line_str.chars().filter(|it| *it == '\t').count();
                 let sanitized = line_str.replace('\t', "    ");
 
                 println!("\x1b[1;34m{line_index:>longest_length$} | \x1b[0m{sanitized}");
-
-                //TODO: Implement an underline?
+                if line_index == node.line {
+                    // Determine the column that the node is on to highlight it
+                    println!(
+                        "\x1b[1;34m{} | {}\x1b[31m^\x1b[0m",
+                        " ".repeat(longest_length),
+                        " ".repeat(node.column - 1 - indents + (indents * 4)),
+                    );
+                }
             }
         }
 
@@ -90,64 +94,97 @@ impl<'a> Compiler<'a> {
         self.scope -= 1;
     }
 
+    pub fn uses(&self, path: &PathBuf) -> bool {
+        self.usages.contains(path)
+    }
+
     // Get the paths to each file in a given module
     pub fn get_use_paths(
         &mut self,
         path: PathBuf,
         selections: Option<Vec<String>>,
     ) -> Result<Vec<PathBuf>, String> {
+        if self.uses(&path) {
+            return Ok(vec![]);
+        }
+
         let mut paths: Vec<PathBuf> = vec![];
 
         for libpath in &self.libpaths {
             let p = libpath.join(&path);
-            if p.exists() && p.is_dir() {
-                if let Some(selections) = selections {
-                    // Check if lib.sea exists, if so we'll import that first
-                    if p.join("lib.sea").exists() {
-                        paths.push(p.join("lib.sea"))
-                    }
 
-                    for s in selections {
-                        if s == "lib" {
-                            continue; // Handled above
-                        }
+            if !p.exists() || p.is_file() {
+                continue;
+            }
 
-                        let file_path = p.join(s);
-
-                        if file_path.with_extension("sea").is_file() {
-                            paths.push(file_path.clone());
-                        } else if file_path.is_dir() {
-                            match self.get_use_paths(file_path, None) {
-                                Ok(mut p) => paths.append(&mut p),
-                                Err(err) => return Err(err),
-                            }
-                        } else {
-                            return Err(format!("{file_path:?} is not a valid module"));
-                        }
-                    }
-                } else {
-                    // Check if lib.sea exists, if so we'll import that first
-                    if p.join("lib.sea").exists() {
-                        paths.push(p.join("lib.sea"))
-                    }
-
-                    // Import each file in the module
-                    for file in p.read_dir().unwrap() {
-                        let file_path = file.unwrap().path();
-
-                        if file_path.file_name().unwrap() == "lib.sea" {
-                            continue; // Handled above
-                        }
-
-                        if file_path.is_file() && file_path.extension().unwrap() == "sea" {
-                            paths.push(file_path.clone());
-                        }
-                    }
+            if let Some(selections) = selections {
+                // Check if lib.sea exists, if so we'll import that first
+                if p.join("lib.sea").exists() && !self.uses(&p.join("lib.sea")) {
+                    paths.push(p.join("lib.sea"))
                 }
 
-                self.usages.push(p);
-                return Ok(paths);
+                // Iterate over each selection and import it
+                for s in selections {
+                    if s == "lib" {
+                        continue; // Handled above
+                    }
+
+                    let file_path = p.join(s);
+                    let file_path_ext = file_path.with_extension("sea");
+
+                    println!("selective import: {file_path:?} ({file_path_ext:?})");
+                    println!("  usages: {:?}", self.usages);
+
+                    if self.uses(&file_path_ext) {
+                        continue;
+                    }
+
+                    // Import individual files
+                    if file_path_ext.is_file() {
+                        println!("  file_path_ext");
+                        paths.push(file_path_ext);
+                    }
+                    // Import submodules
+                    else if file_path.is_dir() {
+                        println!("  dir");
+                        match self.get_use_paths(file_path, None) {
+                            Ok(mut p) => paths.append(&mut p),
+                            Err(err) => return Err(err),
+                        }
+                    }
+                    // Doesn't exist or it wasn't a Sea file
+                    else {
+                        return Err(format!(
+                            "{file_path:?}(.sea) is not a valid module or does not exist"
+                        ));
+                    }
+                }
+            } else {
+                // Check if lib.sea exists, if so we'll import that first
+                if p.join("lib.sea").exists() && !self.uses(&p.join("lib.sea")) {
+                    paths.push(p.join("lib.sea"))
+                }
+
+                // Import each file in the module
+                for file in p.read_dir().unwrap() {
+                    let file_path = file.unwrap().path();
+
+                    if file_path.file_name().unwrap() == "lib.sea" {
+                        continue; // Handled above
+                    }
+
+                    if self.uses(&file_path) {
+                        continue;
+                    }
+
+                    if file_path.is_file() && file_path.extension().unwrap() == "sea" {
+                        paths.push(file_path.clone());
+                    }
+                }
             }
+
+            self.usages.append(&mut paths.clone());
+            return Ok(paths);
         }
 
         Err(format!("no such module: {path:?}"))

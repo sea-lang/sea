@@ -34,8 +34,7 @@ impl<'a> CBackend<'a> {
     }
 
     pub fn throw(&self, error: CompilerError, help: Option<&str>) -> ! {
-        self.compiler
-            .throw_exception(error, help, *self.node.clone())
+        self.compiler.throw(error, help, *self.node.clone())
     }
 
     pub fn get_symbol(&self, symbol: String) -> Option<&Symbol> {
@@ -246,11 +245,19 @@ impl<'a> CBackend<'a> {
         let file_paths = self.compiler.get_use_paths(path.clone(), selections);
         if let Ok(file_paths) = file_paths {
             for path in file_paths {
+                if !path.exists() {
+                    self.throw(
+                        CompilerError::ImportError(format!("no such module: {path:?}")),
+                        None,
+                    );
+                }
                 self.compiler.module_stack.push(path.clone());
+                self.compiler.file_stack.push(path.clone());
                 let code = fs::read_to_string(path.clone()).unwrap();
                 let mut parser = Parser::new(Lexer::new(path, &code));
                 self.write(parser.parse(false));
                 self.compiler.module_stack.pop();
+                self.compiler.file_stack.pop();
             }
         } else {
             self.throw(CompilerError::ImportError(file_paths.err().unwrap()), None)

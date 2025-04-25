@@ -80,7 +80,7 @@ impl<'a> Lexer<'a> {
 
     // Gets the provided line, along with the one before and the one after it. Used for error messages.
     pub fn get_lines(&self, line: usize) -> Vec<(usize, String)> {
-        util::get_lines_from(self.source, line)
+        util::get_lines_from_str(self.source, line)
     }
 
     fn skip_no_buffer(&mut self) {

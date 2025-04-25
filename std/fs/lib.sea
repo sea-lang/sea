@@ -1,6 +1,5 @@
-use std/result
-use std/str
-use std/panic
+use std[result, str]
+use std/io[panic]
 
 def File = ^FILE
 

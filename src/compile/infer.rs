@@ -44,7 +44,7 @@ pub fn infer_type_of_node(compiler: &Compiler, node: &Node) -> Result<SeaType, S
         NodeKind::ExprUnaryOperator { kind, value } => match *kind {
             OperatorKind::Ref => infer_type_of_node(compiler, value)?.pointer(),
             OperatorKind::Deref => infer_type_of_node(compiler, value)?.unpointer(),
-            _ => infer_type_of_node(compiler, node)?,
+            _ => infer_type_of_node(compiler, value)?,
         },
         NodeKind::ExprBinaryOperator { kind, left, right } => match kind {
             OperatorKind::Dot => {

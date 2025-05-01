@@ -10,7 +10,7 @@
 
 > _C for the modern world._
 
-> _Pronounced /see-uh/ (IPA: \[siə\])_
+> _Pronounced \[see-uh\] (IPA: /siə/)_
 
 ---
 

@@ -1,4 +1,4 @@
-use std[result, str]
+use std[res, str]
 use std/io[panic]
 
 def File = ^FILE

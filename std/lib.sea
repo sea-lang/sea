@@ -40,3 +40,7 @@ def usize = size_t
  *  str: ^char - The pointer to the string.
 **/
 rec String(own: bool, len: int, str: ^char)
+
+// Functions
+fun inc(it: ^int) -> it^ = it^ + 1
+fun dec(it: ^int) -> it^ = it^ - 1

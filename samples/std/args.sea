@@ -1,4 +1,0 @@
-use std[arg]
-
-fun main(argc: int, argv: ^char[]): int {
-}

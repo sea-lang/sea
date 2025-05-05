@@ -100,3 +100,45 @@ fun strings_equal(a: String, b: String): bool {
 
 	ret true
 }
+
+/// Finds the first <'ch> in the provided <String>, returning the index of the
+/// first occurrence or -1 if not found.
+fun string_find(a: String, ch: char): int {
+	for i in 0 to a.len {
+		if a.str[i] == ch -> ret i
+	}
+
+	ret -1
+}
+
+/// Finds the last <'ch> in the provided <String>, returning the index of the
+/// first occurrence or -1 if not found.
+fun string_rfind(a: String, ch: char): int {
+	for var i = a.len ; i > 0 ; inc(ref i) {
+		if a.str[i] == ch -> ret i
+	}
+
+	ret -1
+}
+
+/**
+ * Returns a substring of the given string as a string **view**. Mutating the
+ * original string will mutate the view. This string will not be
+ * null-terminated unless the end index is the length of the source string.
+ *
+ * Both the start and end indexes are inclusive.
+ *
+ * To get a copy of the string view, use:
+ * ```sea
+ * let view = string_slice("Hello, World!", 0, 5)
+ * let copy = copy_string(view.len, view.str)
+ * ```
+ *
+ * Args:
+ *  a: String  - The string to slice
+ *  start: int - The starting index.
+ *  end: int   - The ending index.
+**/
+fun string_slice(a: String, start: int, end: int): String {
+	ret string_view(end - start, &a.str[start])
+}

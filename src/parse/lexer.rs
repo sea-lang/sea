@@ -48,6 +48,8 @@ static KEYWORDS: LazyLock<HashMap<&str, TokenKind>> = LazyLock::new(|| {
         ("case", TokenKind::KwCase),
         ("fall", TokenKind::KwFall),
         ("not", TokenKind::OpNot),
+        ("and", TokenKind::OpAnd),
+        ("or", TokenKind::OpOr),
         ("true", TokenKind::True),
         ("false", TokenKind::False),
     ])

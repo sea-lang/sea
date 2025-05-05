@@ -1,0 +1,80 @@
+use std/io[panic]
+
+/**
+ * A simple dynamic array implementation.
+ *
+ * Use <make_list> for instantiation.
+ *
+ * Params:
+ *  bump: f32  - How much to multiply the length by when the list needs to grow.
+ *  esize: int - The size of each element in the array. Do not mutate this!
+ *  len: int   - The current length of the array. Do not mutate this!
+ *  cap: int   - The maximum length of the array. Do not mutate this!
+ *  array: ^^void -
+ *    Pointer to the first element of the array. Do not make other
+ *    pointers to this since it may move from <realloc> calls when the
+ *    array needs to grow.
+**/
+rec List(bump: f32, esize: int, len: int, cap: int, array: ^^void)
+
+//TODO: Replace element_size with sizeof(T) implicitly. Generic types aren't replaced as identifiers in the prototype impl so we can't do this quite yet.
+/**
+ * Creates an empty <List>.
+ *
+ * Args:
+ *  initial_cap: int  - The initial maximum size of the array. Must be `> 0`.
+ *  element_size: int - The size of each element, i.e, `sizeof(String)`.
+ *  bump: f32         - How much to multiply `cap` by when the array exceeds it.
+**/
+fun make_list(initial_cap: int, element_size: int, bump: f32): List {
+	var array: ^void = malloc(element_size * initial_cap)
+	ret new List(bump, element_size, 0, initial_cap, array)
+}
+
+/// Gets the element in <'list> at <'index>, panics if <'index> is out of range.
+/// **Pointers returned by this may move after calling <list_grow> or
+/// <list_append>.**
+fun list_get(list: ^List, index: int): ^void {
+	if index > list^.len or index < 0 -> panic("Invalid index")
+
+	ret list^.array[index]
+}
+
+/// Grows <'list> to the given <'new_cap>.
+fun list_grow(list: ^List, new_cap: int): bool {
+	if list^.cap >= new_cap -> ret false
+
+	var p: ^void = realloc(list^.array, new_cap * list^.esize)
+	if p == nil -> ret false
+
+	list^.cap = new_cap
+	list^.array = p
+	ret true
+}
+
+/// Frees the given <'list>, **elements inside are not freed by this**.
+fun list_free(list: ^List) -> free(list^.array)
+
+/// Appends <'it> to <'list>, growing if needed.
+fun list_append(list: ^List, it: ^void) {
+	if list^.len + 1 > list^.cap -> list_grow(list, (list^.cap * list^.bump) as int)
+
+	list^.array[list^.len] = it
+	list^.len = list^.len + 1
+}
+
+/// Pops the latest element in <'list> and returns it, panics if `<'list>.len == 0`
+fun list_pop(list: ^List): ^void {
+	if list^.len == 0 -> panic("Cannot pop empty list")
+
+	list^.len = list^.len - 1
+
+	ret list^.array[list^.len]
+}
+
+/// Set the element in <'list> at <'index> to <'it>, panics if <'index> is out of range.
+fun list_set(list: ^List, index: int, it: ^void) {
+	if index > list^.len or index < 0 -> panic("Invalid index")
+
+	list^.array[index] = it
+}

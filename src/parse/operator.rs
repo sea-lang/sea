@@ -50,32 +50,31 @@ pub enum Associativity {
     Right,
 }
 
-// Pulled from https://en.cppreference.com/w/c/language/operator_precedence
 pub const OPERATORS: LazyLock<HashMap<TokenKind, Operator>> = LazyLock::new(|| {
     HashMap::from([
         // =
         TokenKind::Eq.ri(0), // expr = expr
-        // + -
-        TokenKind::OpAdd.ri(2), // expr + expr
-        TokenKind::OpSub.ri(2), // expr - expr
-        // * / %
-        TokenKind::OpMul.li(3), // expr * expr
-        TokenKind::OpDiv.li(3), // expr / expr
-        TokenKind::OpMod.li(3), // expr % expr
         // > >= < <=
-        TokenKind::OpGt.li(6),   // expr > expr
-        TokenKind::OpGtEq.li(6), // expr >= expr
-        TokenKind::OpLt.li(6),   // expr < expr
-        TokenKind::OpLtEq.li(6), // expr <= expr
+        TokenKind::OpGt.li(1),   // expr > expr
+        TokenKind::OpGtEq.li(1), // expr >= expr
+        TokenKind::OpLt.li(1),   // expr < expr
+        TokenKind::OpLtEq.li(2), // expr <= expr
         // == !=
-        TokenKind::OpEq.li(7),  // expr == expr
-        TokenKind::OpNeq.li(7), // expr != expr
+        TokenKind::OpEq.li(3),  // expr == expr
+        TokenKind::OpNeq.li(3), // expr != expr
         // and or
-        TokenKind::OpAnd.li(11), // expr and expr
-        TokenKind::OpOr.li(12),  // expr or expr
+        TokenKind::OpAnd.li(4), // expr and expr
+        TokenKind::OpOr.li(4),  // expr or expr
+        // + -
+        TokenKind::OpAdd.ri(5), // expr + expr
+        TokenKind::OpSub.ri(5), // expr - expr
+        // * / %
+        TokenKind::OpMul.li(6), // expr * expr
+        TokenKind::OpDiv.li(6), // expr / expr
+        TokenKind::OpMod.li(6), // expr % expr
         // . as
-        TokenKind::OpDot.li(13), // expr.expr
-        TokenKind::KwAs.ri(13),  // expr as type
+        TokenKind::OpDot.li(7), // expr.expr
+        TokenKind::KwAs.ri(7),  // expr as type
     ])
 });
 

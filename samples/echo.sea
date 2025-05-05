@@ -1,10 +1,7 @@
 use std[io, str]
 
 fun main(argc: int, argv: ^char[]): int {
-	var arg: ^char = nil
-	for i in 0 to argc {
-		arg = argv[i]
-		println(string_view(strlen(arg), arg))
-	}
+	for i in 0 to argc -> println(string_view_nt(argv[i]))
+
 	ret 0
 }

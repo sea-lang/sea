@@ -1,0 +1,24 @@
+tag FlagArgKind(NoArg, ArgRequired, ArgOptional)
+
+rec Flag(short: char, long: String, arg_kind: FlagArgKind, value: String)
+
+rec Flags(flags: Flag[])
+
+fun make_flag(short: char, long: String, arg_kind: FlagArgKind): Flag {
+	ret new Flag(short, long, arg_kind, nil_string())
+}
+
+fun parse_flags(argc: int, argv: ^char[], flags: ^Flags) {
+	let args = make_list(1, sizeof(String), 2.0f)
+
+	for i in 0 to argc {
+		let c_arg = argv[i]
+		let arg = string_view_nt(argv[i])
+
+		if c_arg[0] == `-` {
+			// todo
+		} else {
+			list_append(ref args, copy_string_nt(c_arg))
+		}
+	}
+}

@@ -1,9 +1,0 @@
-/**
- * Allocates `sizeof(<'T>)` on the heap and returns a pointer to it.
- *
- * Args:
- *  T  - The type to allocate.
- *
- * Rets: ^T - A pointer to a heap-allocated <'T>.
-**/
-mac talloc(T): "^${T}" = "malloc(sizeof(${T})) as ^${T}"

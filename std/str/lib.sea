@@ -9,8 +9,17 @@
 fun string_view(len: int, chars: ^char): String -> ret new String(false, len, chars)
 
 /**
+ * Creates a <String> object with characters, expecting null-termination. The
+ * characters are not copied.
+ *
+ * Args:
+ *  chars: ^char - Pointer to the first character.
+**/
+fun string_view_nt(chars: ^char): String -> ret string_view(strlen(chars), chars)
+
+/**
  * Creates a <String> object with the given length and characters. The
- * characters are not copied, however are assumed to be owned by the string.
+ * characters are not copied however are assumed to be owned by the string.
  *
  * Args:
  *  len: int     - Length of the string.
@@ -19,8 +28,18 @@ fun string_view(len: int, chars: ^char): String -> ret new String(false, len, ch
 fun take_string(len: int, chars: ^char): String -> ret new String(true, len, chars)
 
 /**
+ * Creates a <String> object with the given characters, expecting
+ * null-termination. The characters are not copied however are assumed to be
+ * owned by the string.
+ *
+ * Args:
+ *  chars: ^char - Pointer to the first character.
+**/
+fun take_string_nt(chars: ^char): String -> ret take_string(strlen(chars), chars)
+
+/**
  * Creates a <String> object with the given length and characters. The
- * characters are copied, make sure to free the <String> later.
+ * characters are copied, make sure to free the <String>.
  *
  * Args:
  *  len: int     - Length of the string.
@@ -31,6 +50,32 @@ fun copy_string(len: int, chars: ^char): String {
 	memcpy(str.str, chars, len)
 	ret str
 }
+
+/**
+ * Creates a <String> object with the given characters, expecting
+ * null-termination. The characters are copied, make sure to free the <String>.
+ *
+ * Args:
+ *  chars: ^char - Pointer to the first character.
+**/
+fun copy_string_nt(chars: ^char): String -> ret copy_string(strlen(chars), chars)
+
+/**
+ * Creates a <String> object from the given string. The characters are copied,
+ * make sure to free the <String>.
+ *
+ * Args:
+ *  str: String - The string to copy.
+**/
+fun clone_string(str: String): String {
+	let clone = new String(str.own, str.len, malloc(sizeof(char) * str.len))
+	memcpy(clone.str, str.str, str.len)
+	ret clone
+}
+
+fun nil_string(): String -> ret new String(false, 0, nil)
+
+let empty_string = new String(false, 0, c"")
 
 /// Frees the given string's characters, if it owns them.
 fun free_string(string: ^String) -> if string^.own -> free(string^.str)
@@ -44,9 +89,14 @@ fun concat(a: String, b: String): String {
 	ret string_view(len, str)
 }
 
-/**
- * Hashes <'str> using a non-cryptographic
-**/
-fun hash_string(str: String): u32 {
-	ret 0
+/// Compares <'a> and <'b> character-by-character and returns true if the
+/// strings are equal.
+fun strings_equal(a: String, b: String): bool {
+	if a.len != b.len -> ret false
+
+	for i in 0 to a.len {
+		if a.str[i] != b.str[i] -> ret false
+	}
+
+	ret true
 }

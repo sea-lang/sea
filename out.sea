@@ -88,4 +88,13 @@ fun main(argc: int, argv: ^char[]): int {
 	let somethingActionValue = somethingAction.Play.card.value
 
 	let somethingComplex = (box(42).val)^
+
+	if true -> println("true")
+	if false -> println("false")
+	if true or true -> println("true or true")
+	if true and true -> println("true and true")
+
+	var steel: bool = false
+	let flint = steel = true
+	if flint and steel -> println("I am Steve!")
 }

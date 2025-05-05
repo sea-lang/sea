@@ -452,7 +452,7 @@ impl<'a> Parser<'a> {
                 );
                 if self.token.kind != TokenKind::CloseParen {
                     loop {
-                        params.push(self.parse_atom());
+                        params.push(self.parse_expression());
                         if !self.accept(TokenKind::Comma) {
                             break;
                         }
@@ -525,7 +525,7 @@ impl<'a> Parser<'a> {
                     })
                 }
             } else if self.accept(TokenKind::OpenBracket) {
-                let right = self.parse_atom();
+                let right = self.parse_expression();
                 self.expect(
                     TokenKind::CloseBracket,
                     "expected closed bracket (`]`) to end index operator",

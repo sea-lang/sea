@@ -581,7 +581,7 @@ impl<'a> CBackend<'a> {
     }
 
     pub fn expr_false(&mut self) {
-        self.ws("true");
+        self.ws("false");
     }
 
     pub fn expr_id(&mut self, id: String) {
@@ -681,7 +681,9 @@ impl<'a> CBackend<'a> {
             return;
         }
 
-        self.ws("(");
+        if kind != OperatorKind::Index {
+            self.ws("(");
+        }
         self.write(left);
 
         match kind {
@@ -708,9 +710,9 @@ impl<'a> CBackend<'a> {
 
         if kind == OperatorKind::Index {
             self.ws("]");
+        } else {
+            self.ws(")");
         }
-
-        self.ws(")");
     }
 
     pub fn expr_invoke(&mut self, left: Node, params: Vec<Node>) {

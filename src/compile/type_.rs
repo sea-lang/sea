@@ -56,6 +56,29 @@ impl SeaType {
         }
     }
 
+    pub fn mangle(&self) -> String {
+        if self.funptr_rets.is_some() {
+            format!(
+                "fun_{}_{}",
+                self.funptr_args
+                    .as_ref()
+                    .unwrap()
+                    .iter()
+                    .map(|it| it.mangle())
+                    .collect::<Vec<String>>()
+                    .join("_"),
+                self.funptr_rets.as_ref().unwrap().mangle()
+            )
+        } else {
+            format!(
+                "{}_{}_{}",
+                "p".repeat(self.pointers.into()),
+                self.name,
+                "a".repeat(self.arrays.len()),
+            )
+        }
+    }
+
     pub fn pointer(&self) -> Self {
         SeaType {
             pointers: self.pointers + 1,

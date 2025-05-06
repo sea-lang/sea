@@ -1,5 +1,0 @@
-mac say_hello() = "raw[ printf(\"Hello, World!\n\"); ]"
-
-fun main(): int {
-	@say_hello()
-}

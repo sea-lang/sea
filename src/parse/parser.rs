@@ -1,7 +1,7 @@
 use std::{fmt::Debug, path::PathBuf, process::exit, str::FromStr};
 
 use crate::{
-    hashtags::{DefTags, FunTags, MacTags, RecTags, TagRecTags, TagTags},
+    hashtags::{DefTags, FunTags, RecTags, TagRecTags, TagTags},
     parse::operator::Associativity,
 };
 
@@ -984,54 +984,6 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_mac(&mut self, tags: Vec<MacTags>) -> Node {
-        let line = self.prev.line;
-        let column = self.prev.column;
-
-        self.expect(TokenKind::Identifier, "expected identifier after `mac`");
-        let id = self.prev.text.clone();
-        let mut params: Vec<String> = vec![];
-
-        self.expect(
-            TokenKind::OpenParen,
-            "expected open parenthesis after macro name",
-        );
-        while self.accept(TokenKind::Identifier) {
-            params.push(self.prev.text.clone());
-            if !self.accept(TokenKind::Comma) {
-                // if there is no comma then we must be on the last parameter
-                break;
-            }
-        }
-        self.expect(
-            TokenKind::CloseParen,
-            "expected closed parenthesis after macro parameter list",
-        );
-
-        let rets: Option<Box<Node>> = if self.accept(TokenKind::Colon) {
-            Some(Box::new(self.parse_type()))
-        } else {
-            None
-        };
-
-        self.expect(TokenKind::Eq, "expected `=` after macro return type (or after parameter list if return type is omitted)");
-
-        self.expect(TokenKind::String, "expected string after macro `=`");
-        let expands_to = self.prev.text.clone(); //TODO: Don't require a string here
-
-        Node {
-            line,
-            column,
-            node: NodeKind::TopMac {
-                tags,
-                id,
-                params,
-                rets,
-                expands_to,
-            },
-        }
-    }
-
     fn parse_tag(&mut self, tags: Vec<TagTags>) -> Node {
         let line = self.prev.line;
         let column = self.prev.column;
@@ -1123,6 +1075,39 @@ impl<'a> Parser<'a> {
         }
     }
 
+    pub fn parse_pragma(&mut self) -> Node {
+        let line = self.prev.line;
+        let column = self.prev.column;
+
+        self.expect(TokenKind::Identifier, "expected identifier after `pragma`");
+        let id = self.prev.text.clone();
+
+        let mut params: Vec<Node> = vec![];
+        self.expect(
+            TokenKind::OpenParen,
+            "expected open parenthesis after pragma identifier",
+        );
+        if !self.accept(TokenKind::CloseParen) {
+            loop {
+                params.push(self.parse_expression());
+
+                if !self.accept(TokenKind::Comma) {
+                    break;
+                }
+            }
+        }
+        self.expect(
+            TokenKind::CloseParen,
+            "expected closed parenthesis after pragma argument list",
+        );
+
+        Node {
+            line,
+            column,
+            node: NodeKind::TopPragma { id, params },
+        }
+    }
+
     pub fn parse_top_level_statement(&mut self) -> Node {
         if self.accept(TokenKind::KwUse) {
             self.parse_use()
@@ -1136,8 +1121,6 @@ impl<'a> Parser<'a> {
                 self.parse_rec(Parser::cast_hashtags::<RecTags>(tags))
             } else if self.accept(TokenKind::KwDef) {
                 self.parse_def(Parser::cast_hashtags::<DefTags>(tags))
-            } else if self.accept(TokenKind::KwMac) {
-                self.parse_mac(Parser::cast_hashtags::<MacTags>(tags))
             } else if self.accept(TokenKind::KwTag) {
                 if self.accept(TokenKind::KwRec) {
                     self.parse_tagrec(Parser::cast_hashtags::<TagRecTags>(tags))
@@ -1156,8 +1139,6 @@ impl<'a> Parser<'a> {
             self.parse_rec(vec![])
         } else if self.accept(TokenKind::KwDef) {
             self.parse_def(vec![])
-        } else if self.accept(TokenKind::KwMac) {
-            self.parse_mac(vec![])
         } else if self.accept(TokenKind::KwTag) {
             if self.accept(TokenKind::KwRec) {
                 self.parse_tagrec(vec![])
@@ -1166,6 +1147,8 @@ impl<'a> Parser<'a> {
             }
         } else if self.accept(TokenKind::KwRaw) {
             self.parse_raw()
+        } else if self.accept(TokenKind::KwPragma) {
+            self.parse_pragma()
         } else if self.accept(TokenKind::KwVar) {
             let it = self.parse_var();
             Node {

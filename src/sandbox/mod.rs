@@ -249,13 +249,13 @@ impl Sandbox {
             .expect("failed to mkdirs .sea/sandbox/");
 
         // Make compiler and backend
-        let compiler = Compiler::new(
+        let mut compiler = Compiler::new(
             self.output_path.clone(),
             self.c_output_path.clone(),
             vec![], //TODO
             parser,
         );
-        let mut backend = CBackend::new(compiler);
+        let mut backend = CBackend::new(&mut compiler);
 
         // Write output C code
         backend.write(program);

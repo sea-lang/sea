@@ -16,13 +16,13 @@ use crate::{
     },
 };
 
-pub struct CBackend<'a> {
+pub struct CBackend<'a, 'b> {
     pub node: Box<Node>, // reference to current node
-    pub compiler: Compiler<'a>,
+    pub compiler: &'b mut Compiler<'a>,
 }
 
-impl<'a> CBackend<'a> {
-    pub fn new(compiler: Compiler<'a>) -> Self {
+impl<'a, 'b> CBackend<'a, 'b> {
+    pub fn new(compiler: &'b mut Compiler<'a>) -> Self {
         CBackend {
             node: Box::new(Node {
                 line: 0,
@@ -777,7 +777,7 @@ impl<'a> CBackend<'a> {
     // #endregion Expressions
 }
 
-impl<'a> Backend for CBackend<'a> {
+impl<'a, 'b> Backend for CBackend<'a, 'b> {
     fn write(&mut self, node: Node) {
         self.node = Box::new(node.clone());
         match node.node {
@@ -800,15 +800,9 @@ impl<'a> Backend for CBackend<'a> {
             } => self.top_fun(tags, id, params, rets, expr),
             NodeKind::TopRec { tags, id, fields } => self.top_rec(tags, id, fields),
             NodeKind::TopDef { tags, id, typ } => self.top_def(tags, id, *typ),
-            NodeKind::TopMac {
-                tags: _tags,
-                id: _id,
-                params: _params,
-                rets: _rets,
-                expands_to: _expands_to,
-            } => todo!(),
             NodeKind::TopTag { tags, id, entries } => self.top_tag(tags, id, entries),
             NodeKind::TopTagRec { tags, id, entries } => self.top_tag_rec(tags, id, entries),
+            NodeKind::TopPragma { id: _, params: _ } => self.compiler.handle_pragma(node),
             NodeKind::StatRet(node) => self.stat_ret(node.map(|it| *it)),
             NodeKind::StatIf { cond, expr, else_ } => {
                 self.stat_if(*cond, *expr, else_.map(|it| *it))

@@ -37,9 +37,3 @@ pub enum TagRecTags {
     #[strum(serialize = "static")]
     Static,
 }
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumString)]
-pub enum MacTags {
-    #[strum(serialize = "static")]
-    Static,
-}

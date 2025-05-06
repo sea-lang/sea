@@ -148,33 +148,6 @@ impl Node {
                     println!("{spacing}  tags: {TEXT}#{tags:?}{TOP_LEVEL_STAT}");
                 }
             }
-            NodeKind::TopMac {
-                tags,
-                id,
-                params,
-                rets,
-                expands_to,
-            } => {
-                println!("{TOP_LEVEL_STAT}mac '{TEXT}{id}{TOP_LEVEL_STAT}':");
-
-                if tags.iter().count() > 0 {
-                    println!("{spacing}  tags: {TEXT}#{tags:?}{TOP_LEVEL_STAT}");
-                }
-
-                println!("{spacing}  params:");
-                for param_name in params {
-                    println!("{TOP_LEVEL_STAT}{spacing}    - '{TEXT}{param_name}{TOP_LEVEL_STAT}'");
-                }
-
-                if let Some(rets) = rets {
-                    print!("{TOP_LEVEL_STAT}{spacing}  rets = ");
-                    rets.pretty_print_inner(indent, false);
-                }
-
-                println!(
-                    "{TOP_LEVEL_STAT}{spacing}  expansion = '{TEXT}{expands_to}{TOP_LEVEL_STAT}'"
-                );
-            }
             NodeKind::TopTag { tags, id, entries } => {
                 println!("{TOP_LEVEL_STAT}tag '{TEXT}{id}{TOP_LEVEL_STAT}':");
 
@@ -214,6 +187,19 @@ impl Node {
                     } else {
                         println!("{spacing}    - '{TEXT}{entry_id}{TOP_LEVEL_STAT}'()");
                     }
+                }
+            }
+            NodeKind::TopPragma { id, params } => {
+                print!("{TOP_LEVEL_STAT}pragma: '{TEXT}{id}{TOP_LEVEL_STAT}'");
+                if params.len() > 0 {
+                    println!("(");
+                    for param in params {
+                        print!("{TOP_LEVEL_STAT}{spacing}  -");
+                        param.pretty_print_inner(indent + 1, false);
+                    }
+                    println!("{TOP_LEVEL_STAT}{spacing})");
+                } else {
+                    println!("()");
                 }
             }
             NodeKind::StatRet(node) => {

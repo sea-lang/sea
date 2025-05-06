@@ -1,14 +1,15 @@
-use std::{fs, path::PathBuf, process::exit};
+use std::{fs, path::PathBuf, process::exit, rc::Rc};
 
 use backend::{backend::Backend, backends::c::CBackend};
 use compile::compiler::Compiler;
-use parse::{lexer::Lexer, parser::Parser};
+use parse::{ast::Node, lexer::Lexer, parser::Parser};
 
 pub mod backend;
 pub mod compile;
 pub mod error;
 pub mod hashtags;
 pub mod parse;
+pub mod reef;
 pub mod sandbox;
 pub mod util;
 
@@ -91,20 +92,26 @@ fn compile(flags: flags::Compile) {
     }
 
     // Make compiler and backend
-    let compiler = Compiler::new(path(), c_output_path.clone(), libpaths, parser);
-    let mut backend = CBackend::new(compiler);
+    let mut compiler = Compiler::new(path(), c_output_path.clone(), libpaths, parser);
+
+    // This gets used in C code compilation, I make it now so that the borrow checker doesn't make me cry
+    let mut cc_flags: Vec<String> = vec![];
 
     // Write output C code
-    backend.write(program);
+    CBackend::new(&mut compiler).write(program);
 
     // Compile C code
     if !flags.nobuild {
+        cc_flags.extend_from_slice(&compiler.cc_flags);
+        cc_flags.extend_from_slice(&flags.ccflags);
+
         let compile_res = compile::run_compile_cmds(
             c_output_path,
             executable_path.clone(),
             flags.cc.unwrap_or(get_cc(flags.prod)),
-            flags.ccflags,
+            cc_flags,
         );
+
         if compile_res.is_err() {
             throw(compile_res.err().unwrap().as_str());
         }

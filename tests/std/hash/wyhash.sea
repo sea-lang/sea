@@ -1,0 +1,24 @@
+use std/time
+use std/hash/wyhash
+
+fun main(): int {
+	let secret = wyhash_make_secret(get_timestamp())
+
+	let characters = [
+		"Gandalf",
+		"Saruman",
+		"Radagast",
+		"Sauron",
+		"Beorn",
+		"Bilbo",
+		"Frodo",
+		"Sam",
+		"Pippin",
+		"Merry"
+	]
+
+	for i in 0 to 10 {
+		let character: String = characters[i] // TODO: Inferred type here is `String[10]` where it should be `String`
+		printf(c"%.*s = %zu\n", character.len, character.str, wyhash_hash_string(secret, character))
+	}
+}

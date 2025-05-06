@@ -28,7 +28,17 @@ any C libraries directly in Sea _without needing bindings_.
 
 ## Installation
 
-TODO!
+**From Source:**
+
+```sh
+git clone https://github.com/emmathemartian/sea
+cd sea
+cargo build --release
+cp ./target/release/sea somewhere/on/path/
+```
+
+You can also `ln -s $(pwd)/target/release/sea somewhere/on/path` if you rebuild
+often and test in other places.
 
 ## Getting Started
 
@@ -75,6 +85,7 @@ You can run this using `sea compile --run main.sea` (or `sea c -r main.sea`).
 - [Builtins](#builtins)
 - [Documentation](#documentation)
 - [Sandbox](#sandbox)
+- [Pragmas](#pragmas)
 
 ## Hello World
 
@@ -369,7 +380,8 @@ condition.
 > ![TODO]
 > Ternary expression
 
-> ![WARNING] > `else` is not part of the `if` statement, it is its own statement.
+> ![WARNING] \
+> `else` is not part of the `if` statement, it is its own statement.
 > This means that the following code **is not valid**:
 >
 > ```sea
@@ -636,6 +648,56 @@ def Integer = int
 fun main(): Integer -> ret 0
 ```
 
+## Hashtags
+
+Hashtags are like modifier keywords in other languages.
+
+```sea
+#inline
+fun life(): int -> ret 42
+
+// compiles to:
+// inline int life() { return 42; }
+```
+
+To define multiple hashtags, group them in parenthesis:
+
+```sea
+#(inline, static)
+fun life(): int -> ret 42
+
+// compiles to:
+// static inline int life() { return 42; }
+```
+
+> **If hashtags exist, why isn't `tag rec` defined as `#tag rec`?**
+>
+> Hashtags don't change the syntax of the statement. `tag rec`, `rec`, and `tag`
+> are all totally different syntaxes.
+
+Here's a list of all hashtags:
+
+```sea
+// funs:
+#static
+#inline
+#extern // currently unused, though this will be used to prevent name-mangling if/when function overloads are implemented
+#noret  // marks the function with `noreturn`, use this for functions that `exit()` prematurely
+
+// recs:
+#static
+#union
+
+// defs:
+#static
+
+// tags:
+#static
+
+// tag recs:
+#static
+```
+
 ## Raw C Code
 
 ```sea
@@ -779,3 +841,33 @@ To write "good" doc comments, we **recommend** the following guidelines:
 ## Sandbox
 
 See [sandbox.md](./sandbox.md), there's a lot to the sandbox :P
+
+## Pragmas
+
+Pragmas allow you to control the Sea compiler from within your Sea code. You
+shouldn't have to use these often, although if you're interacting with external
+C libraries, you may need to.
+
+Pragmas use the `pragma` keyword and look like this:
+
+```sea
+// Adds `-lraylib` to the C compiler's flags when compiling your code
+pragma add_cc_flag("-lraylib")
+
+// This is equivalent to the above pragma
+pragma add_library("raylib")
+```
+
+Pragmas may look like function invocations, and whilst similar, they fulfil a
+vastly different role.
+
+> ![NOTE]
+> Pragmas cannot be user-defined, nor are they macros!
+
+Here's a list of all pragmas:
+
+```sea
+add_cc_flag(flag: String) // Add a flag to the C compiler
+add_library(link: String) // Add a link (`-l`) to CC flags
+add_include_dir(dir: String) // Add an include directory to CC flags, relative to the current file's directory
+```

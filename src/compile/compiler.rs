@@ -7,6 +7,7 @@ use crate::{
 
 use super::{
     error::CompilerError,
+    pragmas::Pragma,
     symbol::{Symbol, SymbolTable},
     type_::SeaType,
 };
@@ -20,6 +21,7 @@ pub struct Compiler<'a> {
     pub parser: Parser<'a>,
     pub usages: Vec<PathBuf>,
     pub file_stack: Vec<PathBuf>,
+    pub cc_flags: Vec<String>,
 }
 
 impl<'a> Compiler<'a> {
@@ -39,6 +41,7 @@ impl<'a> Compiler<'a> {
             parser,
             usages: vec![],
             file_stack: vec![p],
+            cc_flags: vec![],
         }
     }
 
@@ -209,5 +212,31 @@ impl<'a> Compiler<'a> {
     pub fn add_var(&mut self, name: String, typ: SeaType, mutable: bool) {
         self.symbols
             .add_scoped_symbol(name, self.scope, Symbol::Var { typ, mutable });
+    }
+
+    fn format_pragma_string(&self, s: String) -> String {
+        s.replace(
+            "${dir}",
+            self.file_stack
+                .last()
+                .unwrap()
+                .parent()
+                .unwrap()
+                .to_str()
+                .unwrap(),
+        )
+    }
+
+    pub fn handle_pragma(&mut self, node: Node) {
+        let pragma = Pragma::from_node(&node).unwrap_or_else(|it| self.throw(it, None, node));
+        match pragma {
+            Pragma::AddCCFlag(it) => self.cc_flags.push(self.format_pragma_string(it)),
+            Pragma::AddLibrary(it) => self
+                .cc_flags
+                .push(format!("-l{}", self.format_pragma_string(it))),
+            Pragma::AddIncludeDir(it) => self
+                .cc_flags
+                .push(format!("-I{}", self.format_pragma_string(it))),
+        }
     }
 }

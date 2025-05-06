@@ -1,0 +1,3 @@
+[submodule "std/hash/wyhash/include"]
+	path = std/hash/wyhash/include
+	url = https://github.com/wangyi-fudan/wyhash

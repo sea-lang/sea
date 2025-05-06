@@ -41,13 +41,6 @@ pub enum NodeKind {
         id: String,
         typ: Box<Node>,
     },
-    TopMac {
-        tags: Vec<hashtags::MacTags>,
-        id: String,
-        params: Vec<String>,
-        rets: Option<Box<Node>>,
-        expands_to: String,
-    },
     TopTag {
         tags: Vec<hashtags::TagTags>,
         id: String,
@@ -57,6 +50,10 @@ pub enum NodeKind {
         tags: Vec<hashtags::TagRecTags>,
         id: String,
         entries: Vec<(String, Vec<(String, Node)>)>,
+    },
+    TopPragma {
+        id: String,
+        params: Vec<Node>,
     },
     // Statements
     StatRet(Option<Box<Node>>),

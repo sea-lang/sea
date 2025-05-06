@@ -14,7 +14,6 @@ pub enum Symbol {
     Def {
         typ: SeaType,
     },
-    Mac,
     Tag {
         entries: Vec<String>,
     },

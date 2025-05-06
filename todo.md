@@ -1,6 +1,6 @@
 # To Do
 
-- [ ] Rewrite the compiler in Rust
+- [x] Rewrite the compiler in Rust
 - [ ] Built-in documentation generator
 - [ ] Built-in code formatter
 - [ ] Emit ASM instead of C?
@@ -10,6 +10,7 @@
   - [ ] `--memtrace` flag to trace alloc/free calls to debug memory leaks
 - [x] tags and tagrec
 - [ ] Namespaces?
+- [ ] Function overloading
 - [ ] Reef implementation in Sea
 - [ ] Traits?
 - [ ] Polish or remove each/of

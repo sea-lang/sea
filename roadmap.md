@@ -9,7 +9,8 @@
 - [ ] Traits/interfaces?
 - [x] Type inference
 - [ ] Contracts
-- [ ] Rewrite the compiler in Rust
+- [ ] Function overloading
+- [x] Rewrite the compiler in Rust
 
 ## 0.1 - Humuhumunukunukuapau'a
 

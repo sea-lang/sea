@@ -1,4 +1,4 @@
-use std::{ffi::OsStr, io::ErrorKind, path::PathBuf, process::Command};
+use std::{io::ErrorKind, path::PathBuf, process::Command};
 
 pub mod compiler;
 pub mod error;

@@ -326,14 +326,6 @@ impl Node {
                     param.pretty_print_inner(indent + 2, false);
                 }
             }
-            NodeKind::ExprMacInvoke { name, params } => {
-                println!("mac invoke: '{TEXT}{name}{RESET}'");
-                println!("{spacing}  params:");
-                for param in params {
-                    print!("{RESET}{spacing}    - ");
-                    param.pretty_print_inner(indent + 2, false);
-                }
-            }
             NodeKind::ExprList(nodes) => {
                 println!("{EXPR}list:");
                 for node in nodes {

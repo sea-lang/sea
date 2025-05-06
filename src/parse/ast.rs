@@ -112,10 +112,6 @@ pub enum NodeKind {
         left: Box<Node>,
         params: Vec<Node>,
     },
-    ExprMacInvoke {
-        name: String,
-        params: Vec<Node>,
-    },
     ExprList(Vec<Node>),
     ExprVar {
         name: String,

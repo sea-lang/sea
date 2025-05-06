@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use strum::EnumString;
 
 use crate::parse::ast::{Node, NodeKind};

@@ -1,8 +1,8 @@
-use std::{fs, path::PathBuf, process::exit, rc::Rc};
+use std::{fs, path::PathBuf, process::exit};
 
 use backend::{backend::Backend, backends::c::CBackend};
 use compile::compiler::Compiler;
-use parse::{ast::Node, lexer::Lexer, parser::Parser};
+use parse::{lexer::Lexer, parser::Parser};
 
 pub mod backend;
 pub mod compile;

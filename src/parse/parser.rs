@@ -240,51 +240,6 @@ impl<'a> Parser<'a> {
         casted
     }
 
-    pub fn parse_mac_invoke(&mut self) -> Node {
-        let line = self.prev.line;
-        let column = self.prev.column;
-
-        self.expect(
-            TokenKind::Identifier,
-            "expected identifier after `@` to invoke a macro",
-        );
-        let name = self.prev.text.clone();
-        self.expect(
-            TokenKind::OpenParen,
-            "expected open parenthesis, macro syntax: `'@' <id> '(' <params> ')'`",
-        );
-
-        if self.accept(TokenKind::CloseParen) {
-            Node {
-                line,
-                column,
-                node: NodeKind::ExprMacInvoke {
-                    name,
-                    params: vec![],
-                },
-            }
-        } else {
-            let mut params: Vec<Node> = vec![];
-            loop {
-                params.push(self.parse_expression());
-
-                if !self.accept(TokenKind::Comma) {
-                    break;
-                }
-            }
-            self.expect(
-                TokenKind::CloseParen,
-                "expected closed parenthesis, macro syntax: `'@' <id> '(' <params> ')'`",
-            );
-
-            Node {
-                line,
-                column,
-                node: NodeKind::ExprMacInvoke { name, params },
-            }
-        }
-    }
-
     // #endregion: Misc Parsing
 
     // #region: Expressions
@@ -814,7 +769,6 @@ impl<'a> Parser<'a> {
             _ if self.accept(TokenKind::KwSwitch) => self.parse_switch(),
             _ if self.accept(TokenKind::KwFor) => self.parse_for(),
             _ if self.accept(TokenKind::KwRaw) => self.parse_raw(),
-            _ if self.accept(TokenKind::At) => self.parse_mac_invoke(),
             // if nothing works, we'll try to parse an expression, and if *that* doesn't work, then we have a syntax error
             _ => {
                 let expr = self.parse_expression();
@@ -1111,8 +1065,6 @@ impl<'a> Parser<'a> {
     pub fn parse_top_level_statement(&mut self) -> Node {
         if self.accept(TokenKind::KwUse) {
             self.parse_use()
-        } else if self.accept(TokenKind::At) {
-            self.parse_mac_invoke()
         } else if self.accept(TokenKind::Hashtag) {
             let tags = self.parse_hashtags();
             if self.accept(TokenKind::KwFun) {
@@ -1130,7 +1082,7 @@ impl<'a> Parser<'a> {
             } else {
                 self.throw_exception(
                     ParseError::UnexpectedToken(self.token.clone()),
-                    Some("hashtags can only be applied to [fun, rec, def, mac, tag, tag rec]"),
+                    Some("hashtags can only be applied to [fun, rec, def, tag, tag rec]"),
                 )
             }
         } else if self.accept(TokenKind::KwFun) {

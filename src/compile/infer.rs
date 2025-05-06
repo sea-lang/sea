@@ -34,9 +34,7 @@ pub fn infer_type_of_node(compiler: &Compiler, node: &Node) -> Result<SeaType, S
             },
             None => return Err(format!("symbol undefined or unbound: {id}")),
         },
-        NodeKind::ExprBlock(nodes) => {
-            return Err("cannot infer type for block expressions".to_string())
-        }
+        NodeKind::ExprBlock(_) => return Err("cannot infer type for block expressions".to_string()),
         NodeKind::ExprNew {
             id,
             params: _params,
@@ -111,7 +109,6 @@ pub fn infer_type_of_node(compiler: &Compiler, node: &Node) -> Result<SeaType, S
             }
             _ => todo!(),
         },
-        NodeKind::ExprMacInvoke { name, params } => todo!(),
         NodeKind::ExprList(nodes) => {
             if nodes.len() == 0 {
                 return Err("cannot infer type of empty list".to_string());
@@ -119,8 +116,16 @@ pub fn infer_type_of_node(compiler: &Compiler, node: &Node) -> Result<SeaType, S
                 infer_type_of_node(compiler, &nodes[0])?.array_of_size(nodes.len())
             }
         }
-        NodeKind::ExprVar { name, typ, value } => todo!(),
-        NodeKind::ExprLet { name, typ, value } => todo!(),
+        NodeKind::ExprVar {
+            name: _,
+            typ: _,
+            value: _,
+        } => todo!(),
+        NodeKind::ExprLet {
+            name: _,
+            typ: _,
+            value: _,
+        } => todo!(),
         _ => return Err(format!("cannot infer type for node {node}")),
     })
 }

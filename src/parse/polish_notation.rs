@@ -97,10 +97,6 @@ impl PolishNodeTree {
                 .to_string(),
                 PolishNodeTree::from_node_vec(params).unwrap(),
             ),
-            NodeKind::ExprMacInvoke { name, params } => PolishNodeTree::Branch(
-                format!("macinvoke={}", name).to_string(),
-                PolishNodeTree::from_node_vec(params).unwrap(),
-            ),
             NodeKind::ExprList(nodes) => PolishNodeTree::Branch(
                 "list".to_string(),
                 PolishNodeTree::from_node_vec(nodes).unwrap(),

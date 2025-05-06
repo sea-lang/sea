@@ -840,10 +840,6 @@ impl<'a, 'b> Backend for CBackend<'a, 'b> {
                 self.expr_binary_operator(kind, *left, *right)
             }
             NodeKind::ExprInvoke { left, params } => self.expr_invoke(*left, params),
-            NodeKind::ExprMacInvoke {
-                name: _name,
-                params: _parser,
-            } => todo!(),
             NodeKind::ExprList(nodes) => self.expr_list(nodes),
             NodeKind::ExprVar { name, typ, value } => {
                 self.expr_var(name, typ.map(|it| *it), *value)

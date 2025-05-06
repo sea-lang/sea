@@ -197,10 +197,6 @@ impl<'a> Compiler<'a> {
         self.symbols.add_symbol(name, Symbol::Def { typ });
     }
 
-    pub fn add_mac(&mut self, name: String) {
-        self.symbols.add_symbol(name, Symbol::Mac);
-    }
-
     pub fn add_tag(&mut self, name: String, entries: Vec<String>) {
         self.symbols.add_symbol(name, Symbol::Tag { entries });
     }

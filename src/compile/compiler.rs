@@ -100,11 +100,7 @@ impl<'a> Compiler<'a> {
     }
 
     // Get the paths to each file in a given module
-    pub fn get_use_paths(
-        &mut self,
-        path: PathBuf,
-        selections: Option<Vec<String>>,
-    ) -> Result<Vec<PathBuf>, String> {
+    pub fn get_use_paths(&mut self, path: PathBuf) -> Result<Vec<PathBuf>, String> {
         if self.uses(&path) {
             return Ok(vec![]);
         }
@@ -118,64 +114,25 @@ impl<'a> Compiler<'a> {
                 continue;
             }
 
-            if let Some(selections) = selections {
-                // Check if lib.sea exists, if so we'll import that first
-                if p.join("lib.sea").exists() && !self.uses(&p.join("lib.sea")) {
-                    paths.push(p.join("lib.sea"))
+            // Check if lib.sea exists, if so we'll import that first
+            if p.join("lib.sea").exists() && !self.uses(&p.join("lib.sea")) {
+                paths.push(p.join("lib.sea"))
+            }
+
+            // Import each file in the module
+            for file in p.read_dir().unwrap() {
+                let file_path = file.unwrap().path();
+
+                if file_path.file_name().unwrap() == "lib.sea" {
+                    continue; // Handled above
                 }
 
-                // Iterate over each selection and import it
-                for s in selections {
-                    if s == "lib" {
-                        continue; // Handled above
-                    }
-
-                    let file_path = p.join(s);
-                    let file_path_ext = file_path.with_extension("sea");
-
-                    if self.uses(&file_path_ext) {
-                        continue;
-                    }
-
-                    // Import individual files
-                    if file_path_ext.is_file() {
-                        paths.push(file_path_ext);
-                    }
-                    // Import submodules
-                    else if file_path.is_dir() {
-                        match self.get_use_paths(file_path, None) {
-                            Ok(mut p) => paths.append(&mut p),
-                            Err(err) => return Err(err),
-                        }
-                    }
-                    // Doesn't exist or it wasn't a Sea file
-                    else {
-                        return Err(format!(
-                            "{file_path:?}(.sea) is not a valid module or does not exist"
-                        ));
-                    }
-                }
-            } else {
-                // Check if lib.sea exists, if so we'll import that first
-                if p.join("lib.sea").exists() && !self.uses(&p.join("lib.sea")) {
-                    paths.push(p.join("lib.sea"))
+                if self.uses(&file_path) {
+                    continue;
                 }
 
-                // Import each file in the module
-                for file in p.read_dir().unwrap() {
-                    let file_path = file.unwrap().path();
-
-                    if file_path.file_name().unwrap() == "lib.sea" {
-                        continue; // Handled above
-                    }
-
-                    if self.uses(&file_path) {
-                        continue;
-                    }
-
-                    if file_path.is_file() && file_path.extension().unwrap() == "sea" {
-                        paths.push(file_path.clone());
-                    }
+                if file_path.is_file() && file_path.extension().unwrap() == "sea" {
+                    paths.push(file_path.clone());
                 }
             }
 

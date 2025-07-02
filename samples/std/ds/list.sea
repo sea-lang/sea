@@ -1,5 +1,5 @@
-use std[str]
-use std/ds[list]
+use std/str
+use std/ds/list
 
 fun main(): int {
 	var list = make_list(2, sizeof(String), 2.0f)

@@ -1,0 +1,16 @@
+use std/io
+
+#noret
+fun custom_panic_handler(message: String) {
+	println("uh oh...")
+	println(message)
+	exit(1)
+}
+
+fun main(): int {
+	panic_handler = custom_panic_handler
+
+	panic("hello, world!")
+
+	ret 0
+}

@@ -15,6 +15,10 @@ fun wyhash_make_secret(seed: u64): WyhashSecret {
 	ret secret
 }
 
-fun wyhash_hash_string(secret: WyhashSecret, str: String): i64 {
+fun wyhash_hash_string(secret: WyhashSecret, str: String): u64 {
 	ret wyhash(str.str, str.len, 0, secret.wyp)
+}
+
+fun wyhash_hash_c_string(secret: WyhashSecret, str: ^char, len: usize): u64 {
+	ret wyhash(str, len, 0, secret.wyp)
 }

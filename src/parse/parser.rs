@@ -800,33 +800,10 @@ impl<'a> Parser<'a> {
             path.push(self.prev.text.clone());
         }
 
-        let selections = if self.accept(TokenKind::OpenBracket) {
-            let mut s: Vec<String> = vec![];
-            loop {
-                self.expect(
-                    TokenKind::Identifier,
-                    "expected identifier in selective `use` statement",
-                );
-
-                s.push(self.prev.text.clone());
-
-                if !self.accept(TokenKind::Comma) {
-                    break;
-                }
-            }
-            self.expect(
-                TokenKind::CloseBracket,
-                "expected closed bracket (`]`) to end selective `use` statement",
-            );
-            Some(s)
-        } else {
-            None
-        };
-
         Node {
             line,
             column,
-            node: NodeKind::TopUse(path, selections),
+            node: NodeKind::TopUse(path),
         }
     }
 
@@ -1128,7 +1105,7 @@ impl<'a> Parser<'a> {
             nodes.push(Node {
                 line: 0,
                 column: 0,
-                node: NodeKind::TopUse(PathBuf::from("std"), None),
+                node: NodeKind::TopUse(PathBuf::from("std")),
             })
         }
         self.advance();

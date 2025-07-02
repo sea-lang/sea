@@ -23,7 +23,7 @@ pub enum NodeKind {
         funptr_rets: Option<Box<Node>>,
     },
     // Top level statements
-    TopUse(PathBuf, Option<Vec<String>>),
+    TopUse(PathBuf),
     TopFun {
         tags: Vec<hashtags::FunTags>,
         id: String,

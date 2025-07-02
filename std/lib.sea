@@ -1,5 +1,5 @@
 // Common includes
-raw[
+raw [
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -9,7 +9,7 @@ raw[
 ]
 
 // Globals
-let nil: ^void = NULL
+raw [ #define nil NULL ]
 
 // Types
 def Any = ^void
@@ -36,10 +36,15 @@ def usize = size_t
  * Fields:
  *  own: bool  - Whether or not the string object owns its characters or if it's
  *               just a view to characters.
- *  len: int   - Length of the string.
+ *  len: u32   - Length of the string.
+ *  hash: u64  - A hash of the string (uses Wyhash).
  *  str: ^char - The pointer to the string.
 **/
-rec String(own: bool, len: int, str: ^char)
+rec String(own: bool, len: u32, hash: u64, str: ^char)
+
+// String Secret
+use std/hash/wyhash
+var _strsecret: WyhashSecret = new WyhashSecret([0, 0, 0, 0])
 
 // Functions
 fun inc(it: ^int) -> it^ = it^ + 1

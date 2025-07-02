@@ -1,6 +1,14 @@
+def PanicHandlerFun = fun (String): void
+
+var panic_handler: PanicHandlerFun = nil
+
 #noret
 fun panic(message: String) {
-	print("panic: ")
-	println(message)
-	exit(1)
+	if panic_handler != nil {
+		panic_handler(message)
+	} else {
+		print("panic: ")
+		println(message)
+		exit(1)
+	}
 }

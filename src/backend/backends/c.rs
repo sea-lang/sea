@@ -241,8 +241,8 @@ impl<'a, 'b> CBackend<'a, 'b> {
 
     // #region: Top level statements
 
-    pub fn top_use(&mut self, path: PathBuf, selections: Option<Vec<String>>) {
-        let file_paths = self.compiler.get_use_paths(path.clone(), selections);
+    pub fn top_use(&mut self, path: PathBuf) {
+        let file_paths = self.compiler.get_use_paths(path.clone());
         if let Ok(file_paths) = file_paths {
             for path in file_paths {
                 if !path.exists() {
@@ -456,7 +456,7 @@ impl<'a, 'b> CBackend<'a, 'b> {
         self.w(format_args!("\t_{id}_tag kind;\n"));
         self.ws("\tunion {\n");
         for (entry_id, _) in &entries {
-            self.w(format_args!("_{id}_{entry_id} {entry_id};"));
+            self.w(format_args!("\t\t_{id}_{entry_id} {entry_id};\n"));
         }
         self.ws("\t};\n");
         self.w(format_args!("}} {id};\n\n"));
@@ -481,9 +481,21 @@ impl<'a, 'b> CBackend<'a, 'b> {
         self.write(expr);
         self.ws("}");
         if let Some(else_) = else_ {
-            self.ws(" else {");
-            self.write(else_);
-            self.ws("}");
+            match else_.node {
+                NodeKind::StatIf {
+                    cond: _,
+                    expr: _,
+                    else_: _,
+                } => {
+                    self.ws(" else ");
+                    self.write(else_);
+                }
+                _ => {
+                    self.ws(" else {");
+                    self.write(else_);
+                    self.ws("}");
+                }
+            }
         }
     }
 
@@ -562,7 +574,9 @@ impl<'a, 'b> CBackend<'a, 'b> {
 
     pub fn expr_string(&mut self, string: String) {
         self.w(format_args!(
-            "(String){{false, {}, \"{}\"}}",
+            "(String){{false, {}, wyhash_hash_c_string(_strsecret, \"{}\", {}), \"{}\"}}",
+            string.len(),
+            string,
             string.len(),
             string
         ));
@@ -790,7 +804,7 @@ impl<'a, 'b> Backend for CBackend<'a, 'b> {
                 funptr_args,
                 funptr_rets,
             } => self.typ(pointers, name, arrays, funptr_args, funptr_rets),
-            NodeKind::TopUse(path_buf, selections) => self.top_use(path_buf, selections),
+            NodeKind::TopUse(path_buf) => self.top_use(path_buf),
             NodeKind::TopFun {
                 tags,
                 id,

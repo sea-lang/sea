@@ -99,8 +99,8 @@ impl Node {
                     println!("");
                 }
             }
-            NodeKind::TopUse(path_buf, selections) => {
-                println!("{TOP_LEVEL_STAT}use: {TEXT}{path_buf:?} [{selections:?}]")
+            NodeKind::TopUse(path_buf) => {
+                println!("{TOP_LEVEL_STAT}use: {TEXT}{path_buf:?}")
             }
             NodeKind::TopFun {
                 tags,
@@ -163,7 +163,7 @@ impl Node {
                             print!(" = ");
                             value.pretty_print_inner(indent + 3, false);
                         }
-                        None => {}
+                        _ => {}
                     }
                     println!("");
                 }
@@ -232,7 +232,7 @@ impl Node {
                             }
                             case.pretty_print_inner(indent + 3, true);
                         }
-                        None => println!("{STAT}{spacing}    else:"),
+                        _ => println!("{STAT}{spacing}    else:"),
                     }
                     println!("{STAT}{spacing}      code:");
                     block.pretty_print_inner(indent + 4, true);
@@ -341,7 +341,7 @@ impl Node {
                     print!("{EXPR}{spacing}  value = ");
                     value.pretty_print_inner(indent + 1, false);
                 }
-                None => {
+                _ => {
                     println!("{EXPR}var '{TEXT}{name}{EXPR}' =");
                     value.pretty_print_inner(indent + 1, true);
                 }
@@ -354,7 +354,7 @@ impl Node {
                     print!("{EXPR}{spacing}  value = ");
                     value.pretty_print_inner(indent + 1, false);
                 }
-                None => {
+                _ => {
                     println!("{EXPR}let '{TEXT}{name}{EXPR}' =");
                     value.pretty_print_inner(indent + 1, true);
                 }

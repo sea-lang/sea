@@ -835,7 +835,7 @@ To write "good" doc comments, we **recommend** the following guidelines:
 ```
 
 - The usage of `aka` ("also known as"), `i.e.` ("that is" or "to be specific"),
-  and `e.g.` ("for example") is okay! Avoid other less well-known abbreviations
+  and `e.g.` ("for example") is okay! Avoid other less-known abbreviations
   though.
 
 ## Sandbox

@@ -40,6 +40,21 @@ try it, you can build the compiler using `cargo build --release`.
 To build Sea code, use `sea compile --run ./path/to/input.sea` (or
 `sea c -r ./path/to/input.sea`).
 
+## Installation
+
+```sh
+# The only dependency you need is Cargo/Rust
+
+git clone https://github.com/emmathemartian/sea
+cd sea
+sh ./scripts/install.sh
+
+# In one command
+git clone https://github.com/emmathemartian/sea && cd sea && sh ./scripts/install.sh
+
+# Make sure to add ~/.sea/bin/ to your $PATH
+```
+
 ## Why?
 
 I simply enjoy writing languages! :P

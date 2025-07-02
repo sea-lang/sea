@@ -4,7 +4,6 @@
 
 ```
 doc/          - Documentation, guides, etc
-proto/        - Prototype compiler, this will be removed eventually.
 res/          - Resources (images and such)
 samples/      - Sea samples
 src/          - Compiler source code

@@ -1,7 +1,3 @@
-# Ignore Python stuffs
-/env
-*.pyc
-
 # Ignore Sea caches and builds
 /.sea
 
@@ -11,12 +7,6 @@
 /*.o
 /*.c
 /*.h
-
-# Ignore ANTLR generated files
-proto/syntax/.antlr
-proto/syntax/*.interp
-proto/syntax/*.py
-proto/syntax/*.tokens
 
 # Rust
 /target

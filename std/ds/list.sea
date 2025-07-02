@@ -18,7 +18,6 @@ pkg ds'list {
 	**/
 	rec List(bump: f32, esize: size_t, len: u32, cap: u32, array: ^^void)
 
-	//TODO: Replace element_size with sizeof(T) implicitly. Generic types aren't replaced as identifiers in the prototype impl so we can't do this quite yet.
 	/**
 	* Creates an empty <List>.
 	*

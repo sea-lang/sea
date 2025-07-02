@@ -24,6 +24,7 @@ pub struct Lexer<'a> {
 static KEYWORDS: LazyLock<HashMap<&str, TokenKind>> = LazyLock::new(|| {
     HashMap::from([
         ("use", TokenKind::KwUse),
+        ("pkg", TokenKind::KwPkg),
         ("rec", TokenKind::KwRec),
         ("fun", TokenKind::KwFun),
         ("var", TokenKind::KwVar),
@@ -218,6 +219,23 @@ impl<'a> Lexer<'a> {
     fn lex_id_or_keyword(&mut self) -> Result<Token, ParseError> {
         while is_valid_id(self.peek()) {
             self.skip();
+        }
+
+        // Namespaces
+        if self.peek() == '\'' {
+            self.advance();
+            if self.peek() == '\'' {
+                return Err(ParseError::UnexpectedCharacter('\''));
+            }
+            while is_valid_id(self.peek()) {
+                self.skip();
+                if self.peek() == '\'' {
+                    self.advance();
+                    if self.peek() == '\'' {
+                        return Err(ParseError::UnexpectedCharacter('\''));
+                    }
+                }
+            }
         }
 
         if KEYWORDS.contains_key(self.buffer.as_str()) {

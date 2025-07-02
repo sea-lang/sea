@@ -58,6 +58,7 @@ pub enum TokenKind {
     OpPipe, // TODO (expr |> expr)
     // Keywords
     KwUse,
+    KwPkg,
     KwRec,
     KwFun,
     KwVar,

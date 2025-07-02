@@ -24,6 +24,10 @@ pub enum NodeKind {
     },
     // Top level statements
     TopUse(PathBuf),
+    TopPkg {
+        name: String,
+        statements: Vec<Node>,
+    },
     TopFun {
         tags: Vec<hashtags::FunTags>,
         id: String,

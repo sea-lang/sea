@@ -24,4 +24,7 @@ pub enum CompilerError {
 
     #[error("invalid pragma arguments: expected `{0}` at index `{1}`")]
     InvalidPragmaArguments(String, usize),
+
+    #[error("statement not allowed at top level")]
+    StatementNotAllowedAtTopLevel(),
 }

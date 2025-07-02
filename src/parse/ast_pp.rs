@@ -102,6 +102,12 @@ impl Node {
             NodeKind::TopUse(path_buf) => {
                 println!("{TOP_LEVEL_STAT}use: {TEXT}{path_buf:?}")
             }
+            NodeKind::TopPkg { name, statements } => {
+                println!("{TOP_LEVEL_STAT}pkg: '{TEXT}{name}{TOP_LEVEL_STAT}':");
+                for node in statements {
+                    node.pretty_print_inner(indent + 1, true);
+                }
+            }
             NodeKind::TopFun {
                 tags,
                 id,

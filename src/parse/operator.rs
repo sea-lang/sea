@@ -7,6 +7,7 @@ pub enum OperatorKind {
     Ref,
     Deref,
     Dot,
+    Pkg,
     As,
     Assign,
     And,

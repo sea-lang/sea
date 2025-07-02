@@ -22,7 +22,7 @@ impl PolishNodeTree {
         for node in nodes {
             match PolishNodeTree::from_node(node) {
                 Some(it) => tree_nodes.push(it),
-                None => return None,
+                _ => return None,
             }
         }
         Some(tree_nodes)

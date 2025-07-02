@@ -1,0 +1,26 @@
+use std/io // for #include <stdio.h>
+
+pkg life {
+	// Sea doesn't have privates, but you can use an `_internal` package to
+	// indicate to developers that they shouldn't interact with it.
+	pkg _internal {
+		let life = 42
+	}
+
+	fun get_life(): i32 {
+		// All references are from the global scope (equivalent to using
+		// a "fully qualified" name from Java or C#)
+		ret life'_internal'life
+	}
+}
+
+// You can flatten package names to avoid extraneous indent nesting.
+pkg life'_internal {
+	fun do_thing() {
+		// code
+	}
+}
+
+fun main(): int {
+	printf(c"The meaning of life, the universe, and everything is %d\n", life'get_life())
+}

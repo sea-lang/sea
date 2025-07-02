@@ -22,6 +22,8 @@ pub struct CBackend<'a, 'b> {
 }
 
 impl<'a, 'b> CBackend<'a, 'b> {
+    const NAMESPACE_SEP: &'static str = "$";
+
     pub fn new(compiler: &'b mut Compiler<'a>) -> Self {
         CBackend {
             node: Box::new(Node {
@@ -123,7 +125,7 @@ impl<'a, 'b> CBackend<'a, 'b> {
         } else {
             self.w(format_args!(
                 "{}{}{}",
-                name,
+                name.replace('\'', Self::NAMESPACE_SEP),
                 "*".repeat(pointers.into()),
                 CBackend::get_type_array_str(arrays)
             ))
@@ -136,7 +138,7 @@ impl<'a, 'b> CBackend<'a, 'b> {
         } else {
             self.w(format_args!(
                 "{}{}{}",
-                typ.name,
+                typ.name.replace('\'', Self::NAMESPACE_SEP),
                 "*".repeat(typ.pointers.into()),
                 CBackend::get_type_array_str(typ.arrays)
             ))
@@ -167,7 +169,11 @@ impl<'a, 'b> CBackend<'a, 'b> {
     ) {
         if funptr_rets.is_some() {
             self.typ_from_node(*funptr_rets.unwrap());
-            self.w(format_args!("(*{} {})(", "*".repeat(pointers.into()), id));
+            self.w(format_args!(
+                "(*{} {})(",
+                "*".repeat(pointers.into()),
+                id.replace('\'', Self::NAMESPACE_SEP)
+            ));
             let funptr_args = funptr_args.unwrap();
             if funptr_args.len() > 0 {
                 let end = funptr_args.len() - 1;
@@ -185,9 +191,9 @@ impl<'a, 'b> CBackend<'a, 'b> {
         } else {
             self.w(format_args!(
                 "{} {}{}{}",
-                name,
+                name.replace('\'', Self::NAMESPACE_SEP),
                 "*".repeat(pointers.into()),
-                id,
+                id.replace('\'', Self::NAMESPACE_SEP),
                 CBackend::get_type_array_str(arrays)
             ))
         }
@@ -199,7 +205,7 @@ impl<'a, 'b> CBackend<'a, 'b> {
             self.w(format_args!(
                 "(*{} {})(",
                 "*".repeat(typ.pointers.into()),
-                id
+                id.replace('\'', Self::NAMESPACE_SEP)
             ));
             let funptr_args = typ.funptr_args.unwrap();
             if funptr_args.len() > 0 {
@@ -218,9 +224,9 @@ impl<'a, 'b> CBackend<'a, 'b> {
         } else {
             self.w(format_args!(
                 "{} {}{}{}",
-                typ.name,
+                typ.name.replace('\'', Self::NAMESPACE_SEP),
                 "*".repeat(typ.pointers.into()),
-                id,
+                id.replace('\'', Self::NAMESPACE_SEP),
                 CBackend::get_type_array_str(typ.arrays)
             ))
         }
@@ -271,6 +277,12 @@ impl<'a, 'b> CBackend<'a, 'b> {
         }
     }
 
+    pub fn top_pkg(&mut self, namespace: String, statements: Vec<Node>) {
+        for node in statements {
+            self.pkg_statement(node, &namespace);
+        }
+    }
+
     pub fn top_fun(
         &mut self,
         tags: Vec<FunTags>,
@@ -281,7 +293,7 @@ impl<'a, 'b> CBackend<'a, 'b> {
     ) {
         for hashtag in tags {
             match hashtag {
-                FunTags::NoRet => self.ws("noreturn "),
+                FunTags::NoRet => self.ws("noreturn "), // TODO: noreturn is compiler-specific.
                 FunTags::Extern => unimplemented!(),
                 FunTags::Inline => self.ws("inline "),
                 FunTags::Static => self.ws("static "),
@@ -289,7 +301,7 @@ impl<'a, 'b> CBackend<'a, 'b> {
         }
 
         self.typ_from_node((*rets).clone());
-        self.w(format_args!(" {id}("));
+        self.w(format_args!(" {}(", id.replace('\'', Self::NAMESPACE_SEP)));
         self.compiler.push_scope();
 
         self.compiler.add_fun(
@@ -344,7 +356,7 @@ impl<'a, 'b> CBackend<'a, 'b> {
             self.ws("struct ");
         }
 
-        self.ws(id.as_str());
+        self.ws(id.replace('\'', Self::NAMESPACE_SEP).as_str());
 
         self.ws("{\n");
         for (field_name, field_type) in &fields {
@@ -352,7 +364,10 @@ impl<'a, 'b> CBackend<'a, 'b> {
             self.named_typ_from_node(field_name.clone(), field_type.clone());
             self.ws(";\n");
         }
-        self.w(format_args!("}} {id};\n\n"));
+        self.w(format_args!(
+            "}} {};\n\n",
+            id.replace('\'', Self::NAMESPACE_SEP)
+        ));
 
         self.compiler.add_rec(
             id,
@@ -371,7 +386,7 @@ impl<'a, 'b> CBackend<'a, 'b> {
         }
 
         self.ws("typedef ");
-        self.named_typ_from_node(id.clone(), typ.clone());
+        self.named_typ_from_node(id.replace('\'', Self::NAMESPACE_SEP), typ.clone());
         self.ws(";\n\n");
 
         self.compiler.add_def(id, SeaType::from_node(typ).unwrap());
@@ -398,7 +413,10 @@ impl<'a, 'b> CBackend<'a, 'b> {
             }
             self.ws(",\n");
         }
-        self.w(format_args!("}} {id};\n\n"));
+        self.w(format_args!(
+            "}} {};\n\n",
+            id.replace('\'', Self::NAMESPACE_SEP)
+        ));
 
         self.compiler.add_tag(
             id,
@@ -424,13 +442,14 @@ impl<'a, 'b> CBackend<'a, 'b> {
         for (entry_id, _entry_fields) in &entries {
             self.w(format_args!("\t{entry_id},\n"))
         }
-        self.w(format_args!("}} _{id}_tag;\n\n"));
+        let namespaced_id = id.replace('\'', Self::NAMESPACE_SEP);
+        self.w(format_args!("}} _{namespaced_id}_tag;\n\n"));
 
         let mut mapped_entries: Vec<(String, Vec<(String, SeaType)>)> = vec![];
 
         for (entry_id, entry_fields) in &entries {
             self.ws("typedef struct { ");
-            let name = format!("_{id}_{entry_id}");
+            let name = format!("_{namespaced_id}_{entry_id}");
             for (field, typ) in entry_fields {
                 self.named_typ_from_node(field.to_string(), typ.clone());
                 self.ws("; ");
@@ -453,13 +472,15 @@ impl<'a, 'b> CBackend<'a, 'b> {
             self.ws("static ");
         }
         self.ws("typedef struct {\n");
-        self.w(format_args!("\t_{id}_tag kind;\n"));
+        self.w(format_args!("\t_{namespaced_id}_tag kind;\n"));
         self.ws("\tunion {\n");
         for (entry_id, _) in &entries {
-            self.w(format_args!("\t\t_{id}_{entry_id} {entry_id};\n"));
+            self.w(format_args!(
+                "\t\t_{namespaced_id}_{entry_id} {entry_id};\n"
+            ));
         }
         self.ws("\t};\n");
-        self.w(format_args!("}} {id};\n\n"));
+        self.w(format_args!("}} {namespaced_id};\n\n"));
 
         self.compiler.add_tag_rec(id, mapped_entries);
     }
@@ -510,7 +531,7 @@ impl<'a, 'b> CBackend<'a, 'b> {
                     self.write(*case);
                     self.ws("): "); // aww it's sad :(
                 }
-                None => {
+                _ => {
                     self.ws("default: "); // this one isn't sad :)
                 }
             }
@@ -599,7 +620,7 @@ impl<'a, 'b> CBackend<'a, 'b> {
     }
 
     pub fn expr_id(&mut self, id: String) {
-        self.ws(id.as_str());
+        self.ws(id.replace('\'', Self::NAMESPACE_SEP).as_str());
     }
 
     pub fn expr_block(&mut self, nodes: Vec<Node>) {
@@ -611,7 +632,10 @@ impl<'a, 'b> CBackend<'a, 'b> {
     }
 
     pub fn expr_new(&mut self, id: String, params: Vec<Node>) {
-        self.w(format_args!("({id}){{"));
+        self.w(format_args!(
+            "({}){{",
+            id.replace('\'', Self::NAMESPACE_SEP)
+        ));
         let symbol = self.get_symbol(id.clone());
 
         if symbol.is_some_and(|it| it.instantiatable()) {
@@ -702,6 +726,7 @@ impl<'a, 'b> CBackend<'a, 'b> {
 
         match kind {
             OperatorKind::Dot => self.ws("."),
+            OperatorKind::Pkg => self.ws("__"),
             OperatorKind::Assign => self.ws("="),
             OperatorKind::And => self.ws("&&"),
             OperatorKind::Or => self.ws("||"),
@@ -759,7 +784,7 @@ impl<'a, 'b> CBackend<'a, 'b> {
                 self.named_typ_from_node(name.clone(), typ.clone());
                 SeaType::from_node(typ).unwrap()
             }
-            None => {
+            _ => {
                 let t = infer_type_of_node(&self.compiler, &value).unwrap();
                 self.named_typ_from_seatype(name.clone(), t.clone());
                 t
@@ -777,7 +802,7 @@ impl<'a, 'b> CBackend<'a, 'b> {
                 self.named_typ_from_node(name.clone(), typ.clone());
                 SeaType::from_node(typ).unwrap()
             }
-            None => {
+            _ => {
                 let t = infer_type_of_node(&self.compiler, &value).unwrap();
                 self.named_typ_from_seatype(name.clone(), t.clone());
                 t
@@ -789,6 +814,56 @@ impl<'a, 'b> CBackend<'a, 'b> {
     }
 
     // #endregion Expressions
+
+    pub fn pkg_statement(&mut self, node: Node, namespace: &str) {
+        self.node = Box::new(node.clone());
+        match node.node {
+            NodeKind::Raw(text) => self.raw(text),
+            NodeKind::TopPkg { name, statements } => {
+                self.top_pkg(format_args!("{namespace}'{name}").to_string(), statements)
+            }
+            NodeKind::TopFun {
+                tags,
+                id,
+                params,
+                rets,
+                expr,
+            } => self.top_fun(
+                tags,
+                format_args!("{namespace}'{id}").to_string(),
+                params,
+                rets,
+                expr,
+            ),
+            NodeKind::TopRec { tags, id, fields } => {
+                self.top_rec(tags, format_args!("{namespace}'{id}").to_string(), fields)
+            }
+            NodeKind::TopDef { tags, id, typ } => {
+                self.top_def(tags, format_args!("{namespace}'{id}").to_string(), *typ)
+            }
+            NodeKind::TopTag { tags, id, entries } => {
+                self.top_tag(tags, format_args!("{namespace}'{id}").to_string(), entries)
+            }
+            NodeKind::TopTagRec { tags, id, entries } => {
+                self.top_tag_rec(tags, format_args!("{namespace}'{id}").to_string(), entries)
+            }
+            NodeKind::StatExpr(expr) => {
+                self.pkg_statement(*expr, namespace);
+                self.ws(";\n");
+            }
+            NodeKind::ExprVar { name, typ, value } => self.expr_var(
+                format_args!("{namespace}'{name}").to_string(),
+                typ.map(|it| *it),
+                *value,
+            ),
+            NodeKind::ExprLet { name, typ, value } => self.expr_let(
+                format_args!("{namespace}'{name}").to_string(),
+                typ.map(|it| *it),
+                *value,
+            ),
+            _ => self.throw(CompilerError::StatementNotAllowedAtTopLevel(), None),
+        }
+    }
 }
 
 impl<'a, 'b> Backend for CBackend<'a, 'b> {
@@ -805,6 +880,9 @@ impl<'a, 'b> Backend for CBackend<'a, 'b> {
                 funptr_rets,
             } => self.typ(pointers, name, arrays, funptr_args, funptr_rets),
             NodeKind::TopUse(path_buf) => self.top_use(path_buf),
+            NodeKind::TopPkg { name, statements } => {
+                self.top_pkg(name.replace('\'', Self::NAMESPACE_SEP), statements)
+            }
             NodeKind::TopFun {
                 tags,
                 id,

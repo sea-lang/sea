@@ -807,6 +807,33 @@ impl<'a> Parser<'a> {
         }
     }
 
+    pub fn parse_pkg(&mut self) -> Node {
+        let line = self.prev.line;
+        let column = self.prev.column;
+
+        self.expect(TokenKind::Identifier, "expected identifier after `pkg`");
+        let name = self.prev.text.clone();
+        // while self.accept(TokenKind::OpPkg) {
+        //     self.expect(TokenKind::Identifier, "expected identifier after `::`");
+        //     name += &self.prev.text.clone();
+        // }
+
+        let mut statements: Vec<Node> = vec![];
+        self.expect(
+            TokenKind::OpenCurly,
+            "expected open curly bracket after pkg name",
+        );
+        while !self.accept(TokenKind::CloseCurly) {
+            statements.push(self.parse_top_level_statement())
+        }
+
+        Node {
+            line,
+            column,
+            node: NodeKind::TopPkg { name, statements },
+        }
+    }
+
     pub fn parse_fun(&mut self, tags: Vec<FunTags>) -> Node {
         let line = self.prev.line;
         let column = self.prev.column;
@@ -1062,6 +1089,8 @@ impl<'a> Parser<'a> {
                     Some("hashtags can only be applied to [fun, rec, def, tag, tag rec]"),
                 )
             }
+        } else if self.accept(TokenKind::KwPkg) {
+            self.parse_pkg()
         } else if self.accept(TokenKind::KwFun) {
             self.parse_fun(vec![])
         } else if self.accept(TokenKind::KwRec) {

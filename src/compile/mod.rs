@@ -3,7 +3,6 @@ use std::{io::ErrorKind, path::PathBuf, process::Command};
 pub mod compiler;
 pub mod error;
 pub mod infer;
-pub mod mangling;
 pub mod pragmas;
 pub mod symbol;
 pub mod type_;

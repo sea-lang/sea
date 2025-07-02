@@ -69,6 +69,7 @@ You can run this using `sea compile --run main.sea` (or `sea c -r main.sea`).
     - [Multidimensional Arrays](#multidimensional-arrays)
     - [Fixed-Size Arrays](#fixed-size-arrays)
 - [Modules](#modules)
+- [Packages](#packages)
 - [Statements](#statements)
   - [if/else](#ifelse)
   - [switch/case](#switchcase)
@@ -355,6 +356,53 @@ some/path/api.sea
 > Module imports are always relative to your `main.sea`. You cannot use a `..`
 > in a `use` statement.
 
+## Packages
+
+Packages are a way of organizing your code and preventing name conflicts.
+
+Generally you should use packages for all modules so that you don't add to the
+global scope.
+
+```sea
+pkg life {
+	// Sea doesn't have privates, but you can use an `_internal` package to
+	// indicate to developers that they shouldn't interact with it.
+	pkg _internal {
+		let life = 42
+	}
+
+	fun get_life(): i32 {
+		// All references are from the global scope (equivalent to using
+		// a "fully qualified" name from Java or C#)
+		ret life'_internal'life
+	}
+}
+
+// You can flatten package names to avoid extraneous indent nesting.
+pkg life'_internal {
+	fun do_thing() {
+		// code
+	}
+}
+
+fun main(): int {
+	printf(c"The meaning of life, the universe, and everything is %d\n", life'get_life())
+}
+```
+
+If you are accessing Sea from C, you can access code from packages by using
+dollar signs (`$`) instead of double colons, i.e:
+
+```c
+// Let's assume that the code block above is compiled to this C file
+#include "some_compiled_sea_code.c"
+
+int main()
+{
+	printf("The meaning of life, the universe, and everything is %d\n", life$get_life());
+}
+```
+
 ## Statements
 
 ### `if`/`else`
@@ -467,7 +515,7 @@ or    boolean or
 <=    less than/equals
 ++    increment
 --    decrement
-ass   type cast
+as    type cast
 ref   reference
 ^     dereference
 ```
@@ -758,7 +806,7 @@ def usize = size_t
 rec String(own: bool, len: int, str: ^char)
 ```
 
-Since Sea has no namespaces (\*yet), functions imported from other modules are
+Since Sea has no namespaces (_yet_), functions imported from other modules are
 thrown into the global scope :/
 
 ## Documentation
@@ -767,7 +815,7 @@ You can write documentation comments ("doc comments") using the following two
 syntaxes:
 
 ```sea
-/// Returns <nil>.
+/// Returns <'nil>.
 fun get_nil(): Any -> ret nil
 
 /**
@@ -785,9 +833,9 @@ Doc comments are written in a markdown-style format:
 `text`     - code
 *text*     - italic
 **text**   - bold
-***text*** - italic/bold
+***text*** - italic and bold
 <text>     - link to a function, record, etc
-<'text>    - link to a parameter or argument
+<'text>    - link to a parameter or global variable
 ```
 
 To write "good" doc comments, we **recommend** the following guidelines:

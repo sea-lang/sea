@@ -1,5 +1,3 @@
-use std/io // for #include <stdio.h>
-
 pkg life {
 	// Sea doesn't have privates, but you can use an `_internal` package to
 	// indicate to developers that they shouldn't interact with it.

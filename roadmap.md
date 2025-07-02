@@ -5,11 +5,11 @@
 ## 0.0.1 - Prototype
 
 - [x] tag and tagrec
-- [ ] Namespaces?
+- [x] Namespaces?
 - [ ] Traits/interfaces?
 - [x] Type inference
 - [ ] Contracts
-- [ ] Function overloading
+- [ ] Function overloading?
 - [x] Rewrite the compiler in Rust
 
 ## 0.1 - Humuhumunukunukuapau'a

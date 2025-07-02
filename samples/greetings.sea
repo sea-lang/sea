@@ -1,5 +1,3 @@
-use std
-
 rec User(name: String, age: int)
 
 fun greet(user: User) -> printf(c"Hello, %.*s!\n", user.name.len, user.name.str)

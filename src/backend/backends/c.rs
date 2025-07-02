@@ -404,19 +404,20 @@ impl<'a, 'b> CBackend<'a, 'b> {
             }
         }
 
+        let namespaced_id = id.replace('\'', Self::NAMESPACE_SEP);
         self.ws("typedef enum {\n");
         for (entry, value) in &entries {
-            self.w(format_args!("\t{entry}"));
+            self.w(format_args!(
+                "\t{namespaced_id}{}{entry}",
+                Self::NAMESPACE_SEP
+            ));
             if value.is_some() {
                 self.ws(" = ");
                 self.write(*value.clone().unwrap());
             }
             self.ws(",\n");
         }
-        self.w(format_args!(
-            "}} {};\n\n",
-            id.replace('\'', Self::NAMESPACE_SEP)
-        ));
+        self.w(format_args!("}} {namespaced_id};\n\n"));
 
         self.compiler.add_tag(
             id,
@@ -439,10 +440,15 @@ impl<'a, 'b> CBackend<'a, 'b> {
             self.ws("static ");
         }
         self.ws("typedef enum {\n");
-        for (entry_id, _entry_fields) in &entries {
-            self.w(format_args!("\t{entry_id},\n"))
-        }
         let namespaced_id = id.replace('\'', Self::NAMESPACE_SEP);
+        for (entry_id, _entry_fields) in &entries {
+            self.w(format_args!(
+                "\t{}{}{},\n",
+                namespaced_id,
+                Self::NAMESPACE_SEP,
+                entry_id
+            ))
+        }
         self.w(format_args!("}} _{namespaced_id}_tag;\n\n"));
 
         let mut mapped_entries: Vec<(String, Vec<(String, SeaType)>)> = vec![];
@@ -595,8 +601,10 @@ impl<'a, 'b> CBackend<'a, 'b> {
 
     pub fn expr_string(&mut self, string: String) {
         self.w(format_args!(
-            "(String){{false, {}, wyhash_hash_c_string(_strsecret, \"{}\", {}), \"{}\"}}",
+            "(String){{false, {}, hash{}wyhash{}hash_c_string(_strsecret, \"{}\", {}), \"{}\"}}",
             string.len(),
+            Self::NAMESPACE_SEP,
+            Self::NAMESPACE_SEP,
             string,
             string.len(),
             string
@@ -655,7 +663,8 @@ impl<'a, 'b> CBackend<'a, 'b> {
                     };
                     self.write(kind.clone());
                     if params.len() > 1 {
-                        self.w(format_args!(", .{kind_str}={{"));
+                        let field = kind_str.split('\'').last().unwrap();
+                        self.w(format_args!(", .{field}={{",));
                         self.comma_separated(params[1..].to_vec());
                         self.ws("}");
                     }
@@ -880,9 +889,7 @@ impl<'a, 'b> Backend for CBackend<'a, 'b> {
                 funptr_rets,
             } => self.typ(pointers, name, arrays, funptr_args, funptr_rets),
             NodeKind::TopUse(path_buf) => self.top_use(path_buf),
-            NodeKind::TopPkg { name, statements } => {
-                self.top_pkg(name.replace('\'', Self::NAMESPACE_SEP), statements)
-            }
+            NodeKind::TopPkg { name, statements } => self.top_pkg(name, statements),
             NodeKind::TopFun {
                 tags,
                 id,

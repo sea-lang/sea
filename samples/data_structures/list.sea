@@ -1,35 +1,36 @@
+use std/io
 use std/ds/list
 
 fun main(): int {
-	var names = make_list(2, sizeof(String), 2.0f)
+	var names = ds'list'make_list(2, sizeof(String), 2.0f)
 	var N = ref names
 
 	println("--- Should be empty:")
-	for i in 0 to names.len -> println(list_get(N, i))
+	for i in 0 to names.len -> io'println(ds'list'get(N, i))
 
 	let frodo = "Frodo"
 	let gandalf = "Gandalf"
-	list_append(N, ref frodo)
-	list_append(N, ref gandalf)
+	ds'list'append(N, ref frodo)
+	ds'list'append(N, ref gandalf)
 
-	println("--- Should have `Frodo` and `Gandalf`")
-	for i in 0 to names.len -> println(list_get(N, i))
+	io'println("--- Should have `Frodo` and `Gandalf`")
+	for i in 0 to names.len -> io'println(ds'list'get(N, i))
 
 	let sam = "Sam"
 	let merry = "Merry"
 	let pippin = "Pippin"
-	list_append(N, ref sam)
-	list_append(N, ref merry)
-	list_append(N, ref pippin)
+	ds'list'append(N, ref sam)
+	ds'list'append(N, ref merry)
+	ds'list'append(N, ref pippin)
 
-	println("--- Should be the Fellowship of the Ring's hobbits and `Gandalf`")
-	for i in 0 to names.len -> println(list_get(N, i))
+	io'println("--- Should be the Fellowship of the Ring's hobbits and `Gandalf`")
+	for i in 0 to names.len -> io'println(ds'list'get(N, i))
 
-	let pippin = list_pop(N)
-	println("--- Ditto of above but without Pippin")
-	for i in 0 to names.len -> println(list_get(N, i))
-	println("--- Should just be Pippin:")
-	println(pippin)
+	let pippin = ds'list'pop(N)
+	io'println("--- Ditto of above but without Pippin")
+	for i in 0 to names.len -> io'println(ds'list'get(N, i))
+	io'println("--- Should just be Pippin:")
+	io'println(pippin)
 
-	list_free(N)
+	ds'list'free(N)
 }

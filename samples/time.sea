@@ -2,8 +2,8 @@ use std/io
 use std/time
 
 fun main(): int {
-	let local = get_current_time()
+	let local = time'get_current_time()
 	printf(c"It is %d/%d/%d at %d:%d:%d (Local)\n", local.day, local.month, local.year, local.hour, local.minute, local.second)
-	let utc = get_current_utc_time()
+	let utc = time'get_current_utc_time()
 	printf(c"It is %d/%d/%d at %d:%d:%d (UTC)\n", utc.day, utc.month, utc.year, utc.hour, utc.minute, utc.second)
 }

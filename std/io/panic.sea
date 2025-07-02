@@ -1,14 +1,16 @@
-def PanicHandlerFun = fun (String): void
+pkg io {
+	def PanicHandlerFun = fun (String): void
 
-var panic_handler: PanicHandlerFun = nil
+	var panic_handler: io'PanicHandlerFun = nil
 
-#noret
-fun panic(message: String) {
-	if panic_handler != nil {
-		panic_handler(message)
-	} else {
-		print("panic: ")
-		println(message)
-		exit(1)
+	#noret
+	fun panic(message: String) {
+		if io'panic_handler != nil {
+			io'panic_handler(message)
+		} else {
+			io'print("panic: ")
+			io'println(message)
+			exit(1)
+		}
 	}
 }

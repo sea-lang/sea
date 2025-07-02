@@ -1,144 +1,149 @@
-/**
- * Creates a <String> object with the given length and characters. The
- * characters are not copied.
- *
- * Args:
- *  len: int     - Length of the string.
- *  chars: ^char - Pointer to the first character.
-**/
-fun string_view(len: int, chars: ^char): String -> ret new String(false, len, chars)
-
-/**
- * Creates a <String> object with characters, expecting null-termination. The
- * characters are not copied.
- *
- * Args:
- *  chars: ^char - Pointer to the first character.
-**/
-fun string_view_nt(chars: ^char): String -> ret string_view(strlen(chars), chars)
-
-/**
- * Creates a <String> object with the given length and characters. The
- * characters are not copied however are assumed to be owned by the string.
- *
- * Args:
- *  len: int     - Length of the string.
- *  chars: ^char - Pointer to the first character.
-**/
-fun take_string(len: int, chars: ^char): String -> ret new String(true, len, chars)
-
-/**
- * Creates a <String> object with the given characters, expecting
- * null-termination. The characters are not copied however are assumed to be
- * owned by the string.
- *
- * Args:
- *  chars: ^char - Pointer to the first character.
-**/
-fun take_string_nt(chars: ^char): String -> ret take_string(strlen(chars), chars)
-
-/**
- * Creates a <String> object with the given length and characters. The
- * characters are copied, make sure to free the <String>.
- *
- * Args:
- *  len: int     - Length of the string.
- *  chars: ^char - Pointer to the first character.
-**/
-fun copy_string(len: int, chars: ^char): String {
-	let str = new String(true, len, malloc(sizeof(char) * len))
-	memcpy(str.str, chars, len)
-	ret str
-}
-
-/**
- * Creates a <String> object with the given characters, expecting
- * null-termination. The characters are copied, make sure to free the <String>.
- *
- * Args:
- *  chars: ^char - Pointer to the first character.
-**/
-fun copy_string_nt(chars: ^char): String -> ret copy_string(strlen(chars), chars)
-
-/**
- * Creates a <String> object from the given string. The characters are copied,
- * make sure to free the <String>.
- *
- * Args:
- *  str: String - The string to copy.
-**/
-fun clone_string(str: String): String {
-	let clone = new String(str.own, str.len, malloc(sizeof(char) * str.len))
-	memcpy(clone.str, str.str, str.len)
-	ret clone
-}
-
-fun nil_string(): String -> ret new String(false, 0, nil)
-
-let empty_string = new String(false, 0, c"")
-
-/// Frees the given string's characters, if it owns them.
-fun free_string(string: ^String) -> if string^.own -> free(string^.str)
-
-/// Concatenates <'a> and <'b>, then returns the result.
-fun concat(a: String, b: String): String {
-	let len = a.len + b.len
-	var str: ^char = malloc(len * sizeof(char))
-	memcpy(str, a.str, a.len)
-	memcpy(str+b.len, b.str, b.len)
-	ret string_view(len, str)
-}
-
-/// Compares <'a> and <'b> character-by-character and returns true if the
-/// strings are equal.
-fun strings_equal(a: String, b: String): bool {
-	if a.len != b.len -> ret false
-
-	for i in 0 to a.len {
-		if a.str[i] != b.str[i] -> ret false
+pkg str {
+	/**
+	* Creates a <String> object with the given length and characters. The
+	* characters are not copied.
+	*
+	* Args:
+	*  len: int     - Length of the string.
+	*  chars: ^char - Pointer to the first character.
+	**/
+	fun string_view(len: int, chars: ^char): String {
+		ret new String(false, len, hash'wyhash'hash_c_string(_strsecret, chars, len), chars)
 	}
 
-	ret true
-}
+	/**
+	* Creates a <String> object with characters, expecting null-termination. The
+	* characters are not copied.
+	*
+	* Args:
+	*  chars: ^char - Pointer to the first character.
+	**/
+	fun string_view_nt(chars: ^char): String -> ret str'string_view(strlen(chars), chars)
 
-/// Finds the first <'ch> in the provided <String>, returning the index of the
-/// first occurrence or -1 if not found.
-fun string_find(a: String, ch: char): int {
-	for i in 0 to a.len {
-		if a.str[i] == ch -> ret i
+	/**
+	* Creates a <String> object with the given length and characters. The
+	* characters are not copied however are assumed to be owned by the string.
+	*
+	* Args:
+	*  len: int     - Length of the string.
+	*  chars: ^char - Pointer to the first character.
+	**/
+	fun take_string(len: int, chars: ^char): String {
+		ret new String(true, len, hash'wyhash'hash_c_string(_strsecret, chars, len), chars)
 	}
 
-	ret -1
-}
+	/**
+	* Creates a <String> object with the given characters, expecting
+	* null-termination. The characters are not copied however are assumed to be
+	* owned by the string.
+	*
+	* Args:
+	*  chars: ^char - Pointer to the first character.
+	**/
+	fun take_string_nt(chars: ^char): String -> ret str'take_string(strlen(chars), chars)
 
-/// Finds the last <'ch> in the provided <String>, returning the index of the
-/// first occurrence or -1 if not found.
-fun string_rfind(a: String, ch: char): int {
-	for var i = a.len ; i > 0 ; inc(ref i) {
-		if a.str[i] == ch -> ret i
+	/**
+	* Creates a <String> object with the given length and characters. The
+	* characters are copied, make sure to free the <String>.
+	*
+	* Args:
+	*  len: int     - Length of the string.
+	*  chars: ^char - Pointer to the first character.
+	**/
+	fun copy_string(len: int, chars: ^char): String {
+		var str = new String(true, len, 0, malloc(sizeof(char) * len))
+		memcpy(str.str, chars, len)
+		str.hash = hash'wyhash'hash_string(_strsecret, str)
+		ret str
 	}
 
-	ret -1
-}
+	/**
+	* Creates a <String> object with the given characters, expecting
+	* null-termination. The characters are copied, make sure to free the <String>.
+	*
+	* Args:
+	*  chars: ^char - Pointer to the first character.
+	**/
+	fun copy_string_nt(chars: ^char): String -> ret str'copy_string(strlen(chars), chars)
 
-/**
- * Returns a substring of the given string as a string **view**. Mutating the
- * original string will mutate the view. This string will not be
- * null-terminated unless the end index is the length of the source string.
- *
- * Both the start and end indexes are inclusive.
- *
- * To get a copy of the string view, use:
- * ```sea
- * let view = string_slice("Hello, World!", 0, 5)
- * let copy = copy_string(view.len, view.str)
- * ```
- *
- * Args:
- *  a: String  - The string to slice
- *  start: int - The starting index.
- *  end: int   - The ending index.
-**/
-fun string_slice(a: String, start: int, end: int): String {
-	ret string_view(end - start, &a.str[start])
+	/**
+	* Creates a <String> object from the given string. The characters are copied,
+	* make sure to free the <String>.
+	*
+	* Args:
+	*  str: String - The string to copy.
+	**/
+	fun clone_string(str: String): String {
+		let clone = new String(str.own, str.len, str.hash, malloc(sizeof(char) * str.len))
+		memcpy(clone.str, str.str, str.len)
+		ret clone
+	}
+
+	fun nil_string(): String -> ret new String(false, 0, 0, nil)
+
+	/// Frees the given string's characters, if it owns them.
+	fun free_string(string: ^String) -> if string^.own -> free(string^.str)
+
+	/// Concatenates <'a> and <'b>, then returns the result.
+	fun concat(a: String, b: String): String {
+		let len = a.len + b.len
+		var str: ^char = malloc(len * sizeof(char))
+		memcpy(str, a.str, a.len)
+		memcpy(str+b.len, b.str, b.len)
+		ret str'string_view(len, str)
+	}
+
+	/// Compares <'a> and <'b> character-by-character and returns true if the
+	/// strings are equal.
+	fun strings_equal(a: String, b: String): bool {
+		if a.len != b.len -> ret false
+
+		for i in 0 to a.len {
+			if a.str[i] != b.str[i] -> ret false
+		}
+
+		ret true
+	}
+
+	/// Finds the first <'ch> in the provided <String>, returning the index of the
+	/// first occurrence or -1 if not found.
+	fun string_find(a: String, ch: char): int {
+		for i in 0 to a.len {
+			if a.str[i] == ch -> ret i
+		}
+
+		ret -1
+	}
+
+	/// Finds the last <'ch> in the provided <String>, returning the index of the
+	/// first occurrence or -1 if not found.
+	fun string_rfind(a: String, ch: char): int {
+		for var i = a.len ; i > 0 ; inc(ref i) {
+			if a.str[i] == ch -> ret i
+		}
+
+		ret -1
+	}
+
+	/**
+	* Returns a substring of the given string as a string **view**. Mutating the
+	* original string will mutate the view. This string will not be
+	* null-terminated unless the end index is the length of the source string.
+	*
+	* Both the start and end indexes are inclusive.
+	*
+	* To get a copy of the string view, use:
+	* ```sea
+	* let view = string_slice("Hello, World!", 0, 5)
+	* let copy = copy_string(view.len, view.str)
+	* ```
+	*
+	* Args:
+	*  a: String  - The string to slice
+	*  start: int - The starting index.
+	*  end: int   - The ending index.
+	**/
+	fun string_slice(a: String, start: int, end: int): String {
+		ret str'string_view(end - start, ref (a.str[start]))
+	}
 }

@@ -1,14 +1,13 @@
-use std/mem
 use std/io
 
 rec Name(first: String, last: String)
 
 fun greet(n: Name) {
-	print("Hello, ")
-	print(n.first)
-	print(" ")
-	print(n.last)
-	println("!")
+	io'print("Hello, ")
+	io'print(n.first)
+	io'print(" ")
+	io'print(n.last)
+	io'println("!")
 }
 
 fun main(): int {
@@ -20,7 +19,7 @@ fun main(): int {
 
 	let n = new Name("Frodo", "Baggins")
 	greet(n)
-	var pN = @talloc(Name)
+	var pN: ^Name = malloc(sizeof(Name))
 	pN^ = n
 	pN^.first = "Bilbo"
 	greet(pN^)

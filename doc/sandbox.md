@@ -37,7 +37,7 @@ Let's try something a bit more interesting, input `\exec` and press enter:
 [2]:
 ```
 
-Well that done something! This executed the function we just wrote!
+Well that did something! This executed the function we just wrote!
 
 The sandbox has "commands" which all start with a backslash. To list each of
 them, use `\help`.
@@ -76,7 +76,7 @@ Hello, World!
 
 Woah okay that was a lot! Let me explain what's going on here:
 
-Firstly, `\erlpace` is a command which toggles between what should happen when
+Firstly, `\replace` is a command which toggles between what should happen when
 you are editing a line _before_ the current one. By default, lines get shifted,
 meaning if you do this:
 
@@ -96,7 +96,7 @@ fun main(): int -> ret 0 // This line got shifted down
 To instead replace the line, we toggle `\replace` on.
 
 You may have guessed what `\pos` does. It jumps to the provided line! You can
-also use `\pos end` to jump to the end of the code!
+also use `\pos end` to jump to the end of the file.
 
 Next there's `\pause`. Using this toggles auto-compilation. By default, any time
 you input a line, the sandbox will attempt to compile your code. If you are

@@ -4,7 +4,7 @@ fun main(): int {
 	var a = "Not a bozo"
 	{
 		var a = "Bozo"
-		println(a) // Bozo
+		io'println(a) // Bozo
 	}
-	println(a) // Not a bozo
+	io'println(a) // Not a bozo
 }

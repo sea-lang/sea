@@ -2,23 +2,25 @@ pragma add_include_dir("${dir}/include/")
 
 raw [ #include "wyhash.h" ]
 
-rec WyhashSecret(wyp: u64[4])
+pkg hash'wyhash {
+	rec WyhashSecret(wyp: u64[4])
 
-fun wyhash_make_secret(seed: u64): WyhashSecret {
-	var wyp: u64[4] = []
-	make_secret(seed, wyp)
-	var secret = new WyhashSecret()
-	secret.wyp[0] = wyp[0]
-	secret.wyp[1] = wyp[1]
-	secret.wyp[2] = wyp[2]
-	secret.wyp[3] = wyp[3]
-	ret secret
-}
+	fun make_secret(seed: u64): hash'wyhash'WyhashSecret {
+		var wyp: u64[4] = []
+		make_secret(seed, wyp)
+		var secret = new hash'wyhash'WyhashSecret()
+		secret.wyp[0] = wyp[0]
+		secret.wyp[1] = wyp[1]
+		secret.wyp[2] = wyp[2]
+		secret.wyp[3] = wyp[3]
+		ret secret
+	}
 
-fun wyhash_hash_string(secret: WyhashSecret, str: String): u64 {
-	ret wyhash(str.str, str.len, 0, secret.wyp)
-}
+	fun hash_string(secret: hash'wyhash'WyhashSecret, str: String): u64 {
+		ret wyhash(str.str, str.len, 0, secret.wyp)
+	}
 
-fun wyhash_hash_c_string(secret: WyhashSecret, str: ^char, len: usize): u64 {
-	ret wyhash(str, len, 0, secret.wyp)
+	fun hash_c_string(secret: hash'wyhash'WyhashSecret, str: ^char, len: usize): u64 {
+		ret wyhash(str, len, 0, secret.wyp)
+	}
 }

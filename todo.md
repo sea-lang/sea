@@ -9,13 +9,13 @@
   - [ ] `std/mem/arena` - arena allocator
   - [ ] `--memtrace` flag to trace alloc/free calls to debug memory leaks
 - [x] tags and tagrec
-- [ ] Namespaces?
-- [ ] Function overloading
+- [x] Namespaces?
+- [ ] Function overloading?
 - [ ] Reef implementation in Sea
 - [ ] Traits?
 - [ ] Polish or remove each/of
 - [ ] Multithreading
-- [/] Type and generic inference
+- [/] Type ~~and generic~~ inference
 - [ ] Prevent common C vulnerabilities (buffer overflows, use-after-free, double-free, etc)
 - [ ] Cache compiled libraries
 - [ ] Contracts

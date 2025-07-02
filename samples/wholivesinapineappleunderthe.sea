@@ -1,6 +1,6 @@
 use std/io
 
 fun main(): int {
-	println("Spongebob Squarepants!")
+	io'println("Spongebob Squarepants!")
 	ret 0
 }

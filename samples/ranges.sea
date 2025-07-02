@@ -1,5 +1,5 @@
 use std/io
 
 fun main(): int {
-	for i in 0 to 10 -> println("Hi!")
+	for i in 0 to 10 -> io'println("Hi!")
 }

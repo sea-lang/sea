@@ -1,12 +1,13 @@
 use std/log
+use std/fs
 
 fun main(): int {
-	var my_log = new Log(true, open_file("logging.log", Write))
+	var my_log = new log'Log(true, fs'open_file("logging.log", fs'FileMode'Write))
 
-	debug(ref my_log, "Hello, Debug!")
-	info(ref my_log, "Hello, Info!")
-	warn(ref my_log, "Hello, Warn!")
-	error(ref my_log, "Hello, Error!")
+	log'debug(ref my_log, "Hello, Debug!")
+	log'info(ref my_log, "Hello, Info!")
+	log'warn(ref my_log, "Hello, Warn!")
+	log'error(ref my_log, "Hello, Error!")
 
-	close_file(my_log.file)
+	fs'close_file(my_log.file)
 }

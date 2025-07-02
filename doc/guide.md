@@ -617,21 +617,21 @@ Records also do not have methods, though this is planned.
 
 ```sea
 tag Race(
-	RACE_HOBBIT
-	RACE_HUMAN
-	RACE_ELF
-	RACE_DWARF
+	Hobbit
+	Human
+	Elf
+	Dwarf
 )
 
 rec Person(name: String, age: int, race: Race)
 
-let frodo = new Person("Frodo Baggins", 33, RACE_HOBBIT)
+let frodo = new Person("Frodo Baggins", 33, Race'Hobbit)
 
 switch frodo.race {
-	case RACE_HOBBIT -> println("Hobbit!")
-	case RACE_HUMAN -> println("Human!")
-	case RACE_ELF -> println("Elf!")
-	case RACE_DWARF -> println("Dwarf!")
+	case Race'Hobbit -> println("Hobbit!")
+	case Race'Human -> println("Human!")
+	case Race'Elf -> println("Elf!")
+	case Race'Dwarf -> println("Dwarf!")
 }
 ```
 
@@ -641,7 +641,7 @@ Tagged records (or "tagged unions") are another enumerable type, except they
 can store data with them, similar to Rust enums.
 
 ```sea
-tag Suit(SUIT_SPADE, SUIT_HEART, SUIT_DIAMOND, SUIT_CLUB)
+tag Suit(Spade, Heart, Diamond, Club)
 
 rec Card(suit: Suit, value: u8)
 
@@ -657,10 +657,10 @@ fun print_card(card: Card) {
 		else -> printf(c"%d of ", card.value)
 	}
 	switch card.suit {
-		case SUIT_SPADE -> println("Spades")
-		case SUIT_HEART -> println("Hearts")
-		case SUIT_DIAMOND -> println("Diamonds")
-		case SUIT_CLUB -> println("Clubs")
+		case Suit'Spade -> println("Spades")
+		case Suit'Heart -> println("Hearts")
+		case Suit'Diamond -> println("Diamonds")
+		case Suit'Club -> println("Clubs")
 	}
 }
 
@@ -672,19 +672,19 @@ tag rec Move(
 
 fun play(move: Move) ->
 	switch move.kind {
-		case Draw -> println("You drew a card!")
-		case Play {
+		case Move'Draw -> println("You drew a card!")
+		case Move'Play {
 			print("You played a ")
 			print_card(move.Play.card)
 		}
-		case Fold -> println("You folded :(")
+		case Move'Fold -> println("You folded :(")
 	}
 
 fun main(): int {
-	play(new Move(Draw))
-	play(new Move(Play, new Card(SUIT_SPADES, 4)))
-	play(new Move(Play, new Card(SUIT_DIAMONDS, 12)))
-	play(new Move(Fold))
+	play(new Move(Move'Draw))
+	play(new Move(Move'Play, new Card(Suit'Spades, 4)))
+	play(new Move(Move'Play, new Card(Suit'Diamonds, 12)))
+	play(new Move(Move'Fold))
 }
 ```
 
@@ -720,8 +720,9 @@ fun life(): int -> ret 42
 
 > **If hashtags exist, why isn't `tag rec` defined as `#tag rec`?**
 >
-> Hashtags don't change the syntax of the statement. `tag rec`, `rec`, and `tag`
-> are all totally different syntaxes.
+> As a design choice, hashtags should never change the syntax of the statement.
+> `tag rec` has a totally different syntax from `rec` and `tag`, and so I
+> decided to make it its own statement.
 
 Here's a list of all hashtags:
 
@@ -806,9 +807,6 @@ def usize = size_t
 rec String(own: bool, len: int, str: ^char)
 ```
 
-Since Sea has no namespaces (_yet_), functions imported from other modules are
-thrown into the global scope :/
-
 ## Documentation
 
 You can write documentation comments ("doc comments") using the following two
@@ -868,7 +866,7 @@ To write "good" doc comments, we **recommend** the following guidelines:
 /// Returns nil. <-- Good
 ```
 
-- Use periods to end sentences:
+- Use periods to end sentences and phrases, even partial/broken ones:
 
 ```sea
 /// Returns nil <-- Bad

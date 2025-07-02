@@ -2,49 +2,51 @@ raw [ #include <time.h> ]
 
 raw [ typedef struct tm __tm; ] // Sea can't bind to types that aren't typedef'd.
 
-def Timestamp = time_t // Usually i32 or i64
+pkg time {
+	def Timestamp = time_t // Usually i32 or i64
 
-rec DateTime(
-	unix: Timestamp,
-	year: u16,
-	month: u8,
-	day: u8,
-	hour: u8,
-	minute: u8,
-	second: u8,
-	local: bool,
-)
-
-fun make_datetime_from_time_info(timestamp: Timestamp, t: ^__tm, is_local: bool): DateTime {
-	ret new DateTime(
-		timestamp,
-		t^.tm_year + 1900,
-		t^.tm_mon + 1,
-		t^.tm_mday,
-		t^.tm_hour,
-		t^.tm_min,
-		t^.tm_sec,
-		is_local
+	rec DateTime(
+		unix: time'Timestamp,
+		year: u16,
+		month: u8,
+		day: u8,
+		hour: u8,
+		minute: u8,
+		second: u8,
+		local: bool,
 	)
-}
 
-fun get_local_datetime_from_timestamp(timestamp: Timestamp): DateTime {
-	ret make_datetime_from_time_info(timestamp, localtime(ref timestamp), true)
-}
+	fun make_datetime_from_time_info(timestamp: time'Timestamp, t: ^__tm, is_local: bool): time'DateTime {
+		ret new time'DateTime(
+			timestamp,
+			t^.tm_year + 1900,
+			t^.tm_mon + 1,
+			t^.tm_mday,
+			t^.tm_hour,
+			t^.tm_min,
+			t^.tm_sec,
+			is_local
+		)
+	}
 
-fun get_utc_datetime_from_timestamp(timestamp: Timestamp): DateTime {
-	ret make_datetime_from_time_info(timestamp, gmtime(ref timestamp), false)
-}
+	fun get_local_datetime_from_timestamp(timestamp: time'Timestamp): time'DateTime {
+		ret time'make_datetime_from_time_info(timestamp, localtime(ref timestamp), true)
+	}
 
-fun get_timestamp(): Timestamp {
-	// We cast nil to ^void to avoid a CC warning about nil being a constant
-	ret time(nil as ^void) as Timestamp
-}
+	fun get_utc_datetime_from_timestamp(timestamp: time'Timestamp): time'DateTime {
+		ret time'make_datetime_from_time_info(timestamp, gmtime(ref timestamp), false)
+	}
 
-fun get_current_time(): DateTime {
-	ret get_local_datetime_from_timestamp(get_timestamp())
-}
+	fun get_timestamp(): time'Timestamp {
+		// We cast nil to ^void to avoid a CC warning about nil being a constant
+		ret time(nil as ^void) as time'Timestamp
+	}
 
-fun get_current_utc_time(): DateTime {
-	ret get_utc_datetime_from_timestamp(get_timestamp())
+	fun get_current_time(): time'DateTime {
+		ret time'get_local_datetime_from_timestamp(time'get_timestamp())
+	}
+
+	fun get_current_utc_time(): time'DateTime {
+		ret time'get_utc_datetime_from_timestamp(time'get_timestamp())
+	}
 }

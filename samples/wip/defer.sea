@@ -1,11 +1,9 @@
-use std/mem
-
 fun main(): int {
 	let len = 32
-	let arr = mem::alloc(int)
+	let arr: int = malloc(sizeof(int))
 
 	// Free the array at the end of this scope
-	defer -> mem::dealloc(arr)
+	defer -> free(arr)
 
 	ret 0 // Right before this gets executed, the array will be freed
 }

@@ -1,6 +1,6 @@
 use std/io
 
 fun main(): int {
-	println("Hello, World!")
+	io'println("Hello, World!")
 	ret 0
 }

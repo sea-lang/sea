@@ -1,8 +1,10 @@
-/// Represents a potential error.
-tag rec Result(
-	Err(why: String)
-	Ok()
-)
+pkg res {
+	/// Represents a potential error.
+	tag rec Result(
+		Err(why: String)
+		Ok()
+	)
 
-fun is_ok(this: Result): bool -> ret this.kind == Ok
-fun is_err(this: Result): bool -> ret this.kind == Err
+	fun is_ok(this: res'Result): bool -> ret this.kind == Ok
+	fun is_err(this: res'Result): bool -> ret this.kind == Err
+}

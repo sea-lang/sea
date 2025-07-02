@@ -24,7 +24,7 @@ If you're using VSCode, I highly recommend adding these two extensions:
 - https://marketplace.visualstudio.com/items?itemName=aaron-bond.better-comments
 - https://marketplace.visualstudio.com/items?itemName=MohammadBaqer.better-folding
 
-Then add this to your settings.json:
+Then add this to your settings.json (user or workspace, doesn't matter):
 
 ```json
 {

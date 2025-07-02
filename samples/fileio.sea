@@ -1,9 +1,9 @@
 use std/fs
 
 fun main(): int {
-	var file = open_file("hello.txt", Write)
+	var file = fs'open_file("hello.txt", fs'FileMode'Write)
 
 	fprintf(file, c"Hello, World!\n")
 
-	close_file(file)
+	fs'close_file(file)
 }

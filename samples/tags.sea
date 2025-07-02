@@ -1,11 +1,11 @@
 use std/io
 
-tag Suit(SPADE, HEART, CLUB, DIAMOND)
+tag Suit(Spade, Heart, Club, Diamond)
 
 tag Face(
-	JACK  = 10
-	QUEEN = 11
-	KING  = 12
+	Jack  = 10
+	Queen = 11
+	King  = 12
 )
 
 rec Card(suit: Suit, value: u8)
@@ -18,57 +18,40 @@ tag rec Move(
 	SomethingElse(suit: Suit, card_value: u8)
 )
 
-/* This tag compiles down to this:
-	typedef enum {
-		Play,
-		Draw,
-		SomethingElse,
-	} _Move_tag;
-
-	typedef struct {
-		_Move_tag kind;
-		union {
-			struct { Card card; } Play;
-			struct { } Draw;
-			struct { Suit suit; u8 card_value; } SomethingElse;
-		};
-	} Move;
-*/
-
 fun play_card(suit: Suit) ->
 	switch suit {
-		case SPADE   -> println("You played a spade!")
-		case HEART   -> println("You played a heart!")
-		case CLUB    -> println("You played a club!")
-		case DIAMOND -> println("You played a diamond!")
+		case Suit'Spade   -> io'println("You played a spade!")
+		case Suit'Heart   -> io'println("You played a heart!")
+		case Suit'Club    -> io'println("You played a club!")
+		case Suit'Diamond -> io'println("You played a diamond!")
 	}
 
 fun play(move: Move) ->
 	// TODO: When I implement type inference, I should be able to check if I am switching over a tagged union, and if so, make `.kind` implicit.
 	switch move.kind {
-		case Play -> play_card(move.Play.card.suit)
-		case Draw -> println("You drew a card!")
-		case SomethingElse -> printf(c"SomethingElse: %d\n", move.SomethingElse.card_value)
+		case Move'Play -> play_card(move.Play.card.suit)
+		case Move'Draw -> io'println("You drew a card!")
+		case Move'SomethingElse -> printf(c"SomethingElse: %d\n", move.SomethingElse.card_value)
 	}
 
 fun main(): int {
-	play(new Move(Play, new Card(SPADE)))
-	play(new Move(Play, new Card(HEART)))
-	play(new Move(Play, new Card(CLUB)))
-	play(new Move(Play, new Card(DIAMOND)))
-	play(new Move(Draw))
-	play(new Move(SomethingElse, SPADE, 21))
-	play(new Move(SomethingElse, DIAMOND, 42))
+	play(new Move(Move'Play, new Card(Suit'Spade)))
+	play(new Move(Move'Play, new Card(Suit'Heart)))
+	play(new Move(Move'Play, new Card(Suit'Club)))
+	play(new Move(Move'Play, new Card(Suit'Diamond)))
+	play(new Move(Move'Draw))
+	play(new Move(Move'SomethingElse, Suit'Spade, 21))
+	play(new Move(Move'SomethingElse, Suit'Diamond, 42))
 
 	// You've probably noticed that switch statements automatically break. If you need to manually break them, you can use a fall case:
 	switch 2 {
-		case 0 -> println("Zero")
-		case 1 -> println("One")
-		fall case 2 -> println("Two")
-		fall case 3 -> println("Three")
-		case 4 -> println("Four")
-		case 5 -> println("Five")
-		else -> println("Six or more")
+		case 0 -> io'println("Zero")
+		case 1 -> io'println("One")
+		fall case 2 -> io'println("Two")
+		fall case 3 -> io'println("Three")
+		case 4 -> io'println("Four")
+		case 5 -> io'println("Five")
+		else -> io'println("Six or more")
 	}
 	// The above outputs "Two", "Three", and "Four".
 }

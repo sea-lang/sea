@@ -32,7 +32,7 @@ pub fn infer_type_of_node(compiler: &Compiler, node: &Node) -> Result<SeaType, S
                     ))
                 }
             },
-            None => return Err(format!("symbol undefined or unbound: {id}")),
+            _ => return Err(format!("symbol undefined or unbound: {id}")),
         },
         NodeKind::ExprBlock(_) => return Err("cannot infer type for block expressions".to_string()),
         NodeKind::ExprNew {

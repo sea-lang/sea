@@ -26,7 +26,7 @@ number = 42
 boolean = true
 
 # Reef does not have lists or maps. For lists, you can use a character-delimited string
-# This is not all that rare either, most shells use a semicolon-delimited string for $PATH
+# This is not all that rare in other languages, most shells use a semicolon-delimited string for $PATH
 fake_list = "value;another value;something else"
 
 # As for maps, you can "categorize" the key

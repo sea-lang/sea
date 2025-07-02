@@ -2,7 +2,7 @@ use std/io
 use std/str
 
 fun main(argc: int, argv: ^char[]): int {
-	for i in 0 to argc -> println(string_view_nt(argv[i]))
+	for i in 0 to argc -> io'println(str'string_view_nt(argv[i]))
 
 	ret 0
 }

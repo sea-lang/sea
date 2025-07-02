@@ -2,42 +2,44 @@ use std/res
 use std/str
 use std/io
 
-def File = ^FILE
+pkg fs {
+	def File = ^FILE
 
-tag FileMode(Read, Write, Append)
+	tag FileMode(Read, Write, Append)
 
-fun open_file(path: String, mode: FileMode): File {
-	var mode_str = ""
+	fun open_file(path: String, mode: fs'FileMode): fs'File {
+		var mode_str = ""
 
-	switch mode {
-		case Read -> mode_str = "r"
-		case Write -> mode_str = "w"
-		case Append -> mode_str = "a"
+		switch mode {
+			case fs'FileMode'Read -> mode_str = "r"
+			case fs'FileMode'Write -> mode_str = "w"
+			case fs'FileMode'Append -> mode_str = "a"
+		}
+
+		let file: fs'File = fopen(path.str, mode_str.str)
+
+		if not file -> io'panic("failed to open file")
+
+		ret file
 	}
 
-	let file: File = fopen(path.str, mode_str.str)
+	fun close_file(this: fs'File) -> fclose(this)
 
-	if not file -> panic("failed to open file")
+	fun read_file(path: String): String {
+		var file: fs'File = fs'open_file(path, fs'FileMode'Read)
 
-	ret file
-}
+		// get file size
+		fseek(file, 0, SEEK_END)
+		let size: size_t = ftell(file)
+		rewind(file)
 
-fun close_file(this: File) -> fclose(this)
+		// create a buffer to hold the file
+		var str: ^char = malloc((size + 1) * sizeof(char))
 
-fun read_file(path: String): String {
-	var file: File = open_file(path, Read)
+		// read file into buffer
+		fread(str, sizeof(char), size, file)
+		str[size] = `\0`
 
-	// get file size
-	fseek(file, 0, SEEK_END)
-	let size: size_t = ftell(file)
-	rewind(file)
-
-	// create a buffer to hold the file
-	var str: ^char = malloc((size + 1) * sizeof(char))
-
-	// read file into buffer
-	fread(str, sizeof(char), size, file)
-	str[size] = `\0`
-
-	ret take_string(size, str)
+		ret str'take_string(size, str)
+	}
 }

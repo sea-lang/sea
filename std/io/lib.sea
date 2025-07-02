@@ -1,31 +1,33 @@
-/**
- * Prints unformatted text.
- *
- * Arguments:
- *  text: String - The string to print.
-**/
-fun print(text: String) -> printf(c"%.*s", text.len, text.str)
+pkg io {
+	/**
+	* Prints unformatted text.
+	*
+	* Arguments:
+	*  text: String - The string to print.
+	**/
+	fun print(text: String) -> printf(c"%.*s", text.len, text.str)
 
-/**
- * Prints an unformatted line.
- *
- * Arguments:
- *  line: String - The string to print.
-**/
-fun println(line: String) -> printf(c"%.*s\n", line.len, line.str)
+	/**
+	* Prints an unformatted line.
+	*
+	* Arguments:
+	*  line: String - The string to print.
+	**/
+	fun println(line: String) -> printf(c"%.*s\n", line.len, line.str)
 
-/**
- * Prints unformatted text to stderr.
- *
- * Arguments:
- *  text: String - The string to print.
-**/
-fun eprint(text: String) -> fprintf(stderr, c"%.*s", text.len, text.str)
+	/**
+	* Prints unformatted text to stderr.
+	*
+	* Arguments:
+	*  text: String - The string to print.
+	**/
+	fun eprint(text: String) -> fprintf(stderr, c"%.*s", text.len, text.str)
 
-/**
- * Prints an unformatted line to stderr.
- *
- * Arguments:
- *  line: String - The string to print.
-**/
-fun eprintln(line: String) -> fprintf(stderr, c"%.*s\n", line.len, line.str)
+	/**
+	* Prints an unformatted line to stderr.
+	*
+	* Arguments:
+	*  line: String - The string to print.
+	**/
+	fun eprintln(line: String) -> fprintf(stderr, c"%.*s\n", line.len, line.str)
+}

@@ -3,7 +3,7 @@ use thiserror::Error;
 use super::token::{Token, TokenKind};
 
 #[derive(Debug, Clone, Error)]
-pub enum ParseError {
+pub enum LexErrorKind {
     #[error("unexpected character: `{0}`")]
     UnexpectedCharacter(char),
 
@@ -18,7 +18,17 @@ pub enum ParseError {
 
     #[error("unterminated raw block")]
     UnterminatedRawBlock,
+}
 
+// A lexer error with a fake token to indicate where the error occurred at.
+#[derive(Debug, Clone)]
+pub struct LexError {
+    pub error: LexErrorKind,
+    pub token: Token,
+}
+
+#[derive(Debug, Clone, Error)]
+pub enum ParseError {
     #[error("function pointer type missing parenthesis")]
     FunPtrMissingParenthesis,
 
@@ -37,9 +47,12 @@ pub enum ParseError {
     #[error("expected statement but got `{}`", .0.text)]
     ExpectedStatement(Token),
 
-    #[error("(internal error) advance error (caused by: {0})")]
-    AdvanceError(Box<ParseError>),
+    #[error("lexing error: {0}")]
+    LexError(LexErrorKind),
 
     #[error("expected token of kind `{0:?}`")]
     ExpectedTokenOfKind(TokenKind),
+
+    #[error("reached EOF before closing brace")]
+    ReachedEOFBeforeClosingBrace,
 }

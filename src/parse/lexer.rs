@@ -1,9 +1,9 @@
 use std::{collections::HashMap, iter::Peekable, path::PathBuf, str::Chars, sync::LazyLock};
 
-use crate::util;
+use crate::{parse::error::LexError, util};
 
 use super::{
-    error::ParseError,
+    error::LexErrorKind,
     token::{Token, TokenKind},
 };
 
@@ -124,6 +124,28 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    fn make_error_token(&self) -> Token {
+        Token {
+            kind: TokenKind::Error,
+            start: self.start,
+            column: self.column,
+            len: 1,
+            text: "".to_string(),
+            line: self.line,
+        }
+    }
+
+    fn make_error(&self, error: LexErrorKind) -> LexError {
+        LexError {
+            error,
+            token: self.make_error_token(),
+        }
+    }
+
+    fn make_error_with_token(&self, error: LexErrorKind, token: Token) -> LexError {
+        LexError { error, token }
+    }
+
     fn skip_whitespace(&mut self) {
         loop {
             let ch = self.peek();
@@ -139,8 +161,10 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn lex_string(&mut self) -> Result<Token, ParseError> {
+    fn lex_string(&mut self) -> Result<Token, LexError> {
         self.start += 1; // skip the opening quote
+        let start_line = self.line;
+        let start_column = self.column;
         self.buffer.remove(0); // remove the opening quote from the buffer
 
         while self.peek() != '"' && !self.is_done() {
@@ -155,14 +179,24 @@ impl<'a> Lexer<'a> {
         }
 
         if self.is_done() {
-            Err(ParseError::UnterminatedString)
+            Err(self.make_error_with_token(
+                LexErrorKind::UnterminatedString,
+                Token {
+                    kind: TokenKind::String,
+                    start: self.start,
+                    column: start_column - 1,
+                    len: 1,
+                    text: "".to_string(),
+                    line: start_line,
+                },
+            ))
         } else {
             self.skip_no_buffer(); // eat the closing quote
             Ok(self.make_token(TokenKind::String))
         }
     }
 
-    fn lex_c_string(&mut self) -> Result<Token, ParseError> {
+    fn lex_c_string(&mut self) -> Result<Token, LexError> {
         self.start += 1;
         self.advance(); // skip the `c`
         self.buffer.remove(0); // remove the `c` from the buffer
@@ -176,8 +210,12 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn lex_char(&mut self) -> Result<Token, ParseError> {
+    fn lex_char(&mut self) -> Result<Token, LexError> {
         self.start += 1;
+
+        let start_line = self.line;
+        let start_column = self.column;
+
         self.advance(); // skip the ```
         self.buffer.remove(0); // remove the ``` from the buffer
 
@@ -186,21 +224,31 @@ impl<'a> Lexer<'a> {
         }
 
         if self.is_done() {
-            Err(ParseError::UnterminatedChar)
+            Err(self.make_error_with_token(
+                LexErrorKind::UnterminatedChar,
+                Token {
+                    kind: TokenKind::String,
+                    start: self.start,
+                    column: start_column - 1,
+                    len: 1,
+                    text: "".to_string(),
+                    line: start_line,
+                },
+            ))
         } else {
             self.skip_no_buffer(); // eat the closing ```
             Ok(self.make_token(TokenKind::Character))
         }
     }
 
-    fn lex_number(&mut self) -> Result<Token, ParseError> {
+    fn lex_number(&mut self) -> Result<Token, LexError> {
         let mut is_float = false;
 
         while self.peek().is_alphanumeric() || self.peek() == '_' || self.peek() == '.' {
             if self.peek() == '.' {
                 // prevent two dots in one float
                 if is_float {
-                    return Err(ParseError::UnexpectedCharacter('.'));
+                    return Err(self.make_error(LexErrorKind::UnexpectedCharacter('.')));
                 }
 
                 is_float = true;
@@ -216,7 +264,7 @@ impl<'a> Lexer<'a> {
         }))
     }
 
-    fn lex_id_or_keyword(&mut self) -> Result<Token, ParseError> {
+    fn lex_id_or_keyword(&mut self) -> Result<Token, LexError> {
         while is_valid_id(self.peek()) {
             self.skip();
         }
@@ -225,14 +273,14 @@ impl<'a> Lexer<'a> {
         if self.peek() == '\'' {
             self.advance();
             if self.peek() == '\'' {
-                return Err(ParseError::UnexpectedCharacter('\''));
+                return Err(self.make_error(LexErrorKind::UnexpectedCharacter('\'')));
             }
             while is_valid_id(self.peek()) {
                 self.skip();
                 if self.peek() == '\'' {
                     self.advance();
                     if self.peek() == '\'' {
-                        return Err(ParseError::UnexpectedCharacter('\''));
+                        return Err(self.make_error(LexErrorKind::UnexpectedCharacter('\'')));
                     }
                 }
             }
@@ -245,7 +293,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn lex_raw_block(&mut self) -> Result<Token, ParseError> {
+    fn lex_raw_block(&mut self) -> Result<Token, LexErrorKind> {
         let mut depth = 1;
 
         // Brackets may be unbalanced if they're used in strings, character
@@ -310,7 +358,7 @@ impl<'a> Lexer<'a> {
                         in_single_line_comment = false;
                     }
                 }
-                '\0' => return Err(ParseError::UnterminatedRawBlock),
+                '\0' => return Err(LexErrorKind::UnterminatedRawBlock),
                 _ => {}
             }
             self.skip();
@@ -319,7 +367,7 @@ impl<'a> Lexer<'a> {
         Ok(self.make_token(TokenKind::LiteralText))
     }
 
-    fn get_next_token(&mut self) -> Option<Result<Token, ParseError>> {
+    fn get_next_token(&mut self) -> Result<Token, LexError> {
         self.skip_whitespace();
 
         self.buffer.clear();
@@ -327,79 +375,77 @@ impl<'a> Lexer<'a> {
 
         let cur = self.advance();
 
-        if self.is_done() {
-            None
-        } else if self.prev_token.kind == TokenKind::KwRaw {
+        if self.prev_token.kind == TokenKind::KwRaw {
             if cur != '[' {
-                Some(Err(ParseError::ExpectedCharacter('[', cur)))
+                Err(self.make_error(LexErrorKind::ExpectedCharacter('[', cur)))
             } else {
-                Some(Ok(self.lex_raw_block().unwrap()))
+                Ok(self.lex_raw_block().unwrap())
             }
         } else {
             match cur {
                 // Common/misc symbols
-                ',' => Some(Ok(self.make_token(TokenKind::Comma))),
-                ':' => Some(Ok(self.make_token(TokenKind::Colon))),
-                ';' => Some(Ok(self.make_token(TokenKind::Semicolon))),
-                '^' => Some(Ok(self.make_token(TokenKind::Pointer))),
-                '(' => Some(Ok(self.make_token(TokenKind::OpenParen))),
-                ')' => Some(Ok(self.make_token(TokenKind::CloseParen))),
-                '[' => Some(Ok(self.make_token(TokenKind::OpenBracket))),
-                ']' => Some(Ok(self.make_token(TokenKind::CloseBracket))),
-                '{' => Some(Ok(self.make_token(TokenKind::OpenCurly))),
-                '}' => Some(Ok(self.make_token(TokenKind::CloseCurly))),
-                '\\' => Some(Ok(self.make_token(TokenKind::Backslash))),
-                '#' => Some(Ok(self.make_token(TokenKind::Hashtag))),
-                '@' => Some(Ok(self.make_token(TokenKind::At))),
+                ',' => Ok(self.make_token(TokenKind::Comma)),
+                ':' => Ok(self.make_token(TokenKind::Colon)),
+                ';' => Ok(self.make_token(TokenKind::Semicolon)),
+                '^' => Ok(self.make_token(TokenKind::Pointer)),
+                '(' => Ok(self.make_token(TokenKind::OpenParen)),
+                ')' => Ok(self.make_token(TokenKind::CloseParen)),
+                '[' => Ok(self.make_token(TokenKind::OpenBracket)),
+                ']' => Ok(self.make_token(TokenKind::CloseBracket)),
+                '{' => Ok(self.make_token(TokenKind::OpenCurly)),
+                '}' => Ok(self.make_token(TokenKind::CloseCurly)),
+                '\\' => Ok(self.make_token(TokenKind::Backslash)),
+                '#' => Ok(self.make_token(TokenKind::Hashtag)),
+                '@' => Ok(self.make_token(TokenKind::At)),
                 // Operators
-                '.' => Some(Ok(self.make_token(TokenKind::OpDot))),
+                '.' => Ok(self.make_token(TokenKind::OpDot)),
                 '=' => match self.peek() {
                     '=' => {
                         self.skip();
-                        Some(Ok(self.make_token(TokenKind::OpEq)))
+                        Ok(self.make_token(TokenKind::OpEq))
                     }
-                    _ => Some(Ok(self.make_token(TokenKind::Eq))),
+                    _ => Ok(self.make_token(TokenKind::Eq)),
                 },
                 '!' => match self.peek() {
                     '=' => {
                         self.skip();
-                        Some(Ok(self.make_token(TokenKind::OpNeq)))
+                        Ok(self.make_token(TokenKind::OpNeq))
                     }
-                    _ => Some(Err(ParseError::UnexpectedCharacter(cur))),
+                    _ => Err(self.make_error(LexErrorKind::UnexpectedCharacter(cur))),
                 },
                 '>' => match self.peek() {
                     '=' => {
                         self.skip();
-                        Some(Ok(self.make_token(TokenKind::OpGtEq)))
+                        Ok(self.make_token(TokenKind::OpGtEq))
                     }
-                    _ => Some(Ok(self.make_token(TokenKind::OpGt))),
+                    _ => Ok(self.make_token(TokenKind::OpGt)),
                 },
                 '<' => match self.peek() {
                     '=' => {
                         self.skip();
-                        Some(Ok(self.make_token(TokenKind::OpLtEq)))
+                        Ok(self.make_token(TokenKind::OpLtEq))
                     }
-                    _ => Some(Ok(self.make_token(TokenKind::OpLt))),
+                    _ => Ok(self.make_token(TokenKind::OpLt)),
                 },
                 '+' => match self.peek() {
                     '+' => {
                         self.skip();
-                        Some(Ok(self.make_token(TokenKind::OpInc)))
+                        Ok(self.make_token(TokenKind::OpInc))
                     }
-                    _ => Some(Ok(self.make_token(TokenKind::OpAdd))),
+                    _ => Ok(self.make_token(TokenKind::OpAdd)),
                 },
                 '-' => match self.peek() {
                     '-' => {
                         self.skip();
-                        Some(Ok(self.make_token(TokenKind::OpDec)))
+                        Ok(self.make_token(TokenKind::OpDec))
                     }
                     '>' => {
                         self.skip();
-                        Some(Ok(self.make_token(TokenKind::Arrow)))
+                        Ok(self.make_token(TokenKind::Arrow))
                     }
-                    _ => Some(Ok(self.make_token(TokenKind::OpSub))),
+                    _ => Ok(self.make_token(TokenKind::OpSub)),
                 },
-                '*' => Some(Ok(self.make_token(TokenKind::OpMul))),
+                '*' => Ok(self.make_token(TokenKind::OpMul)),
                 '/' => {
                     if self.peek() == '/' {
                         while self.peek() != '\n' {
@@ -422,28 +468,27 @@ impl<'a> Lexer<'a> {
                         self.skip_no_buffer(); // Skip the ending `/`
                         return self.get_next_token();
                     } else {
-                        Some(Ok(self.make_token(TokenKind::OpDiv)))
+                        Ok(self.make_token(TokenKind::OpDiv))
                     }
                 }
-                '%' => Some(Ok(self.make_token(TokenKind::OpMod))),
-                cur if cur == '|' && self.peek() == '>' => {
-                    Some(Ok(self.make_token(TokenKind::OpPipe)))
-                }
+                '%' => Ok(self.make_token(TokenKind::OpMod)),
+                cur if cur == '|' && self.peek() == '>' => Ok(self.make_token(TokenKind::OpPipe)),
                 // Literals
-                '"' => Some(self.lex_string()),
-                'c' if self.peek() == '"' => Some(self.lex_c_string()),
-                '`' => Some(self.lex_char()),
-                cur if is_valid_id_start(cur) => Some(self.lex_id_or_keyword()),
-                '0'..='9' => Some(self.lex_number()),
-                _ => Some(Err(ParseError::UnexpectedCharacter(cur))),
+                '"' => self.lex_string(),
+                'c' if self.peek() == '"' => self.lex_c_string(),
+                '`' => self.lex_char(),
+                cur if is_valid_id_start(cur) => self.lex_id_or_keyword(),
+                '0'..='9' => self.lex_number(),
+                '\0' => Ok(self.make_token(TokenKind::Eof)),
+                _ => Err(self.make_error(LexErrorKind::UnexpectedCharacter(cur))),
             }
         }
     }
 
-    pub fn next_token(&mut self) -> Option<Result<Token, ParseError>> {
+    pub fn next_token(&mut self) -> Result<Token, LexError> {
         let tok = self.get_next_token();
-        if tok.as_ref().is_some_and(|it| it.is_ok()) {
-            self.prev_token = tok.as_ref().unwrap().as_ref().unwrap().clone();
+        if tok.as_ref().is_ok() {
+            self.prev_token = tok.as_ref().unwrap().clone();
         }
         tok
     }

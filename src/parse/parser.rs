@@ -87,22 +87,24 @@ impl<'a> Parser<'a> {
     pub fn advance(&mut self) -> bool {
         self.prev = self.token.clone();
 
-        let opt_tok = self.lexer.next_token();
-        if opt_tok.is_none() {
-            self.done = true;
-            return false;
-        }
-        let tok = opt_tok.unwrap();
-        if tok.is_err() {
-            self.throw_exception(ParseError::AdvanceError(Box::new(tok.err().unwrap())), None);
+        match self.lexer.next_token() {
+            Ok(it) => match it.kind {
+                TokenKind::Eof => {
+                    self.done = true;
+                    return false;
+                }
+                _ => self.token = it,
+            },
+            Err(err) => {
+                self.throw_exception_at(ParseError::LexError(err.error), None, err.token);
+            }
         }
 
-        self.token = tok.unwrap();
         return true;
     }
 
     pub fn accept(&mut self, kind: TokenKind) -> bool {
-        if self.token.kind == kind {
+        if self.token.kind == kind && !self.done {
             self.advance();
             true
         } else {
@@ -253,6 +255,8 @@ impl<'a> Parser<'a> {
         let column = self.prev.column;
 
         if self.prev.kind == TokenKind::OpenCurly {
+            let start_tok = self.prev.clone();
+
             if self.accept(TokenKind::CloseCurly) {
                 return Node {
                     line,
@@ -266,6 +270,12 @@ impl<'a> Parser<'a> {
                 exprs.push(self.parse_statement());
                 if self.accept(TokenKind::CloseCurly) {
                     break;
+                } else if self.done {
+                    self.throw_exception_at(
+                        ParseError::ReachedEOFBeforeClosingBrace,
+                        None,
+                        start_tok,
+                    );
                 }
             }
             Node {

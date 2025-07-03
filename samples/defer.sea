@@ -1,0 +1,25 @@
+use std/io
+
+fun main(): int {
+	let len = 32
+	var arr: ^int = malloc(sizeof(int))
+	// Free the array at the end of this scope
+	defer {
+		free(arr)
+		io'println("free'd arr")
+	}
+
+	if true {
+		// This will get executed at the end of this scope
+		defer -> io'println(", World!")
+		io'print("Hello")
+		// Output here is `Hello, World!`
+
+		ret 0 // Right before this gets executed, the array will be freed
+	} else {
+		defer -> io'println("This shouldn't be printed")
+	}
+
+	// The array free defer would be executed here, however we have a
+	// `ret 0` an `if true`, so it'll never get executed here.
+}

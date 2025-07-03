@@ -284,6 +284,10 @@ impl Node {
                 println!("{STAT}{spacing}  expr:");
                 expr.pretty_print_inner(indent + 2, true);
             }
+            NodeKind::StatDefer(nodes) => {
+                println!("{STAT}defer:");
+                nodes.pretty_print_inner(indent + 1, true);
+            }
             NodeKind::StatExpr(node) => {
                 println!("{EXPR}expr:");
                 node.pretty_print_inner(indent + 1, true);

@@ -1,23 +1,30 @@
 use std::collections::HashMap;
 
+use crate::hashtags::{DefTags, FunTags, RecTags, TagRecTags, TagTags};
+
 use super::type_::SeaType;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Symbol {
     Fun {
+        tags: Vec<FunTags>,
         params: Vec<SeaType>,
         rets: SeaType,
     },
     Rec {
+        tags: Vec<RecTags>,
         fields: Vec<(String, SeaType)>,
     },
     Def {
+        tags: Vec<DefTags>,
         typ: SeaType,
     },
     Tag {
+        tags: Vec<TagTags>,
         entries: Vec<String>,
     },
     TagRec {
+        tags: Vec<TagRecTags>,
         entries: Vec<(String, Vec<(String, SeaType)>)>,
     },
     Var {
@@ -29,15 +36,22 @@ pub enum Symbol {
 impl Symbol {
     pub fn instantiatable(&self) -> bool {
         match self {
-            Symbol::Rec { fields: _ } => true,
-            Symbol::TagRec { entries: _ } => true,
+            Symbol::Rec { tags: _, fields: _ } => true,
+            Symbol::TagRec {
+                tags: _,
+                entries: _,
+            } => true,
             _ => false,
         }
     }
 
     pub fn invocable(&self) -> bool {
         match self {
-            Symbol::Fun { params: _, rets: _ } => true,
+            Symbol::Fun {
+                tags: _,
+                params: _,
+                rets: _,
+            } => true,
             Symbol::Var { typ, mutable: _ } => typ.funptr_rets.is_some(),
             _ => false,
         }

@@ -36,6 +36,7 @@ static KEYWORDS: LazyLock<HashMap<&str, TokenKind>> = LazyLock::new(|| {
         ("for", TokenKind::KwFor),
         ("each", TokenKind::KwEach),
         ("of", TokenKind::KwOf),
+        ("defer", TokenKind::KwDefer),
         ("new", TokenKind::KwNew),
         ("ref", TokenKind::KwRef),
         ("as", TokenKind::KwAs),

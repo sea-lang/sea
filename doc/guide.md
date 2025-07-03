@@ -74,6 +74,7 @@ You can run this using `sea compile --run main.sea` (or `sea c -r main.sea`).
   - [if/else](#ifelse)
   - [switch/case](#switchcase)
   - [for](#for)
+  - [defer](#defer)
 - [Expressions and Operators](#expressions-and-operators)
   - [Type Casting](#type-casting)
   - [References and Pointers](#references-and-pointers)
@@ -496,6 +497,34 @@ for 0 to 5 -> println("Hello, World!")
 
 > ![TODO]
 > Finish implementation for `each/in` and document here
+
+### `defer`
+
+Defer is a statement that lets you execute code in the future. It's useful for
+any code that has a "begin" and "end" pair, such as `malloc` and `free` or a
+library's `init` and `deinit`. For a real-life example, Raylib's `BeginDrawing`
+and `EndDrawing`.
+
+```sea
+fun main(): int {
+	let x: ^int = malloc(sizeof(int))
+	// Right before this scope is exited, this code will be executed.
+	defer -> free(x)
+
+	// do stuff using `x`
+
+	// `x` gets free'd right here.
+	ret 0
+}
+```
+
+If we `ret` early then `x` will be free'd there too. This also extends to any
+function marked with `#noret`.
+
+> ![WARNING]
+> If a function _might_ exit and is not marked with `#noret`, then deferred code
+> **will not get executed**. Generally, a function should avoid conditionally
+> exiting anyway.
 
 ## Expressions and Operators
 

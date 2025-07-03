@@ -16,9 +16,16 @@ use crate::{
     },
 };
 
+#[derive(Clone)]
+pub struct CodeBlock {
+    pub deferred: Vec<Node>,
+    pub returned: bool,
+}
+
 pub struct CBackend<'a, 'b> {
     pub node: Box<Node>, // reference to current node
     pub compiler: &'b mut Compiler<'a>,
+    pub block_stack: Vec<CodeBlock>,
 }
 
 impl<'a, 'b> CBackend<'a, 'b> {
@@ -32,6 +39,7 @@ impl<'a, 'b> CBackend<'a, 'b> {
                 node: NodeKind::Raw(Default::default()),
             }),
             compiler,
+            block_stack: vec![],
         }
     }
 
@@ -245,6 +253,42 @@ impl<'a, 'b> CBackend<'a, 'b> {
         }
     }
 
+    pub fn write_deferred(&mut self, all: bool, clear: bool) {
+        if all {
+            // I almost definitely shouldn't be cloning this here but whatever.
+            self.block_stack.clone().iter().rev().for_each(|block| {
+                block.deferred.clone().iter().for_each(|it| {
+                    self.ws("/* deferred */\n"); // write an indicator that this code block is deferred
+                    self.write(it.clone());
+                })
+            });
+
+            if clear {
+                // Consume all of the deferred blocks
+                self.block_stack.iter_mut().for_each(|block| {
+                    block.deferred.clear();
+                });
+            }
+        } else {
+            // I probably shouldn't be cloning this here but whatever.
+            self.block_stack
+                .last()
+                .unwrap()
+                .deferred
+                .clone()
+                .iter()
+                .for_each(|it| {
+                    self.ws("/* deferred */\n"); // write an indicator that this code block is deferred
+                    self.write(it.clone());
+                });
+
+            if clear {
+                // Consume the deferred block
+                self.block_stack.last_mut().unwrap().deferred.clear();
+            }
+        }
+    }
+
     // #region: Top level statements
 
     pub fn top_use(&mut self, path: PathBuf) {
@@ -291,7 +335,7 @@ impl<'a, 'b> CBackend<'a, 'b> {
         rets: Box<Node>,
         expr: Box<Node>,
     ) {
-        for hashtag in tags {
+        for hashtag in tags.clone() {
             match hashtag {
                 FunTags::NoRet => self.ws("noreturn "), // TODO: noreturn is compiler-specific.
                 FunTags::Extern => unimplemented!(),
@@ -306,6 +350,7 @@ impl<'a, 'b> CBackend<'a, 'b> {
 
         self.compiler.add_fun(
             id,
+            tags,
             params
                 .iter()
                 .map(|(_, it)| SeaType::from_node(it.clone()).unwrap())
@@ -341,7 +386,7 @@ impl<'a, 'b> CBackend<'a, 'b> {
 
     pub fn top_rec(&mut self, tags: Vec<RecTags>, id: String, fields: Vec<(String, Node)>) {
         let mut is_union = false;
-        for hashtag in tags {
+        for hashtag in tags.clone() {
             match hashtag {
                 RecTags::Union => is_union = true,
                 RecTags::Static => self.ws("static "),
@@ -371,6 +416,7 @@ impl<'a, 'b> CBackend<'a, 'b> {
 
         self.compiler.add_rec(
             id,
+            tags,
             fields
                 .iter()
                 .map(|(name, typ)| (name.clone(), SeaType::from_node(typ.clone()).unwrap()))
@@ -379,7 +425,7 @@ impl<'a, 'b> CBackend<'a, 'b> {
     }
 
     pub fn top_def(&mut self, tags: Vec<DefTags>, id: String, typ: Node) {
-        for hashtag in tags {
+        for hashtag in tags.clone() {
             match hashtag {
                 DefTags::Static => self.ws("static "),
             }
@@ -389,7 +435,8 @@ impl<'a, 'b> CBackend<'a, 'b> {
         self.named_typ_from_node(id.replace('\'', Self::NAMESPACE_SEP), typ.clone());
         self.ws(";\n\n");
 
-        self.compiler.add_def(id, SeaType::from_node(typ).unwrap());
+        self.compiler
+            .add_def(id, tags, SeaType::from_node(typ).unwrap());
     }
 
     pub fn top_tag(
@@ -398,7 +445,7 @@ impl<'a, 'b> CBackend<'a, 'b> {
         id: String,
         entries: Vec<(String, Option<Box<Node>>)>,
     ) {
-        for hashtag in tags {
+        for hashtag in tags.clone() {
             match hashtag {
                 TagTags::Static => self.ws("static "),
             }
@@ -421,6 +468,7 @@ impl<'a, 'b> CBackend<'a, 'b> {
 
         self.compiler.add_tag(
             id,
+            tags,
             entries
                 .iter()
                 .map(|it| it.0.clone())
@@ -471,7 +519,7 @@ impl<'a, 'b> CBackend<'a, 'b> {
                 })
                 .collect::<Vec<(String, SeaType)>>();
             mapped_entries.push((entry_id.clone(), mapped_fields.clone()));
-            self.compiler.add_rec(name, mapped_fields);
+            self.compiler.add_rec(name, vec![], mapped_fields);
         }
 
         if is_static {
@@ -488,7 +536,7 @@ impl<'a, 'b> CBackend<'a, 'b> {
         self.ws("\t};\n");
         self.w(format_args!("}} {namespaced_id};\n\n"));
 
-        self.compiler.add_tag_rec(id, mapped_entries);
+        self.compiler.add_tag_rec(id, tags, mapped_entries);
     }
 
     // #endregion: Top level statements
@@ -496,9 +544,11 @@ impl<'a, 'b> CBackend<'a, 'b> {
     // #region: Statements
 
     pub fn stat_ret(&mut self, node: Option<Node>) {
+        self.write_deferred(true, false);
         self.ws("return ");
         node.map(|it| self.write(it));
         self.ws(";\n");
+        self.block_stack.last_mut().unwrap().returned = true;
     }
 
     pub fn stat_if(&mut self, cond: Node, expr: Node, else_: Option<Node>) {
@@ -585,6 +635,10 @@ impl<'a, 'b> CBackend<'a, 'b> {
         self.ws("}")
     }
 
+    pub fn stat_defer(&mut self, expr: Node) {
+        self.block_stack.last_mut().unwrap().deferred.push(expr)
+    }
+
     // #endregion Statements
 
     // #region: Expressions
@@ -633,9 +687,17 @@ impl<'a, 'b> CBackend<'a, 'b> {
 
     pub fn expr_block(&mut self, nodes: Vec<Node>) {
         self.ws("{\n");
+        self.block_stack.push(CodeBlock {
+            deferred: vec![],
+            returned: false,
+        });
         for node in nodes {
             self.write(node);
         }
+        if !self.block_stack.last().unwrap().returned {
+            self.write_deferred(false, true);
+        }
+        self.block_stack.pop();
         self.ws("}");
     }
 
@@ -649,7 +711,10 @@ impl<'a, 'b> CBackend<'a, 'b> {
         if symbol.is_some_and(|it| it.instantiatable()) {
             // When instantiating tag recs, we want to explicitly specify which union we are instantiating
             match symbol.unwrap() {
-                Symbol::TagRec { entries: _ } => {
+                Symbol::TagRec {
+                    tags: _,
+                    entries: _,
+                } => {
                     if params.len() == 0 {
                         self.throw(CompilerError::TagRecInstantiateWithoutKind, None);
                     }
@@ -920,7 +985,37 @@ impl<'a, 'b> Backend for CBackend<'a, 'b> {
                 to,
                 expr,
             } => self.stat_for_range(var, *from, *to, *expr),
+            NodeKind::StatDefer(expr) => self.stat_defer(*expr),
             NodeKind::StatExpr(node) => {
+                // Get ready for some spaghetti.
+                // This checks if the expression is a function invoke, and if so
+                // we then check if it has the #noret tag. If so, we will write
+                // any deferred statements.
+                match &node.node {
+                    NodeKind::ExprInvoke { left, params: _ } => match &left.node {
+                        NodeKind::ExprIdentifier(id) => {
+                            let s = self.compiler.symbols.get_symbol(id.clone());
+                            match s {
+                                Some(it) => match it {
+                                    Symbol::Fun {
+                                        tags,
+                                        params: _,
+                                        rets: _,
+                                    } => {
+                                        if tags.contains(&FunTags::NoRet) {
+                                            self.write_deferred(true, false);
+                                        }
+                                    }
+                                    _ => {}
+                                },
+                                _ => {}
+                            }
+                        }
+                        _ => {}
+                    },
+                    _ => {}
+                }
+
                 self.write(*node);
                 self.ws(";\n");
             }

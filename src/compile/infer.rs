@@ -60,7 +60,7 @@ pub fn infer_type_of_node(compiler: &Compiler, node: &Node) -> Result<SeaType, S
                 }
                 let sym = sym.unwrap();
                 match sym {
-                    symbol::Symbol::Rec { fields } => {
+                    symbol::Symbol::Rec { tags: _, fields } => {
                         for (field_name, field_type) in fields {
                             if *field_name == *id {
                                 return Ok(field_type.clone());
@@ -68,7 +68,10 @@ pub fn infer_type_of_node(compiler: &Compiler, node: &Node) -> Result<SeaType, S
                         }
                         return Err(format!("struct `{name}` has no field `{id}`"));
                     }
-                    symbol::Symbol::TagRec { entries: _ } => SeaType {
+                    symbol::Symbol::TagRec {
+                        tags: _,
+                        entries: _,
+                    } => SeaType {
                         pointers: 0,
                         name: format!("_{name}_{id}"),
                         arrays: vec![],
@@ -91,7 +94,11 @@ pub fn infer_type_of_node(compiler: &Compiler, node: &Node) -> Result<SeaType, S
                 let sym = compiler.symbols.get_symbol(id.clone());
                 match sym {
                     Some(sym) => match sym {
-                        symbol::Symbol::Fun { params: _, rets } => rets.clone(),
+                        symbol::Symbol::Fun {
+                            tags: _,
+                            params: _,
+                            rets,
+                        } => rets.clone(),
                         symbol::Symbol::Var { typ, mutable: _ } => {
                             if typ.funptr_rets.is_some() {
                                 return Ok(typ.funptr_rets.as_ref().unwrap().as_ref().clone());

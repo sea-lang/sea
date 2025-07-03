@@ -754,6 +754,19 @@ impl<'a> Parser<'a> {
         }
     }
 
+    pub fn parse_defer(&mut self) -> Node {
+        let line = self.token.line;
+        let column = self.token.column;
+
+        let code = self.parse_block(true);
+
+        Node {
+            line,
+            column,
+            node: NodeKind::StatDefer(Box::new(code)),
+        }
+    }
+
     fn parse_raw(&mut self) -> Node {
         let line = self.token.line;
         let column = self.token.column;
@@ -778,6 +791,7 @@ impl<'a> Parser<'a> {
             _ if self.accept(TokenKind::KwIf) => self.parse_if(),
             _ if self.accept(TokenKind::KwSwitch) => self.parse_switch(),
             _ if self.accept(TokenKind::KwFor) => self.parse_for(),
+            _ if self.accept(TokenKind::KwDefer) => self.parse_defer(),
             _ if self.accept(TokenKind::KwRaw) => self.parse_raw(),
             // if nothing works, we'll try to parse an expression, and if *that* doesn't work, then we have a syntax error
             _ => {

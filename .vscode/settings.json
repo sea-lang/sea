@@ -1,3 +1,11 @@
 {
-  "cSpell.words": ["peekable"]
+  "cSpell.words": [
+    "funptr",
+    "noreturn",
+    "peekable",
+    "seatyp",
+    "seatype",
+    "strsecret",
+    "wyhash"
+  ]
 }

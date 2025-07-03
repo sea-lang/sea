@@ -1,6 +1,7 @@
 use std::{fs::File, path::PathBuf, process::exit};
 
 use crate::{
+    hashtags::{DefTags, FunTags, RecTags, TagRecTags, TagTags},
     parse::{ast::Node, parser::Parser},
     util,
 };
@@ -142,24 +143,37 @@ impl<'a> Compiler<'a> {
         Err(format!("no such module: {path:?}"))
     }
 
-    pub fn add_fun(&mut self, name: String, params: Vec<SeaType>, rets: SeaType) {
-        self.symbols.add_symbol(name, Symbol::Fun { params, rets });
+    pub fn add_fun(
+        &mut self,
+        name: String,
+        tags: Vec<FunTags>,
+        params: Vec<SeaType>,
+        rets: SeaType,
+    ) {
+        self.symbols
+            .add_symbol(name, Symbol::Fun { tags, params, rets });
     }
 
-    pub fn add_rec(&mut self, name: String, fields: Vec<(String, SeaType)>) {
-        self.symbols.add_symbol(name, Symbol::Rec { fields });
+    pub fn add_rec(&mut self, name: String, tags: Vec<RecTags>, fields: Vec<(String, SeaType)>) {
+        self.symbols.add_symbol(name, Symbol::Rec { tags, fields });
     }
 
-    pub fn add_def(&mut self, name: String, typ: SeaType) {
-        self.symbols.add_symbol(name, Symbol::Def { typ });
+    pub fn add_def(&mut self, name: String, tags: Vec<DefTags>, typ: SeaType) {
+        self.symbols.add_symbol(name, Symbol::Def { tags, typ });
     }
 
-    pub fn add_tag(&mut self, name: String, entries: Vec<String>) {
-        self.symbols.add_symbol(name, Symbol::Tag { entries });
+    pub fn add_tag(&mut self, name: String, tags: Vec<TagTags>, entries: Vec<String>) {
+        self.symbols.add_symbol(name, Symbol::Tag { tags, entries });
     }
 
-    pub fn add_tag_rec(&mut self, name: String, entries: Vec<(String, Vec<(String, SeaType)>)>) {
-        self.symbols.add_symbol(name, Symbol::TagRec { entries });
+    pub fn add_tag_rec(
+        &mut self,
+        name: String,
+        tags: Vec<TagRecTags>,
+        entries: Vec<(String, Vec<(String, SeaType)>)>,
+    ) {
+        self.symbols
+            .add_symbol(name, Symbol::TagRec { tags, entries });
     }
 
     pub fn add_var(&mut self, name: String, typ: SeaType, mutable: bool) {

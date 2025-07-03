@@ -72,6 +72,7 @@ pub enum TokenKind {
     KwFor,
     KwEach, // todo
     KwOf,   // todo
+    KwDefer,
     KwNew,
     KwRef,
     KwAs,

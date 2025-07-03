@@ -1,0 +1,66 @@
+pkg math {
+	// Basic functions
+
+	fun abs_f32(number: f32): f32 {
+		if number > 0 -> ret number
+		else -> ret -number
+	}
+
+	fun max_f32(a: f32, b: f32): f32 {
+		if a > b -> ret a
+		else -> ret b
+	}
+
+	fun min_f32(a: f32, b: f32): f32 {
+		if a < b -> ret a
+		else -> ret b
+	}
+
+	// Exponential functions
+
+	#inline fun exp(num: f32): f32 -> ret expf(num)
+	#inline fun exp2(num: f32): f32 -> ret exp2f(num)
+	#inline fun log(num: f32): f32 -> ret logf(num)
+	#inline fun log2(num: f32): f32 -> ret log2f(num)
+	#inline fun log10(num: f32): f32 -> ret log10f(num)
+
+	// Power functions
+
+	#inline fun sqrt(num: f32): f32 -> ret sqrtf(num)
+	#inline fun cbrt(num: f32): f32 -> ret cbrtf(num)
+	#inline fun hypot(a: f32, b: f32): f32 -> ret hypotf(a, b)
+	#inline fun pow(num: f32, pow: f32): f32 -> ret powf(num, pow)
+
+	// Trig functions
+
+	#inline fun sin(num: f32): f32 -> ret sinf(num)
+	#inline fun cos(num: f32): f32 -> ret cosf(num)
+	#inline fun tan(num: f32): f32 -> ret tanf(num)
+	#inline fun asin(num: f32): f32 -> ret asinf(num)
+	#inline fun acos(num: f32): f32 -> ret acosf(num)
+	#inline fun atan(num: f32): f32 -> ret atanf(num)
+	#inline fun atan2(num: f32): f32 -> ret atan2f(num)
+
+	// Hyperbolic functions
+
+	#inline fun sinh(num: f32): f32 -> ret sinhf(num)
+	#inline fun cosh(num: f32): f32 -> ret coshf(num)
+	#inline fun tanh(num: f32): f32 -> ret tanhf(num)
+	#inline fun asinh(num: f32): f32 -> ret asinhf(num)
+	#inline fun acosh(num: f32): f32 -> ret acoshf(num)
+	#inline fun atanh(num: f32): f32 -> ret atanhf(num)
+
+	// Rounding
+
+	#inline fun ceil(num: f32): f32 -> ret ceilf(num)
+	#inline fun floor(num: f32): f32 -> ret floorf(num)
+	#inline fun trunc(num: f32): f32 -> ret truncf(num)
+	#inline fun round(num: f32): f32 -> ret roundf(num)
+
+	// Floating-point number magic
+
+	#inline fun is_finite(num: f32): bool -> ret isfinite(num)
+	#inline fun is_inf(num: f32): bool -> ret isinf(num)
+	#inline fun is_nan(num: f32): bool -> ret isnan(num)
+	#inline fun is_normal(num: f32): bool -> ret isnormal(num)
+}

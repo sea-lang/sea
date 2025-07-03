@@ -1,0 +1,66 @@
+pkg math {
+	// Basic functions
+
+	fun abs_f64(number: f64): f64 {
+		if number > 0 -> ret number
+		else -> ret -number
+	}
+
+	fun max_f64(a: f64, b: f64): f64 {
+		if a > b -> ret a
+		else -> ret b
+	}
+
+	fun min_f64(a: f64, b: f64): f64 {
+		if a < b -> ret a
+		else -> ret b
+	}
+
+	// Exponential functions
+
+	#inline fun exp_f64(num: f64): f64 -> ret exp(num)
+	#inline fun exp2_f64(num: f64): f64 -> ret exp2(num)
+	#inline fun log_f64(num: f64): f64 -> ret log(num)
+	#inline fun log2_f64(num: f64): f64 -> ret log2(num)
+	#inline fun log10_f64(num: f64): f64 -> ret log10(num)
+
+	// Power functions
+
+	#inline fun sqrt_f64(num: f64): f64 -> ret sqrt(num)
+	#inline fun cbrt_f64(num: f64): f64 -> ret cbrt(num)
+	#inline fun hypot_f64(a: f64, b: f64): f64 -> ret hypot(a, b)
+	#inline fun pow_f64(num: f64, pow: f64): f64 -> ret pow(num, pow)
+
+	// Trig functions
+
+	#inline fun sin_f64(num: f64): f64 -> ret sin(num)
+	#inline fun cos_f64(num: f64): f64 -> ret cos(num)
+	#inline fun tan_f64(num: f64): f64 -> ret tan(num)
+	#inline fun asin_f64(num: f64): f64 -> ret asin(num)
+	#inline fun acos_f64(num: f64): f64 -> ret acos(num)
+	#inline fun atan_f64(num: f64): f64 -> ret atan(num)
+	#inline fun atan2_f64(num: f64): f64 -> ret atan2(num)
+
+	// Hyperbolic functions
+
+	#inline fun sinh_f64(num: f64): f64 -> ret sinh(num)
+	#inline fun cosh_f64(num: f64): f64 -> ret cosh(num)
+	#inline fun tanh_f64(num: f64): f64 -> ret tanh(num)
+	#inline fun asinh_f64(num: f64): f64 -> ret asinh(num)
+	#inline fun acosh_f64(num: f64): f64 -> ret acosh(num)
+	#inline fun atanh_f64(num: f64): f64 -> ret atanh(num)
+
+	// Rounding
+
+	#inline fun ceil_f64(num: f64): f64 -> ret ceil(num)
+	#inline fun floor_f64(num: f64): f64 -> ret floor(num)
+	#inline fun trunc_f64(num: f64): f64 -> ret trunc(num)
+	#inline fun round_f64(num: f64): f64 -> ret round(num)
+
+	// Floating-point number magic
+
+	#inline fun is_f64_finite(num: f64): bool -> ret isfinite(num)
+	#inline fun is_f64_inf(num: f64): bool -> ret isinf(num)
+	#inline fun is_f64_nan(num: f64): bool -> ret isnan(num)
+	#inline fun is_f64_normal(num: f64): bool -> ret isnormal(num)
+}

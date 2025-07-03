@@ -32,6 +32,13 @@ performant, and portable code without needing to write C.
 - [Cyclone](https://cyclone.thelanguage.org), partially
 - [Go](https://go.dev)
 
+**Note:**
+
+Sea does _not_ aim to replace C. That's basically impossible. What _isn't_
+impossible is to make a language that makes working with programming at the
+C-level just a little less tedious. That's what Sea aims for, C but a little bit
+more modern.
+
 ## Usage
 
 At the moment, Sea is not in a feature-complete state, however if you want to

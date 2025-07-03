@@ -1,0 +1,46 @@
+use std/io
+use std/str
+
+pkg test {
+	rec Context(passed: int, failed: int)
+
+	fun test(con: ^test'Context, name: String, cond: bool) {
+		if cond {
+			con^.passed = con^.passed + 1
+			io'print("\x1b[32m[pass] ")
+			io'print(name)
+			io'println("\x1b[0m")
+		} else {
+			con^.failed = con^.failed + 1
+			io'print("\x1b[31m[fail] ")
+			io'print(name)
+			io'println("\x1b[0m")
+		}
+	}
+
+	fun series(con: ^test'Context, count: int, conditions: bool[]) {
+		for i in 0 to count {
+			var s = str'from_int(i + 1)
+			test'test(con, s, conditions[i])
+			str'free_string(ref s)
+		}
+	}
+
+	fun print_results(con: ^test'Context) {
+		io'println("----------")
+		if con^.failed == 0 {
+			printf(c"\x1b[1;32mall %d tests passed\x1b[0m\n", con^.passed + con^.failed)
+		} else {
+			printf(c"\x1b[1;31m%d/%d tests failed\x1b[0m\n", con^.failed, con^.passed + con^.failed)
+		}
+	}
+
+	fun assert(cond: bool, message: String) {
+		if not cond {
+			var msg = str'concat("assert failed: ", message)
+			io'eprintln(msg)
+			str'free_string(ref msg) // concat allocates a new string
+			exit(1)
+		}
+	}
+}

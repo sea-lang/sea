@@ -88,23 +88,26 @@ pub fn infer_type_of_node(compiler: &Compiler, node: &Node) -> Result<SeaType, S
         },
         NodeKind::ExprInvoke { left, params: _ } => match &left.node {
             NodeKind::ExprIdentifier(id) => {
-                let sym = compiler.symbols.get_symbol(id.clone()).unwrap();
+                let sym = compiler.symbols.get_symbol(id.clone());
                 match sym {
-                    symbol::Symbol::Fun { params: _, rets } => rets.clone(),
-                    symbol::Symbol::Var { typ, mutable: _ } => {
-                        if typ.funptr_rets.is_some() {
-                            return Ok(typ.funptr_rets.as_ref().unwrap().as_ref().clone());
-                        } else {
-                            return Err(format!(
-                                "cannot invoke a non-function pointer variable: {id}"
-                            ));
+                    Some(sym) => match sym {
+                        symbol::Symbol::Fun { params: _, rets } => rets.clone(),
+                        symbol::Symbol::Var { typ, mutable: _ } => {
+                            if typ.funptr_rets.is_some() {
+                                return Ok(typ.funptr_rets.as_ref().unwrap().as_ref().clone());
+                            } else {
+                                return Err(format!(
+                                    "cannot invoke a non-function pointer variable: {id}"
+                                ));
+                            }
                         }
-                    }
-                    _ => {
-                        return Err(format!(
-                            "cannot invoke a non-function (or function pointer): {node}"
-                        ))
-                    }
+                        _ => {
+                            return Err(format!(
+                                "cannot invoke a non-function (or function pointer): {node}"
+                            ))
+                        }
+                    },
+                    _ => return Err(format!("no such identifier: {id}")),
                 }
             }
             _ => todo!(),

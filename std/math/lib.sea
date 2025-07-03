@@ -1,0 +1,3 @@
+pragma add_library("m")
+
+raw [ #include <math.h> ]

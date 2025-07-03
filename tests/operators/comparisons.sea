@@ -1,0 +1,45 @@
+use std/test
+
+fun main(): int {
+	var con = new test'Context(0, 0)
+	var C = ref con
+
+	var tests = [
+		// boolean literals
+		true,
+		not false,
+		// and
+		true and true,
+		not (true and false),
+		// or
+		true or true,
+		false or true,
+		true or false,
+		// eq
+		0 == 0,
+		1 == 1,
+		true == true,
+		false == false,
+		// neq
+		1 != 0,
+		0 != 1,
+		// gt
+		1 > 0,
+		not (0 > 1),
+		// lt
+		0 < 1,
+		not (1 < 0),
+		// gteq
+		1 >= 0,
+		1 >= 1,
+		// lteq
+		0 <= 1,
+		1 <= 1
+	]
+
+	test'series(C, 21, tests)
+	test'print_results(C)
+
+	if con.failed > 0 -> ret 1
+	else -> ret 0
+}

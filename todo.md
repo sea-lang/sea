@@ -19,6 +19,8 @@
 - [ ] Prevent common C vulnerabilities (buffer overflows, use-after-free, double-free, etc)
 - [ ] Cache compiled libraries
 - [ ] Contracts
+- [ ] `array.len`
+- [ ] **Optional** garbage collector
 
 - [ ] Make the compiler mean!
 

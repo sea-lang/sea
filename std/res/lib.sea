@@ -1,10 +1,10 @@
 pkg res {
 	/// Represents a potential error.
-	tag rec Result(
+	tag rec Res(
 		Err(why: String)
-		Ok()
+		Ok
 	)
 
-	fun is_ok(this: res'Result): bool -> ret this.kind == Ok
-	fun is_err(this: res'Result): bool -> ret this.kind == Err
+	fun is_ok(this: res'Res): bool -> ret this.kind == res'Res'Ok
+	fun is_err(this: res'Res): bool -> ret this.kind == res'Res'Err
 }

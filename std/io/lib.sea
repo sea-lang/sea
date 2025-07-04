@@ -15,6 +15,8 @@ pkg io {
 	**/
 	fun println(line: String) -> printf(c"%.*s\n", line.len, line.str)
 
+	fun flush() -> putc(`\n`, stdout)
+
 	/**
 	* Prints unformatted text to stderr.
 	*

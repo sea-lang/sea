@@ -1,0 +1,23 @@
+pkg chars {
+	#inline
+	fun is_whitespace(ch: char): bool {
+		switch ch {
+			fall case ` ` {}
+			fall case `\t` {}
+			fall case `\r` {}
+			fall case `\f` {}
+			fall case `\n` -> ret true
+			else -> ret false
+		}
+	}
+
+	#inline
+	fun is_digit(ch: char): bool {
+		ret ch >= `0` and ch <= `9`
+	}
+
+	#inline
+	fun to_int(ch: char): int {
+		ret ch - `0`
+	}
+}

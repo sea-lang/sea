@@ -1,10 +1,10 @@
 # Sea Guide
 
-> ![WARNING]
+> ![WARNING] \
 > This guide contains multiple `TODO` blocks, this is because Sea is still a
 > work-in-progress language! I do not recommend using it at the moment &gt;3
 
-> ![NOTE]
+> ![NOTE] \
 > This document assumes you already have programming knowledge!
 
 This guide's structure is based on V's documentation/guide:
@@ -21,7 +21,7 @@ Technically it was designed with game development in mind since I made Sea with
 the intent of using it in my games, however it has since grown from just that.
 
 Sea is intentionally quite minimal, it provides you with more than C but less
-than, say, C++.
+than C++ or Rust.
 
 Despite this minimalism, Sea is very capable. You can embed raw C code and use
 any C libraries directly in Sea _without needing bindings_.
@@ -68,6 +68,7 @@ You can run this using `sea compile --run main.sea` (or `sea c -r main.sea`).
   - [Arrays](#arrays)
     - [Multidimensional Arrays](#multidimensional-arrays)
     - [Fixed-Size Arrays](#fixed-size-arrays)
+- [Operators](#operators)
 - [Modules](#modules)
 - [Packages](#packages)
 - [Statements](#statements)
@@ -88,6 +89,7 @@ You can run this using `sea compile --run main.sea` (or `sea c -r main.sea`).
 - [Documentation](#documentation)
 - [Sandbox](#sandbox)
 - [Pragmas](#pragmas)
+- [CLI Usage](#cli-usage)
 
 ## Hello World
 
@@ -143,18 +145,20 @@ fun main(): int {
 }
 ```
 
-> ![NOTE]
+> ![NOTE] \
 > Sea does not support function overloading.
 
-> ![WARNING] ![TODO]
+> ![WARNING] ![TODO] \
 > Since C does not guarantee parameter evaluation order, Sea does not either.
 > This will change in the future!
 
 ## Symbol Visibility
 
 Sea doesn't have a distinction between public and private functions. To denote
-a "private" function/variable/etc, you should prefix its name with a dollar
-sign (`$`).
+a "private" function/variable/etc, you should prefix its name with an underscore
+(`_`).
+
+You can also use an `_internal` package (see [Packages](#packages)).
 
 ## Variables
 
@@ -302,6 +306,35 @@ let grid = [
 ```sea
 let numbers: int[5] = [ 0, 1, 2, 3, 4 ]
 ```
+
+## Operators
+
+```
+Math operators:
+  +   add
+  -   subtract
+  *   multiply
+  /   divide
+  %   modulo
+
+Comparisons:
+  ==   Equal to
+  !=   Not equal to
+  >    Greater than
+  >=   Greater than or equal to
+  <    Less than
+  <=   Less than or equal to
+
+Boolean ops:
+  and   Boolean and
+  or    Boolean or
+
+Misc:
+  .    Property/field accessor
+  as   Type casting
+```
+
+For bitwise operations, see the `std/bit` module.
 
 ## Modules
 
@@ -495,9 +528,6 @@ for true {
 for 0 to 5 -> println("Hello, World!")
 ```
 
-> ![TODO]
-> Finish implementation for `each/in` and document here
-
 ### `defer`
 
 Defer is a statement that lets you execute code in the future. It's useful for
@@ -521,7 +551,10 @@ fun main(): int {
 If we `ret` early then `x` will be free'd there too. This also extends to any
 function marked with `#noret`.
 
-> ![WARNING]
+> ![NOTE] \
+> `continue` and `break` statements will also cause defers to "trigger."
+
+> ![WARNING] \
 > If a function _might_ exit and is not marked with `#noret`, then deferred code
 > **will not get executed**. Generally, a function should avoid conditionally
 > exiting anyway.
@@ -945,4 +978,25 @@ Here's a list of all pragmas:
 add_cc_flag(flag: String) // Add a flag to the C compiler
 add_library(link: String) // Add a link (`-l`) to CC flags
 add_include_dir(dir: String) // Add an include directory to CC flags, relative to the current file's directory
+```
+
+## CLI Usage
+
+```
+sea -h --help                  Prints help
+
+sea compile|c <input>          Compile the provided file
+    -o --output <output>       The path to the output file
+    -r --run                   Execute the program after compilation
+    -p --prod                  Toggle optimizations for production builds
+    -c --cc <cc>               The C compiler to build with
+    -f --ccflags <ccflags>     Arguments for the C compiler
+    -l --libpaths <libpaths>   Paths to search for libraries
+    -s --std <std>             Path to the standard library
+    -S --nostd                 Disable implicit `use std`
+    --print-ast                Print the AST
+    -n --nobuild               Skip C compilation
+
+sea sandbox|s                  Open a Sea sandbox
+    -s --std <std>             Path to the standard library
 ```

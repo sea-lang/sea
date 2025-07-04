@@ -114,7 +114,7 @@ pub fn infer_type_of_node(compiler: &Compiler, node: &Node) -> Result<SeaType, S
                             ))
                         }
                     },
-                    _ => return Err(format!("no such identifier: {id}")),
+                    _ => return Err(format!("no such function: {id}")),
                 }
             }
             _ => todo!(),

@@ -29,7 +29,7 @@ pkg math {
 	#inline fun sqrt(num: f32): f32 -> ret sqrtf(num)
 	#inline fun cbrt(num: f32): f32 -> ret cbrtf(num)
 	#inline fun hypot(a: f32, b: f32): f32 -> ret hypotf(a, b)
-	#inline fun pow(num: f32, pow: f32): f32 -> ret powf(num, pow)
+	#inline fun pow(num: f32, power: f32): f32 -> ret powf(num, power)
 
 	// Trig functions
 
@@ -39,7 +39,7 @@ pkg math {
 	#inline fun asin(num: f32): f32 -> ret asinf(num)
 	#inline fun acos(num: f32): f32 -> ret acosf(num)
 	#inline fun atan(num: f32): f32 -> ret atanf(num)
-	#inline fun atan2(num: f32): f32 -> ret atan2f(num)
+	#inline fun atan2(x: f32, y: f32): f32 -> ret atan2f(x, y)
 
 	// Hyperbolic functions
 

@@ -21,6 +21,9 @@
 - [ ] Contracts
 - [ ] `array.len`
 - [ ] **Optional** garbage collector
+- [ ] Automatically forward declare structs, functions, etc
+- [ ] Revisit doc comment syntax
+- [ ] Header file generation?
 
 - [ ] Make the compiler mean!
 

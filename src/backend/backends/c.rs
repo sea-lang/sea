@@ -337,7 +337,7 @@ impl<'a, 'b> CBackend<'a, 'b> {
     ) {
         for hashtag in tags.clone() {
             match hashtag {
-                FunTags::NoRet => self.ws("noreturn "), // TODO: noreturn is compiler-specific.
+                FunTags::NoRet => self.ws("noreturn "), // TODO: is noreturn compiler-specific?
                 FunTags::Extern => unimplemented!(),
                 FunTags::Inline => self.ws("inline "),
                 FunTags::Static => self.ws("static "),
@@ -389,20 +389,22 @@ impl<'a, 'b> CBackend<'a, 'b> {
         for hashtag in tags.clone() {
             match hashtag {
                 RecTags::Union => is_union = true,
-                RecTags::Static => self.ws("static "),
+                RecTags::Static => self.ws("static "), //todo: can structs even be static??? is it ever used if so???
             }
         }
 
+        // Write a forward declaration
         self.ws("typedef ");
-
-        if is_union {
-            self.ws("union ");
-        } else {
-            self.ws("struct ");
-        }
-
+        self.ws(if is_union { "union " } else { "struct " });
         self.ws(id.replace('\'', Self::NAMESPACE_SEP).as_str());
+        self.ws(" ");
+        self.ws(id.replace('\'', Self::NAMESPACE_SEP).as_str());
+        self.ws(";\n");
 
+        // Write the struct declaration
+        self.ws("typedef ");
+        self.ws(if is_union { "union " } else { "struct " });
+        self.ws(id.replace('\'', Self::NAMESPACE_SEP).as_str());
         self.ws("{\n");
         for (field_name, field_type) in &fields {
             self.ws("\t");
@@ -650,7 +652,7 @@ impl<'a, 'b> CBackend<'a, 'b> {
     }
 
     pub fn expr_number(&mut self, number: String) {
-        self.ws(number.as_str());
+        self.ws(&number.as_str().replace('_', ""));
     }
 
     pub fn expr_string(&mut self, string: String) {
@@ -858,11 +860,13 @@ impl<'a, 'b> CBackend<'a, 'b> {
                 self.named_typ_from_node(name.clone(), typ.clone());
                 SeaType::from_node(typ).unwrap()
             }
-            _ => {
-                let t = infer_type_of_node(&self.compiler, &value).unwrap();
-                self.named_typ_from_seatype(name.clone(), t.clone());
-                t
-            }
+            _ => match infer_type_of_node(&self.compiler, &value) {
+                Ok(it) => {
+                    self.named_typ_from_seatype(name.clone(), it.clone());
+                    it
+                }
+                Err(why) => self.throw(CompilerError::InferenceError(why), None),
+            },
         };
         self.ws(" = ");
         self.write(value);
@@ -985,6 +989,14 @@ impl<'a, 'b> Backend for CBackend<'a, 'b> {
                 to,
                 expr,
             } => self.stat_for_range(var, *from, *to, *expr),
+            NodeKind::StatContinue => {
+                self.write_deferred(false, false);
+                self.ws("continue;");
+            }
+            NodeKind::StatBreak => {
+                self.write_deferred(false, false);
+                self.ws("break;");
+            }
             NodeKind::StatDefer(expr) => self.stat_defer(*expr),
             NodeKind::StatExpr(node) => {
                 // Get ready for some spaghetti.

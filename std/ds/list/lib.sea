@@ -1,0 +1,114 @@
+use std/io
+
+pkg list {
+	/**
+	* A simple dynamic array implementation.
+	*
+	* Use <make_list> for instantiation.
+	*
+	* Params:
+	*  bump: f32    - How much to multiply the length by when the list needs to grow.
+	*  esize: usize - The size of each element in the array. Do not mutate this!
+	*  len: u32     - The current length of the array. Do not mutate this!
+	*  cap: u32     - The maximum length of the array. Do not mutate this!
+	*  data: ^Ant   -
+	*    Pointer to the first element of the array. Do not make other
+	*    pointers to this since it may move from <realloc> calls when the
+	*    array needs to grow.
+	**/
+	rec List(bump: f32, esize: usize, len: usize, cap: usize, data: ^Any)
+
+	/**
+	* Creates an empty <List>.
+	*
+	* Args:
+	*  initial_cap: u32    - The initial maximum size of the array. Must be `> 0`.
+	*  element_size: usize - The size of each element, i.e, `sizeof(String)`.
+	*  bump: f32           - How much to multiply `cap` by when the length exceeds it. `2` is a good default.
+	**/
+	fun make_list(initial_cap: u32, element_size: usize, bump: f32): ^list'List {
+		var list: ^list'List = malloc(sizeof(list'List))
+		if list == nil -> ret nil
+
+		list^.bump = bump
+		list^.esize = element_size
+		list^.len = 0
+		list^.cap = initial_cap
+
+		var data: ^Any = calloc(initial_cap, element_size)
+		list^.data = data
+		if data == nil {
+			free(list)
+			ret nil
+		}
+
+		ret list
+	}
+
+	fun make(element_size: usize): ^list'List -> ret list'make_list(8, element_size, 2)
+
+	/// Frees the given <'list>.
+	fun free(list: ^list'List) {
+		for i in 0 to list^.len -> free(list^.data[i])
+
+		free(list^.data)
+		free(list)
+	}
+
+	pkg _internal {
+		fun grow(list: ^list'List): bool {
+			var new_cap: usize = list^.cap * list^.bump
+
+			if new_cap < list^.cap -> ret false // overflow
+
+			var p: ^Any = calloc(new_cap, list^.esize)
+			if p == nil -> ret false
+
+			list^.cap = new_cap
+			list^.data = p
+			ret true
+		}
+	}
+
+	/// Gets the element in <'list> at <'index>, panics if <'index> is out of range.
+	/// **Pointers returned by this may move after calling <list_grow> or
+	/// <list_append>.**
+	fun get(list: ^list'List, index: int): Any {
+		if index > list^.len or index < 0 -> io'panic("index out of bounds")
+
+		ret list^.data[index]
+	}
+
+	#inline
+	fun raw_get(list: ^list'List, index: int): Any -> ret list^.data[index]
+
+	/// Appends <'it> to <'list>, growing if needed.
+	fun append(list: ^list'List, it: ^void) {
+		if list^.len + 1 > list^.cap -> list'_internal'grow(list)
+
+		list^.data[list^.len] = it
+
+		list^.len = list^.len + 1
+	}
+
+	/// Pops the latest element in <'list> and returns it, panics if `<'list>.len == 0`
+	fun pop(list: ^list'List): Any {
+		if list^.len == 0 -> io'panic("cannot pop empty list")
+
+		list^.len = list^.len - 1
+
+		ret list'raw_get(list, list^.len)
+	}
+
+	/// Set the element in <'list> at <'index> to <'it>, panics if <'index> is out of range.
+	fun set(list: ^list'List, index: usize, it: Any) {
+		if index > list^.len or index < 0 -> io'panic("index out of bounds")
+
+		list^.data[index] = it
+	}
+
+	#inline
+	fun raw_set(list: ^list'List, index: usize, it: Any) {
+		list^.data[index] = it
+	}
+}

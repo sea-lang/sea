@@ -754,6 +754,22 @@ impl<'a> Parser<'a> {
         }
     }
 
+    pub fn parse_continue(&mut self) -> Node {
+        Node {
+            line: self.token.line,
+            column: self.token.column,
+            node: NodeKind::StatContinue,
+        }
+    }
+
+    pub fn parse_break(&mut self) -> Node {
+        Node {
+            line: self.token.line,
+            column: self.token.column,
+            node: NodeKind::StatBreak,
+        }
+    }
+
     pub fn parse_defer(&mut self) -> Node {
         let line = self.token.line;
         let column = self.token.column;
@@ -791,6 +807,8 @@ impl<'a> Parser<'a> {
             _ if self.accept(TokenKind::KwIf) => self.parse_if(),
             _ if self.accept(TokenKind::KwSwitch) => self.parse_switch(),
             _ if self.accept(TokenKind::KwFor) => self.parse_for(),
+            _ if self.accept(TokenKind::KwContinue) => self.parse_continue(),
+            _ if self.accept(TokenKind::KwBreak) => self.parse_break(),
             _ if self.accept(TokenKind::KwDefer) => self.parse_defer(),
             _ if self.accept(TokenKind::KwRaw) => self.parse_raw(),
             // if nothing works, we'll try to parse an expression, and if *that* doesn't work, then we have a syntax error

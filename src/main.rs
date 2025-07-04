@@ -16,8 +16,8 @@ pub mod util;
 mod flags {
     use std::path::PathBuf;
 
-    xflags::xflags!(
-        cmd app {
+    xflags::xflags! {
+        cmd sea {
             cmd compile c {
                 /// The file to compile
                 required input: PathBuf
@@ -45,9 +45,11 @@ mod flags {
                 optional -n, --nobuild
             }
             cmd sandbox s {
+                /// Path to the standard library
+                optional -s, --std std: String
             }
         }
-    );
+    }
 }
 
 fn throw(msg: &str) -> ! {
@@ -126,30 +128,19 @@ fn compile(flags: flags::Compile) {
     }
 }
 
-fn sandbox(_flags: flags::Sandbox) {
+fn sandbox(flags: flags::Sandbox) {
     let mut sandbox = sandbox::Sandbox::new();
+    sandbox.libpaths.push(PathBuf::from(
+        flags.std.unwrap_or_else(|| "~/.sea/std/".to_string()),
+    ));
     sandbox.start();
 }
 
 fn main() {
-    let flags = flags::App::from_env_or_exit();
+    let flags = flags::Sea::from_env_or_exit();
 
     match flags.subcommand {
-        flags::AppCmd::Compile(args) => compile(args),
-        flags::AppCmd::Sandbox(args) => sandbox(args),
+        flags::SeaCmd::Compile(args) => compile(args),
+        flags::SeaCmd::Sandbox(args) => sandbox(args),
     }
-
-    // let mut lexer = make_lexer(PathBuf::new(), &code);
-    // while let Some(tok) = lexer.next_token() {
-    //     println!("tok: {:?}", tok);
-    // }
-
-    // let expr = "thing(1 + 2, -3 + 4)^.2".to_string();
-    // println!("Expression: {expr}");
-    // let mut expr_parser = Parser::make_parser(make_lexer(PathBuf::new(), &expr));
-    // expr_parser.advance();
-    // println!(
-    //     "Polish Notation: {}",
-    //     PolishNodeTree::from_node(expr_parser.parse_expression()).unwrap()
-    // );
 }

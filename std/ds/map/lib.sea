@@ -1,0 +1,127 @@
+use std/bit
+use std/str
+
+// implementation based on https://benhoyt.com/writings/hash-table-in-c/
+pkg map {
+	rec Entry(key: String, val: Any)
+	rec Map(len: usize, cap: usize, data: ^map'Entry)
+
+	fun make_with_initial_cap(cap: usize): ^map'Map {
+		var map: ^map'Map = malloc(sizeof(map'Map))
+		if map == nil -> ret nil
+		map^.len = 0
+		map^.cap = cap
+		map^.data = calloc(cap, sizeof(map'Entry))
+		if map^.data == nil {
+			free(map)
+			ret nil
+		}
+		ret map
+	}
+
+	fun make(): ^map'Map -> ret map'make_with_initial_cap(8)
+
+	fun free(map: ^map'Map) {
+		// for i: usize in 0 to map^.cap { // TODO
+		for i in 0 to map^.cap {
+			if map^.data[i].key.own {
+				str'free_string(ref (map^.data[i].key))
+			}
+		}
+		free(map^.data)
+		free(map)
+	}
+
+	pkg _internal {
+		fun set(data: ^map'Entry, cap: usize, key: String, val: Any, length_ptr: ^usize): bool {
+			var index: usize = bit'and_u64(key.hash, cap - 1) as usize
+
+			for not str'is_nil_str(data[index].key) {
+				if str'strings_equal(key, data[index].key) {
+					// update existing value
+					data[index].val = val
+					ret true
+				}
+				index = index + 1
+				if index >= cap {
+					index = 0
+				}
+			}
+
+			// didn't find key
+			if length_ptr != nil {
+				length_ptr = length_ptr + 1
+			}
+			data[index].key = key
+			data[index].val = val
+			ret true
+		}
+
+		fun grow(map: ^map'Map): bool {
+			var new_cap: usize = map^.cap * 2
+			if new_cap < map^.cap -> ret false // overflow
+
+			var new_data: ^map'Entry = calloc(new_cap, sizeof(map'Entry))
+			if new_data == nil -> ret false
+
+			// move entries from old map to new map
+			for i in 0 to map^.cap {
+				let entry: map'Entry = map^.data[i]
+				if not str'is_nil_str(entry.key) {
+					map'_internal'set(new_data, new_cap, entry.key, entry.val, nil)
+				}
+			}
+
+			free(map^.data)
+			map^.data = new_data
+			map^.cap = new_cap
+			ret true
+		}
+	}
+
+	fun get(map: ^map'Map, key: String): Any {
+		var index: usize = bit'and_u64(key.hash, map^.cap - 1) as usize
+
+		for not str'is_nil_str(map^.data[index].key) {
+			if str'strings_equal(key, map^.data[index].key) {
+				ret map^.data[index].val
+			}
+			index = index + 1
+			if index >= map^.cap {
+				index = 0
+			}
+		}
+
+		ret nil
+	}
+
+	fun set(map: ^map'Map, key: String, val: Any): bool {
+		if map^.len >= map^.cap / 2 {
+			if not map'_internal'grow(map) {
+				ret false
+			}
+		}
+
+		ret map'_internal'set(map^.data, map^.cap, key, val, ref (map^.len))
+	}
+
+	fun print(map: ^map'Map) {
+		io'print("{ ")
+		var it: ^map'Entry = nil
+		for i in 0 to map^.cap {
+			it = ref (map^.data[i])
+			if not str'is_nil_str(it^.key) {
+				io'print("'")
+				io'print(it^.key)
+				io'print("'=")
+				printf(c"%p, ", it^.val)
+			}
+		}
+		io'print("}")
+	}
+
+	fun println(map: ^map'Map) {
+		map'print(map)
+		io'flush()
+	}
+}

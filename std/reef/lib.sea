@@ -1,0 +1,56 @@
+use std/str
+use std/io
+use std/ds/map
+use std/fs
+
+pkg reef {
+	tag rec Val(
+		Err,
+		Str(val: String),
+		Int(val: i64),
+		Bool(val: bool),
+	)
+
+	fun val_from_str(str: String): reef'Val {
+		if str'starts_with(str, "\"") {
+			let str_value_view = str'slice(str, 1, str.len - 1)
+			let str_value = str'copy_string(str_value_view.len, str_value_view.str)
+			ret new reef'Val(reef'Val'Str, str_value)
+		} else if str'strings_equal(str, "true") {
+			ret new reef'Val(reef'Val'Bool, true)
+		} else if str'strings_equal(str, "false") {
+			ret new reef'Val(reef'Val'Bool, false)
+		} else if str'is_int(str) {
+			ret new reef'Val(reef'Val'Int, str'to_int(str))
+		} else {
+			ret new reef'Val(reef'Val'Err)
+		}
+	}
+
+	fun parse(text: String): ^map'Map {
+		var doc = map'make()
+
+		var lines = str'split_lines(text)
+		defer -> list'free(lines)
+		var line: String = ""
+		for i in 0 to lines^.len {
+			line = list'get(lines, i)
+			let p = str'trim_whitespace(line)
+			defer -> free(p)
+			// skip empty lines and comments
+			if str'strings_equal(p, "") or str'starts_with(p, "#") {
+				continue
+			}
+
+			let key_str = str'slice(str, 0, str'find(str, `=`))
+			let val_str = str'slice(str, str'find(str, `=`), str.end)
+			var val: ^reef'Val = malloc(sizeof(reef'Val))
+			val^ = reef'val_from_str(val_str)
+			map'set(doc, key_str, val)
+		}
+
+		ret doc
+	}
+
+	fun parse_file(path: String): ^map'Map -> ret reef'parse(fs'read_file(path))
+}

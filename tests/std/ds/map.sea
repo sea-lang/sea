@@ -1,0 +1,33 @@
+use std/test
+use std/ds/map
+
+fun main(): int {
+	var con = new test'Context(0, 0)
+
+	var C = ref con
+
+	var name = "Gandalf"
+	var age = 50_000
+	var class = "Wizard"
+
+	var map = map'make()
+	defer -> map'free(map)
+
+	if not map'set(map, "name", (ref name) as Any) -> io'panic("failed to set `name`")
+	if not map'set(map, "age", (ref age) as Any) -> io'panic("failed to set `age`")
+	if not map'set(map, "class", (ref class) as Any) -> io'panic("failed to set `class`")
+
+	map'println(map)
+
+	io'print("name = ")
+	io'println((map'get(map, "name") as ^String)^)
+
+	test'test(C, "name == Gandalf", str'strings_equal((map'get(map, "name") as ^String)^, "Gandalf"))
+	test'test(C, "age == 50000", (map'get(map, "age") as ^int)^ == 50_000)
+	test'test(C, "class == Wizard", str'strings_equal((map'get(map, "class") as ^String)^, "Wizard"))
+
+	test'print_results(C)
+
+	if con.failed > 0 -> ret 1
+	else -> ret 0
+}

@@ -1,4 +1,3 @@
-use std/res
 use std/str
 use std/io
 

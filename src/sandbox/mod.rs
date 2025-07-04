@@ -173,6 +173,7 @@ pub struct Sandbox {
     pub replace_lines: bool,
     pub output_path: PathBuf,
     pub c_output_path: PathBuf,
+    pub libpaths: Vec<PathBuf>,
 }
 
 impl Sandbox {
@@ -219,7 +220,7 @@ impl Sandbox {
                                     break;
                                 }
                             }
-                            None => break,
+                            _ => break,
                         }
                     }
                     if !buf.is_empty() {
@@ -252,7 +253,7 @@ impl Sandbox {
         let mut compiler = Compiler::new(
             self.output_path.clone(),
             self.c_output_path.clone(),
-            vec![], //TODO
+            self.libpaths.clone(),
             parser,
         );
         let mut backend = CBackend::new(&mut compiler);
@@ -359,6 +360,7 @@ impl Sandbox {
             replace_lines: false,
             output_path: PathBuf::from(".sea/sandbox/program"),
             c_output_path: PathBuf::from(".sea/sandbox/program.c"),
+            libpaths: vec![],
         }
     }
 }

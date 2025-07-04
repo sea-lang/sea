@@ -1,0 +1,41 @@
+// Reef is a tiny config file format built into Sea. It's designed to be minimal
+// and only supports basic entries. For Sea's purposes, this is plenty, for
+// yours, Reef might not be the best choice.
+// Reef's implementation is 57 lines (including whitespace). It's *tiny*
+
+use std/io
+use std/ds/map
+use std/reef
+
+fun main(): int {
+	let doc = "
+		# Reef supports strings, integers, and booleans. That's it :P
+		name = \"Gandalf\"
+		age = 50000
+		wizard = true
+		evil = false
+	"
+
+	let doc = reef'parse(doc)
+	defer -> map'free(doc)
+
+	let name_val = (map'get(doc, "name") as ^reef'Val)^
+	io'print("name = ")
+	io'println(name_val.Str.val)
+
+	let age_val = (map'get(doc, "age") as ^reef'Val)^
+	io'print("age = ")
+	let s = str'from_int(name_val.Int.val)
+	io'println(s)
+	free(s)
+
+	let wizard_val = (map'get(doc, "wizard") as ^reef'Val)^
+	if wizard_val.Bool.val -> io'println("wizard = true")
+	else -> io'println("wizard = false")
+
+	let evil_val = (map'get(doc, "evil") as ^reef'Val)^
+	if evil_val.Bool.val -> io'println("evil = true")
+	else -> io'println("evil = false")
+
+	ret 0
+}

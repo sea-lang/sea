@@ -29,7 +29,7 @@ pkg math {
 	#inline fun sqrt_f64(num: f64): f64 -> ret sqrt(num)
 	#inline fun cbrt_f64(num: f64): f64 -> ret cbrt(num)
 	#inline fun hypot_f64(a: f64, b: f64): f64 -> ret hypot(a, b)
-	#inline fun pow_f64(num: f64, pow: f64): f64 -> ret pow(num, pow)
+	#inline fun pow_f64(num: f64, power: f64): f64 -> ret pow(num, power)
 
 	// Trig functions
 
@@ -39,7 +39,7 @@ pkg math {
 	#inline fun asin_f64(num: f64): f64 -> ret asin(num)
 	#inline fun acos_f64(num: f64): f64 -> ret acos(num)
 	#inline fun atan_f64(num: f64): f64 -> ret atan(num)
-	#inline fun atan2_f64(num: f64): f64 -> ret atan2(num)
+	#inline fun atan2_f64(x: f64, y: f64): f64 -> ret atan2(x, y)
 
 	// Hyperbolic functions
 

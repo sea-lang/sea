@@ -72,6 +72,8 @@ pub enum TokenKind {
     KwFor,
     KwEach, // todo
     KwOf,   // todo
+    KwContinue,
+    KwBreak,
     KwDefer,
     KwNew,
     KwRef,

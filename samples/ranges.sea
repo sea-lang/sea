@@ -2,4 +2,14 @@ use std/io
 
 fun main(): int {
 	for i in 0 to 10 -> io'println("Hi!")
+
+	for i in 0 to 10 {
+		if i > 5 -> continue
+		io'println("Asdf")
+	}
+
+	for i in 0 to 10 {
+		if i == 3 -> break
+		io'println("Fdsa")
+	}
 }

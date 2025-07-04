@@ -17,7 +17,7 @@ pkg math {
 	}
 
 	/// Get the amount of digits in the provided number.
-	// fun count_digits(number: int): int {
-	// 	ret math'ceil(math'log((math'abs(number) + 1) as f32))
+	// fun count_digits(number: int): u32 {
+	// 	ret math'ceil(math'log((math'abs(number) + 1) as f32)) as u32
 	// }
 }

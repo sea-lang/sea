@@ -36,6 +36,8 @@ static KEYWORDS: LazyLock<HashMap<&str, TokenKind>> = LazyLock::new(|| {
         ("for", TokenKind::KwFor),
         ("each", TokenKind::KwEach),
         ("of", TokenKind::KwOf),
+        ("continue", TokenKind::KwContinue),
+        ("break", TokenKind::KwBreak),
         ("defer", TokenKind::KwDefer),
         ("new", TokenKind::KwNew),
         ("ref", TokenKind::KwRef),
@@ -118,7 +120,7 @@ impl<'a> Lexer<'a> {
         Token {
             kind,
             start: self.start,
-            column: self.column - (self.pos - self.start),
+            column: self.column, // - (self.pos - self.start),
             len: self.pos - self.start,
             text: self.buffer.clone(),
             line: self.line,

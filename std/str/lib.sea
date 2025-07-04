@@ -1,4 +1,6 @@
 use std/math
+use std/ds/list
+use std/chars
 
 pkg str {
 	/**
@@ -81,7 +83,9 @@ pkg str {
 		ret clone
 	}
 
-	fun nil(): String -> ret new String(false, 0, 0, nil)
+	fun nil_str(): String -> ret new String(false, 0, 0, nil)
+
+	fun is_nil_str(str: String): bool -> ret str.str == nil
 
 	/// Frees the given string's characters, if it owns them.
 	fun free_string(string: ^String) -> if string^.own -> free(string^.str)
@@ -97,6 +101,7 @@ pkg str {
 
 	/// Compares <'a> and <'b> character-by-character and returns true if the
 	/// strings are equal.
+	// TODO: Rename to compare
 	fun strings_equal(a: String, b: String): bool {
 		if a.len != b.len -> ret false
 
@@ -107,25 +112,40 @@ pkg str {
 		ret true
 	}
 
+	/// Returns true if <'a> and <'b> are of the same length and have the
+	/// same hash.
+	// TODO: Rename to compare_hashes
+	#inline
+	fun compare(a: String, b: String): bool ->
+		ret a.len == b.len and a.hash == b.hash
+
+	/// Finds the first <'ch> in the provided <String> starting from <'from>,
+	/// returning the index of the first occurrence or -1 if not found.
+	fun find_from(a: String, ch: char, from: int): int {
+		for i in from to a.len {
+			if a.str[i] == ch -> ret i
+		}
+
+		ret -1
+	}
+
 	/// Finds the first <'ch> in the provided <String>, returning the index of the
 	/// first occurrence or -1 if not found.
-	fun find(a: String, ch: char): int {
-		for i in 0 to a.len {
+	fun find(a: String, ch: char): int -> ret str'find_from(a, ch, 0)
+
+	/// Finds the last <'ch> in the provided <String> starting at <'from>,
+	/// returning the index of the first occurrence or -1 if not found.
+	fun rfind_from(a: String, ch: char, from: int): int {
+		for var i = from ; i > 0 ; inc(ref i) {
 			if a.str[i] == ch -> ret i
 		}
 
 		ret -1
 	}
 
-	/// Finds the last <'ch> in the provided <String>, returning the index of the
-	/// first occurrence or -1 if not found.
-	fun rfind(a: String, ch: char): int {
-		for var i = a.len ; i > 0 ; inc(ref i) {
-			if a.str[i] == ch -> ret i
-		}
-
-		ret -1
-	}
+	/// Finds the last <'ch> in the provided <String>, returning the index
+	/// of the first occurrence or -1 if not found.
+	fun rfind(a: String, ch: char): int -> ret str'rfind_from(a, ch, a.len)
 
 	/**
 	 * Returns a substring of the given string as a string **view**. Mutating the
@@ -149,6 +169,18 @@ pkg str {
 		ret str'string_view(end - start, ref (a.str[start]))
 	}
 
+	fun is_int(str: String): bool {
+		if str.len == 0 -> ret false
+
+		for i in 0 to str.len {
+			if not chars'is_digit(str.str[i]) {
+				ret false
+			}
+		}
+
+		ret true
+	}
+
 	/**
 	 * Get a null-terminated string representation of the given number. The
 	 * string is owned by the caller.
@@ -156,11 +188,77 @@ pkg str {
 	fun from_int(number: int): String {
 		if number == 0 -> ret "0"
 
-		let len: int = math'ceil(math'log((math'abs(number) + 1) as f32)) + 1 // add 1 for \0
+		let len: int = math'ceil(math'log10((math'abs(number) + 1) as f32)) + 1 // add 1 for \0
 		// let len = math'count_digits(number) + 1 // add 1 for \0
 		var buf: ^char = malloc(sizeof(char) * len)
 		snprintf(buf, len, c"%d", number)
 		buf[len] = `\0`
-		ret str'take_string(len, buf)
+		ret str'take_string(len - 1, buf)
+	}
+
+	fun to_int(str: String): int {
+		if str.len == 0 -> ret 0
+
+		var res = 0
+		var mult = 1
+		for var i: i32 = str.len - 1 ; i >= 0 ; i = i - 1 {
+			res = res + chars'to_int(str.str[i]) * mult
+			mult = mult * 10
+		}
+
+		ret res
+	}
+
+	fun split_ch(str: String, ch: char): ^list'List {
+		var list = list'make(sizeof(String))
+
+		var prev = 0
+		var i = 0
+		for true {
+			prev = i
+			i = str'find_from(str, ch, i)
+
+			if i == -1 {
+				var s: ^String = malloc(sizeof(String))
+				s^ = str'slice(str, prev, str.len)
+				list'append(list, s as Any)
+				break
+			}
+
+			var s: ^String = malloc(sizeof(String))
+			s^ = str'slice(str, prev, i)
+			list'append(list, s)
+		}
+
+		ret list
+	}
+
+	fun split_lines(str: String): ^list'List -> ret str'split_ch(str, `\n`)
+
+	fun trim_whitespace(str: String): String {
+		var start = 0
+		var end = str.len
+		for true {
+			if not chars'is_whitespace(str.str[start]) {
+				break
+			}
+			start = start + 1
+		}
+		for true {
+			if not chars'is_whitespace(str.str[end]) {
+				break
+			}
+			end = end - 1
+		}
+		ret str'slice(str, start, end)
+	}
+
+	fun starts_with(str: String, with: String): bool {
+		for i in 0 to with.len {
+			if str.str[i] != with.str[i] {
+				ret false
+			}
+		}
+		ret true
 	}
 }

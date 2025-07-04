@@ -27,4 +27,7 @@ pub enum CompilerError {
 
     #[error("statement not allowed at top level")]
     StatementNotAllowedAtTopLevel(),
+
+    #[error("type inference error: {0}")]
+    InferenceError(String),
 }

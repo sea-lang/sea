@@ -88,6 +88,8 @@ pub enum NodeKind {
         expr: Box<Node>,
     },
     // StatForIn {},
+    StatContinue,
+    StatBreak,
     StatDefer(Box<Node>),
     StatExpr(Box<Node>),
     // Expressions

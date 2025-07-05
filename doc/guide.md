@@ -68,9 +68,6 @@ You can run this using `sea compile --run main.sea` (or `sea c -r main.sea`).
   - [Arrays](#arrays)
     - [Multidimensional Arrays](#multidimensional-arrays)
     - [Fixed-Size Arrays](#fixed-size-arrays)
-- [Operators](#operators)
-- [Modules](#modules)
-- [Packages](#packages)
 - [Statements](#statements)
   - [if/else](#ifelse)
   - [switch/case](#switchcase)
@@ -84,6 +81,8 @@ You can run this using `sea compile --run main.sea` (or `sea c -r main.sea`).
   - [Tags](#tags)
   - [Tagged Records](#tagged-records)
   - [Type Aliases](#type-aliases)
+- [Modules](#modules)
+- [Packages](#packages)
 - [Raw C Code](#raw-c-code)
 - [Builtins](#builtins)
 - [Documentation](#documentation)
@@ -277,7 +276,7 @@ let a_double: f64 = 3.14192
 ### Arrays
 
 ```sea
-let the_fellowship = [
+var the_fellowship = [
 	"Frodo",
 	"Sam",
 	"Merry",
@@ -294,7 +293,7 @@ fun main(): int {
 	io'println(the_fellowship[2]) // "Merry"
 
 	the_fellowship[0] = "Bilbo"
-	println(the_fellowship[0]) // "Bilbo"
+	io'println(the_fellowship[0]) // "Bilbo"
 }
 ```
 
@@ -317,136 +316,6 @@ let grid = [
 
 ```sea
 let numbers: int[5] = [ 0, 1, 2, 3, 4 ]
-```
-
-## Operators
-
-```
-Math operators:
-  +   add
-  -   subtract
-  *   multiply
-  /   divide
-  %   modulo
-
-Comparisons:
-  ==   Equal to
-  !=   Not equal to
-  >    Greater than
-  >=   Greater than or equal to
-  <    Less than
-  <=   Less than or equal to
-
-Boolean ops:
-  and   Boolean and
-  or    Boolean or
-
-Misc:
-  .    Property/field accessor
-  as   Type casting
-```
-
-For bitwise operations, see the `std/bit` module.
-
-## Modules
-
-```sea
-// ./library/lib.sea
-use std/io
-
-fun library_fun() {
-	println("Hello, World!")
-}
-
-// ./main.sea
-use library
-
-fun main(): int {
-	library_fun()
-}
-```
-
-For further organization, you can do the following:
-
-```sea
-/* File structure:
- * main.sea
- * library/
- *  lib.sea
- *  api.sea
-**/
-
-// ./library/lib.sea
-let life = 42
-
-// ./library/api.sea
-fun get_life(): int -> ret life
-
-// ./main.sea
-use library/api
-
-fun main(): int -> ret get_life()
-```
-
-`library/lib.sea` gets implicitly imported.
-
-If you import `some/path/api`, then you'll import:
-
-```
-some/lib.sea (if exists)
-some/path/lib.sea (if exists)
-some/path/api.sea
-```
-
-> ![NOTE]
-> Module imports are always relative to your `main.sea`. You cannot use a `..`
-> in a `use` statement.
-
-## Packages
-
-Packages are a way of organizing your code and preventing name conflicts.
-
-Generally you should use packages for all modules so that you don't add to the
-global scope.
-
-```sea
-pkg life {
-	// Sea doesn't have privates, but you can use an `_internal` package to
-	// indicate to developers that they shouldn't interact with it.
-	pkg _internal {
-		let life = 42
-	}
-
-	fun get_life(): i32 {
-		// All references are from the global scope (equivalent to using
-		// a "fully qualified" name from Java or C#)
-		ret life'_internal'life
-	}
-}
-
-// You can flatten package names to avoid extraneous indent nesting.
-pkg life'_internal {
-	fun do_thing() {
-		// code
-	}
-}
-
-fun main(): int {
-	printf(c"The meaning of life, the universe, and everything is %d\n", life'get_life())
-}
-```
-
-If you are accessing Sea from C, you can access code from packages by using
-dollar signs (`$`) instead of double colons, i.e:
-
-```c
-// Let's assume that the code block above is compiled to this C file
-#include "some_compiled_sea_code.c"
-
-int main()
-{
-	printf("The meaning of life, the universe, and everything is %d\n", life$get_life());
-}
 ```
 
 ## Statements
@@ -597,6 +466,8 @@ as    type cast
 ref   reference
 ^     dereference
 ```
+
+> For bitops, you can use the `std/bit` module
 
 ### Type Casting
 
@@ -799,6 +670,107 @@ fun main(): int {
 def Integer = int
 
 fun main(): Integer -> ret 0
+```
+
+## Modules
+
+```sea
+// ./library/lib.sea
+use std/io
+
+fun library_fun() {
+	io'println("Hello, World!")
+}
+
+// ./main.sea
+use library
+
+fun main(): int {
+	library_fun()
+}
+```
+
+For further organization, you can do the following:
+
+```sea
+/* File structure:
+ * main.sea
+ * library/
+ *  lib.sea
+ *  api.sea
+**/
+
+// ./library/lib.sea
+let life = 42
+
+// ./library/api.sea
+fun get_life(): int -> ret life
+
+// ./main.sea
+use library/api
+
+fun main(): int -> ret get_life()
+```
+
+`library/lib.sea` gets implicitly imported.
+
+If you import `some/path/api`, then you'll import:
+
+```
+some/lib.sea (if exists)
+some/path/lib.sea (if exists)
+some/path/api.sea
+```
+
+> ![NOTE]
+> Module imports are always relative to your `main.sea`. You cannot use a `..`
+> in a `use` statement.
+
+## Packages
+
+Packages are a way of organizing your code and preventing name conflicts.
+
+Generally you should use packages for all modules so that you don't add to the
+global scope.
+
+```sea
+pkg life {
+	// Sea doesn't have privates, but you can use an `_internal` package to
+	// indicate to developers that they shouldn't interact with it.
+	pkg _internal {
+		let life = 42
+	}
+
+	fun get_life(): i32 {
+		// All references are from the global scope (equivalent to using
+		// a "fully qualified" name from Java or C#)
+		ret life'_internal'life
+	}
+}
+
+// You can flatten package names to avoid extraneous indent nesting.
+pkg life'_internal {
+	fun do_thing() {
+		// code
+	}
+}
+
+fun main(): int {
+	printf(c"The meaning of life, the universe, and everything is %d\n", life'get_life())
+}
+```
+
+If you are accessing Sea from C, you can access code from packages by using
+dollar signs (`$`) instead of double colons, i.e:
+
+```c
+// Let's assume that the code block above is compiled to this C file
+#include "some_compiled_sea_code.c"
+
+int main()
+{
+	printf("The meaning of life, the universe, and everything is %d\n", life$get_life());
+}
 ```
 
 ## Hashtags

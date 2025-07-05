@@ -5,7 +5,7 @@ fun main(): int {
 	var names = ds'list'make_list(2, sizeof(String), 2.0f)
 	var N = ref names
 
-	println("--- Should be empty:")
+	io'println("--- Should be empty:")
 	for i in 0 to names.len -> io'println(ds'list'get(N, i))
 
 	let frodo = "Frodo"

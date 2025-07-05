@@ -30,6 +30,9 @@ pub enum DefTags {
 pub enum TagTags {
     #[strum(serialize = "static")]
     Static,
+
+    #[strum(serialize = "nohelpers")]
+    NoHelpers,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, EnumString)]

@@ -1,0 +1,46 @@
+use std/str
+use std/io
+
+tag Suit(
+	Spades,
+	Hearts,
+	Diamonds,
+	Clubs,
+)
+
+// Tags include some implicit helpers, including string conversions and an
+// entries array. You can disable these by using the #nohelpers tag.
+/*
+pkg Suit {
+	let entries = [
+		Suit'Spades,
+		Suit'Hearts,
+		Suit'Diamonds,
+		Suit'Clubs
+	]
+
+	let len = 4
+
+	fun to_str(it: Suit): String {
+		switch it {
+			case Suit'Spades -> ret "Spades"
+			case Suit'Hearts -> ret "Hearts"
+			case Suit'Diamonds -> ret "Diamonds"
+			case Suit'Clubs -> ret "Clubs"
+		}
+		ret "" // appease the C compiler
+	}
+
+	fun from_str(it: String): Suit {
+		if str'strings_equal(it, "Clubs") -> ret Suit'Clubs
+		else if str'strings_equal(it, "Diamonds") -> ret Suit'Diamonds
+		else if str'strings_equal(it, "Hearts") -> ret Suit'Hearts
+		else if str'strings_equal(it, "Spades") -> ret Suit'Spades
+		else -> ret Suit'Clubs // appease the C compiler
+	}
+}
+*/
+
+fun main(): int {
+	io'println(p'Suit'to_str(p'Suit'Spades))
+}

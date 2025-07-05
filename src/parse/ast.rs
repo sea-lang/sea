@@ -11,6 +11,16 @@ pub struct Node {
     pub node: NodeKind,
 }
 
+impl Node {
+    pub fn of_kind(node: NodeKind) -> Node {
+        Node {
+            line: 0,
+            column: 0,
+            node,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum NodeKind {
     Program(Vec<Node>),

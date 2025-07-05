@@ -1,4 +1,4 @@
-use core::{fmt, panic};
+use core::{fmt, format_args, panic};
 use std::{fs, io::Write, path::PathBuf};
 
 use crate::{
@@ -447,9 +447,11 @@ impl<'a, 'b> CBackend<'a, 'b> {
         id: String,
         entries: Vec<(String, Option<Box<Node>>)>,
     ) {
+        let mut skip_helpers = false;
         for hashtag in tags.clone() {
             match hashtag {
                 TagTags::Static => self.ws("static "),
+                TagTags::NoHelpers => skip_helpers = true,
             }
         }
 
@@ -469,12 +471,141 @@ impl<'a, 'b> CBackend<'a, 'b> {
         self.w(format_args!("}} {namespaced_id};\n\n"));
 
         self.compiler.add_tag(
-            id,
+            id.clone(),
             tags,
             entries
                 .iter()
                 .map(|it| it.0.clone())
                 .collect::<Vec<String>>(),
+        );
+
+        if entries.len() == 0 || skip_helpers {
+            return;
+        }
+
+        // Create the `entries` array
+        self.w(format_args!(
+            "const {} {}{}{}[] = {{\n",
+            namespaced_id,
+            namespaced_id,
+            Self::NAMESPACE_SEP,
+            "entries"
+        ));
+        entries.iter().for_each(|it| {
+            self.w(format_args!(
+                "\t{}{}{},\n",
+                namespaced_id,
+                Self::NAMESPACE_SEP,
+                it.0
+            ));
+        });
+        self.ws("};\n\n");
+
+        self.w(format_args!(
+            "const int {}{}len = {};\n\n",
+            namespaced_id,
+            Self::NAMESPACE_SEP,
+            entries.len()
+        ));
+
+        // to_str and from_str functions. I hope you're ready for some truly horrendous code
+        // to_str
+        let to_str_cases = entries
+            .iter()
+            .map(|it| {
+                (
+                    Some(Box::new(Node::of_kind(NodeKind::ExprIdentifier(
+                        format_args!("{}{}{}", id, Self::NAMESPACE_SEP, it.0).to_string(),
+                    )))),
+                    false,
+                    Box::new(Node::of_kind(NodeKind::ExprBlock(vec![Node::of_kind(
+                        NodeKind::StatRet(Some(Box::new(Node::of_kind(NodeKind::ExprString(
+                            it.0.clone(),
+                        ))))),
+                    )]))),
+                )
+            })
+            .collect::<Vec<(Option<Box<Node>>, bool, Box<Node>)>>();
+        self.top_fun(
+            vec![],
+            format_args!("{}'to_str", id.clone()).to_string(),
+            vec![(
+                "it".to_string(),
+                Node::of_kind(NodeKind::Type {
+                    pointers: 0,
+                    name: id.clone(),
+                    arrays: vec![],
+                    funptr_args: None,
+                    funptr_rets: None,
+                }),
+            )],
+            Box::new(Node::of_kind(NodeKind::Type {
+                pointers: 0,
+                name: "String".to_string(),
+                arrays: vec![],
+                funptr_args: None,
+                funptr_rets: None,
+            })),
+            Box::new(Node::of_kind(NodeKind::ExprBlock(vec![
+                Node::of_kind(NodeKind::StatSwitch {
+                    switch: Box::new(Node::of_kind(NodeKind::ExprIdentifier("it".to_string()))),
+                    cases: to_str_cases,
+                }),
+                Node::of_kind(NodeKind::StatRet(Some(Box::new(Node::of_kind(
+                    NodeKind::ExprString("".to_string()),
+                ))))),
+            ]))),
+        );
+
+        // from_str
+        let make_if_cond_for = |entry: String, else_: NodeKind| NodeKind::StatIf {
+            cond: Box::new(Node::of_kind(NodeKind::ExprInvoke {
+                left: Box::new(Node::of_kind(NodeKind::ExprIdentifier(
+                    "str'strings_equal".to_string(),
+                ))),
+                params: vec![
+                    Node::of_kind(NodeKind::ExprIdentifier("it".to_string())),
+                    Node::of_kind(NodeKind::ExprString(entry.clone())),
+                ],
+            })),
+            expr: Box::new(Node::of_kind(NodeKind::ExprBlock(vec![Node::of_kind(
+                NodeKind::StatRet(Some(Box::new(Node::of_kind(NodeKind::ExprIdentifier(
+                    format_args!("{id}'{entry}").to_string(),
+                ))))),
+            )]))),
+            else_: Some(Box::new(Node::of_kind(else_))),
+        };
+        let mut from_str_if_chain =
+            NodeKind::StatRet(Some(Box::new(Node::of_kind(NodeKind::ExprIdentifier(
+                format_args!("{}{}{}", id, Self::NAMESPACE_SEP, entries.last().unwrap().0)
+                    .to_string(),
+            )))));
+        entries.iter().for_each(|it| {
+            from_str_if_chain = make_if_cond_for(it.0.clone(), from_str_if_chain.clone())
+        });
+        self.top_fun(
+            vec![],
+            format_args!("{}'from_str", id.clone()).to_string(),
+            vec![(
+                "it".to_string(),
+                Node::of_kind(NodeKind::Type {
+                    pointers: 0,
+                    name: "String".to_string(),
+                    arrays: vec![],
+                    funptr_args: None,
+                    funptr_rets: None,
+                }),
+            )],
+            Box::new(Node::of_kind(NodeKind::Type {
+                pointers: 0,
+                name: id.clone(),
+                arrays: vec![],
+                funptr_args: None,
+                funptr_rets: None,
+            })),
+            Box::new(Node::of_kind(NodeKind::ExprBlock(vec![Node::of_kind(
+                from_str_if_chain,
+            )]))),
         );
     }
 

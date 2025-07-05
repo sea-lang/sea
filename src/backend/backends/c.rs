@@ -558,6 +558,15 @@ impl<'a, 'b> CBackend<'a, 'b> {
         );
 
         // from_str
+        if !self.compiler.uses(&PathBuf::from("std/str")) {
+            // If `std` is in usage, then we can probably add std/str implicitly.
+            // If it *isn't* in usage then the user is likely using --nostd.
+            if self.compiler.uses(&PathBuf::from("std")) {
+                self.top_use(PathBuf::from("std/str"))
+            } else {
+                return;
+            }
+        }
         let make_if_cond_for = |entry: String, else_: NodeKind| NodeKind::StatIf {
             cond: Box::new(Node::of_kind(NodeKind::ExprInvoke {
                 left: Box::new(Node::of_kind(NodeKind::ExprIdentifier(

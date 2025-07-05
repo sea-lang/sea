@@ -97,7 +97,7 @@ You can run this using `sea compile --run main.sea` (or `sea c -r main.sea`).
 use std/io
 
 fun main(): int {
-	println("Hello, World!")
+	io'println("Hello, World!")
 }
 ```
 
@@ -127,6 +127,8 @@ braces, nifty!
 ## Functions
 
 ```sea
+use std/io
+
 fun get_gandalf(): String {
 	ret "Gandalf"
 }
@@ -135,9 +137,9 @@ fun get_gandalf(): String {
 // fun get_gandalf(): String -> ret "Gandalf"
 
 fun greet(who: String) {
-	print("Hello, ")
-	print(who)
-	println("!")
+	io'print("Hello, ")
+	io'print(who)
+	io'println("!")
 }
 
 fun main(): int {
@@ -163,22 +165,24 @@ You can also use an `_internal` package (see [Packages](#packages)).
 ## Variables
 
 ```sea
+use std/io
+
 var ring_bearer = "Gandalf" // Mutable variable
 let me = "Gandalf" // Immutable variable
 
-ring_bearer = "Frodo"
+fun main(): int {
+	ring_bearer = "Frodo"
 
-// If you need to specify the type for a variable (i.e, calling an unbound fun):
-var me_ptr: ^String = malloc(sizeof(String))
+	// If you need to specify the type for a variable (i.e, calling an unbound fun):
+	var me_ptr: ^String = malloc(sizeof(String))
 
-// Variable shadowing is allowed:
-fun something() {
+	// Variable shadowing is allowed:
 	var a = "Not a bozo"
 	{
 		var a = "Bozo"
-		println(a) // Bozo
+		io'println(a) // Bozo
 	}
-	println(a) // Not a bozo
+	io'println(a) // Not a bozo
 }
 ```
 
@@ -208,9 +212,11 @@ guaranteed, however strings always store their length with them.
 
 ```sea
 // The string definition looks like this:
-// rec String(own: bool, len: int, str: ^char)
+// rec String(own: bool, len: u32, hash: u64, str: ^char)
 
-"Hello, World!".len // == 13
+fun main(): int {
+	"Hello, World!".len // == 13
+}
 ```
 
 `own` tells you weather or not the string owns the memory for its characters.
@@ -225,14 +231,18 @@ You can use this to differentiate strings from string _views_.
 to C functions. For example:
 
 ```sea
-let str = "Hello, World!"
-printf(c"%.*s\n", str.len, str.str)
+fun main(): int {
+	let str = "Hello, World!"
+	printf(c"%.*s\n", str.len, str.str)
+}
 ```
 
 If you need to use a C string, you can use `c""` instead of `""`:
 
 ```
-printf(c"Hello, World!\n")
+fun main(): int {
+	printf(c"Hello, World!\n")
+}
 ```
 
 ### Characters
@@ -248,7 +258,7 @@ Characters can be defined using backticks (`\``):
 
 ### Numbers
 
-```
+```sea
 let the_meaning_of_life = 42 // defaults to your platform-specific integer type (typically i32)
 
 // If you need to specify the type, you can do so like this:
@@ -277,13 +287,15 @@ let the_fellowship = [
 	"Legolas"
 ]
 
-// The type for the above is a `String[]`
 
-println(the_fellowship[0]) // "Frodo"
-println(the_fellowship[2]) // "Merry"
+fun main(): int {
+	// The type of the_fellowship is `String[]`
+	io'println(the_fellowship[0]) // "Frodo"
+	io'println(the_fellowship[2]) // "Merry"
 
-the_fellowship[0] = "Bilbo"
-println(the_fellowship[0]) // "Bilbo"
+	the_fellowship[0] = "Bilbo"
+	println(the_fellowship[0]) // "Bilbo"
+}
 ```
 
 > ![TODO]
@@ -339,7 +351,7 @@ For bitwise operations, see the `std/bit` module.
 ## Modules
 
 ```sea
-// ./library.sea
+// ./library/lib.sea
 use std/io
 
 fun library_fun() {
@@ -442,56 +454,56 @@ int main()
 ### `if`/`else`
 
 ```sea
-if 1 == 1 {
-	println("A")
-} else if 1 == 2 {
-	println("B")
-} else {
-	println("C)
-}
+use std/io
 
-// Like functions, you can use the -> shorthand syntax:
-if 1 == 1 -> println("A")
-else if 1 == 2 -> println("B")
-else -> println("C")
+fun main(): int {
+	if 1 == 1 {
+		io'println("A")
+	} else if 1 == 2 {
+		io'println("B")
+	} else {
+		io'println("C)
+	}
+
+	// Like functions, you can use the -> shorthand syntax:
+	if 1 == 1 -> io'println("A")
+	else if 1 == 2 -> io'println("B")
+	else -> io'println("C")
+}
 ```
 
 The only major note about if/else is that you do not use parenthesis for the
 condition.
 
-> ![TODO]
-> Ternary expression
-
-> ![WARNING] \
-> `else` is not part of the `if` statement, it is its own statement.
-> This means that the following code **is not valid**:
->
-> ```sea
-> fun do_something() -> if true { } else { }
-> ```
-
 ### `switch`/`case`
 
 ```sea
-let value = 0
-switch value {
-	case 0 -> println("Zero!")
-	case 1 -> println("One!")
-	case 2 -> println("Two!")
-	else -> println("Something else!")
+use std/io
+
+fun main(): int {
+	let value = 0
+	switch value {
+		case 0 -> io'println("Zero!")
+		case 1 -> io'println("One!")
+		case 2 -> io'println("Two!")
+		else -> io'println("Something else!")
+	}
 }
 ```
 
 `case` will break by default, to fall through a case, you can use `fall case`:
 
 ```
+use std/io
 
-let value = 0
-switch value {
-	fall case 0 -> println("Zero!") // will not break
-	fall case 1 -> println("One!") // will not break
-	case 2 -> println("Two!") // will break
-	else -> println("Something else!")
+fun main(): int {
+	let value = 0
+	switch value {
+		fall case 0 -> io'println("Zero!") // will not break
+		fall case 1 -> io'println("One!") // will not break
+		case 2 -> io'println("Two!") // will break
+		else -> io'println("Something else!")
+	}
 }
 ```
 
@@ -500,32 +512,36 @@ switch value {
 For loops in Sea have three forms:
 
 ```sea
-// c-style for
-for var i = 0 ; i < 10 ; i++ {
-	printf(c"%d\n", i)
+use std/io
+
+fun main(): int {
+	// c-style for
+	for var i = 0 ; i < 10 ; i++ {
+		printf(c"%d\n", i)
+	}
+
+	// for/in?/to
+	// This is an **exclusive** range, meaning that 0 is included but 10 is not
+	// (i.e, the range is: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
+	for 0 to 10 {
+		io'println("Hello, World!")
+	}
+
+	for i in 0 to 10 {
+		if i == 5 -> continue // skip `5` for the sake of showcasing `continue` statements
+
+		printf("%d\n", i)
+	}
+
+	// single-expression (functionally equivalent to a while loop)
+	for true {
+		io'println("Hello, World!")
+		break
+	}
+
+	// Just like functions and if expressions, you can use -> with for loops:
+	for 0 to 5 -> io'println("Hello, World!")
 }
-
-// for/in?/to
-// This is an **exclusive** range, meaning that 0 is included but 10 is not
-// (i.e, the range is: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
-for 0 to 10 {
-	println("Hello, World!")
-}
-
-for i in 0 to 10 {
-	if i == 5 -> continue // skip `5` for the sake of showcasing `continue` statements
-
-	printf("%d\n", i)
-}
-
-// single-expression (functionally equivalent to a while loop)
-for true {
-	println("Hello, World!")
-	break
-}
-
-// Just like functions and if expressions, you can use -> with for loops:
-for 0 to 5 -> println("Hello, World!")
 ```
 
 ### `defer`
@@ -589,7 +605,9 @@ You can cast something to another type using the `as` operator:
 ```sea
 rec Vector2f(x: f32, y: f32)
 
-var p = malloc(sizeof(Vector2f)) as ^Vector2f
+fun main(): int {
+	var p = malloc(sizeof(Vector2f)) as ^Vector2f
+}
 ```
 
 ### References and Pointers
@@ -597,27 +615,33 @@ var p = malloc(sizeof(Vector2f)) as ^Vector2f
 You can reference a value using the `ref` expression:
 
 ```sea
-var x = 0
-var px = ref x
+fun main(): int {
+	var x = 0
+	var px = ref x
 
-x = 10
-printf("%d\n", x) // 10
+	x = 10
+	printf(c"%d\n", x) // 10
 
-// You can dereference using the `^` operator:
-px^ = 5
-printf("%d\n", x^) // 5
+	// You can dereference using the `^` operator:
+	px^ = 5
+	printf(c"%d\n", x^) // 5
+}
 ```
 
 You'll often see `some_id^.some_other_id`, this is functionally equivalent to
 C's `->` operator, which Sea does not have.
 
 ```sea
+use std/io
+
 rec Name(first: String, last: String)
 
-var n = new Name("Frodo", "Baggins")
-var pn = ref n
+fun main(): int {
+	var n = new Name("Frodo", "Baggins")
+	var pn = ref n
 
-println(pn^.first) // "Frodo"
+	io'println(pn^.first) // "Frodo"
+}
 ```
 
 To denote a pointer type, you prefix the type with `^`:
@@ -627,8 +651,10 @@ rec Person(name: String, age: int)
 
 rec RingBearer(bearer: ^Person)
 
-let frodo = new Person("Frodo Baggins", 33)
-let ring_bearer = new RingBearer(ref frodo)
+fun main(): int {
+	let frodo = new Person("Frodo Baggins", 33)
+	let ring_bearer = new RingBearer(ref frodo)
+}
 ```
 
 ## Data Types
@@ -638,8 +664,10 @@ let ring_bearer = new RingBearer(ref frodo)
 ```sea
 rec Name(first: String, last: String)
 
-let name = new Name("Bilbo", "Baggins")
-name.first = "Frodo"
+fun main(): int {
+	let name = new Name("Bilbo", "Baggins")
+	name.first = "Frodo"
+}
 ```
 
 Records called "structs" in many other languages. They are the exact same here,
@@ -662,22 +690,14 @@ fun make_cat(): Cat -> ret new Cat(
 )
 ```
 
-It's a bit messy, but it works. I plan to support a basic form of inheritance
-in the future (derives).
-
-Records also do not have methods, though this is planned.
-
-> ![TODO]
->
-> - Record derives
-> - Record methods
-
 ### Tags
 
 > ![NOTE]
 > Commonly called "enums" in other languages
 
 ```sea
+use std/io
+
 tag Race(
 	Hobbit
 	Human
@@ -687,13 +707,34 @@ tag Race(
 
 rec Person(name: String, age: int, race: Race)
 
-let frodo = new Person("Frodo Baggins", 33, Race'Hobbit)
+fun main(): int {
+	let frodo = new Person("Frodo Baggins", 33, Race'Hobbit)
 
-switch frodo.race {
-	case Race'Hobbit -> println("Hobbit!")
-	case Race'Human -> println("Human!")
-	case Race'Elf -> println("Elf!")
-	case Race'Dwarf -> println("Dwarf!")
+	switch frodo.race {
+		case Race'Hobbit -> io'println("Hobbit!")
+		case Race'Human -> io'println("Human!")
+		case Race'Elf -> io'println("Elf!")
+		case Race'Dwarf -> io'println("Dwarf!")
+	}
+}
+```
+
+Tags also come with a few helpers implicitly:
+
+```sea
+use std/io
+
+tag Race(
+	Hobbit
+	Human
+	Elf
+	Dwarf
+)
+
+fun main(): int {
+	for i in 0 to Race'len {
+		io'println(Race'to_str(Race'entries[i]))
+	}
 }
 ```
 
@@ -703,26 +744,28 @@ Tagged records (or "tagged unions") are another enumerable type, except they
 can store data with them, similar to Rust enums.
 
 ```sea
+use std/io
+
 tag Suit(Spade, Heart, Diamond, Club)
 
 rec Card(suit: Suit, value: u8)
 
 fun print_card(card: Card) {
 	switch card.value {
-		case 11 -> print("Jack of ")
-		case 12 -> print("Queen of ")
-		case 13 -> print("King of ")
+		case 11 -> io'print("Jack of ")
+		case 12 -> io'print("Queen of ")
+		case 13 -> io'print("King of ")
 		// Sometimes aces are 1, sometimes 14
 		fall case 1 {}
-		case 14 -> print("Ace of ")
+		case 14 -> io'print("Ace of ")
 		// Anything else
 		else -> printf(c"%d of ", card.value)
 	}
 	switch card.suit {
-		case Suit'Spade -> println("Spades")
-		case Suit'Heart -> println("Hearts")
-		case Suit'Diamond -> println("Diamonds")
-		case Suit'Club -> println("Clubs")
+		case Suit'Spade -> io'println("Spades")
+		case Suit'Heart -> io'println("Hearts")
+		case Suit'Diamond -> io'println("Diamonds")
+		case Suit'Club -> io'println("Clubs")
 	}
 }
 
@@ -734,12 +777,12 @@ tag rec Move(
 
 fun play(move: Move) ->
 	switch move.kind {
-		case Move'Draw -> println("You drew a card!")
+		case Move'Draw -> io'println("You drew a card!")
 		case Move'Play {
-			print("You played a ")
+			io'print("You played a ")
 			print_card(move.Play.card)
 		}
-		case Move'Fold -> println("You folded :(")
+		case Move'Fold -> io'println("You folded :(")
 	}
 
 fun main(): int {
@@ -770,7 +813,7 @@ fun life(): int -> ret 42
 // inline int life() { return 42; }
 ```
 
-To define multiple hashtags, group them in parenthesis:
+To use multiple hashtags, group them in parenthesis:
 
 ```sea
 #(inline, static)
@@ -780,7 +823,8 @@ fun life(): int -> ret 42
 // static inline int life() { return 42; }
 ```
 
-> **If hashtags exist, why isn't `tag rec` defined as `#tag rec`?**
+> **If hashtags exist, why isn't `tag rec` defined as `#tag rec` or something
+> similar?**
 >
 > As a design choice, hashtags should never change the syntax of the statement.
 > `tag rec` has a totally different syntax from `rec` and `tag`, and so I
@@ -804,6 +848,7 @@ Here's a list of all hashtags:
 
 // tags:
 #static
+#nohelpers // disables implicit helpers defined with tags
 
 // tag recs:
 #static
@@ -832,7 +877,7 @@ Life the_meaning_of_life = (Life){ 42 };
 ]
 ```
 
-> ![NOTE]
+> ![NOTE] \
 > Raw code has no syntax validation, safety checks, etc, this means that you
 > may need to read the outputted C code to debug these!
 
@@ -974,7 +1019,7 @@ vastly different role.
 
 Here's a list of all pragmas:
 
-```sea
+```
 add_cc_flag(flag: String) // Add a flag to the C compiler
 add_library(link: String) // Add a link (`-l`) to CC flags
 add_include_dir(dir: String) // Add an include directory to CC flags, relative to the current file's directory

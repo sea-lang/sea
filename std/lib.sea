@@ -44,8 +44,6 @@ rec String(own: bool, len: u32, hash: u64, str: ^char)
 
 // String Secret
 use std/hash/wyhash
-var _strsecret = new hash'wyhash'WyhashSecret([0, 0, 0, 0])
-
-// Functions
-fun inc(it: ^int) -> it^ = it^ + 1
-fun dec(it: ^int) -> it^ = it^ - 1
+pkg _internal {
+	var strsecret = new hash'wyhash'WyhashSecret([0, 0, 0, 0])
+}

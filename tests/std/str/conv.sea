@@ -13,12 +13,12 @@ fun main(): int {
 	test'test(C, "str'to_int(\"0\")", str'to_int("0") == 0)
 	test'test(C, "str'to_int(\"123123123\")", str'to_int("123123123") == 123_123_123)
 
-	test'test(C, "str'from_int(1000)", str'strings_equal(str'from_int(1000), "1000"))
-	test'test(C, "str'from_int(101)", str'strings_equal(str'from_int(101), "101"))
-	test'test(C, "str'from_int(1234)", str'strings_equal(str'from_int(1234), "1234"))
-	test'test(C, "str'from_int(1)", str'strings_equal(str'from_int(1), "1"))
-	test'test(C, "str'from_int(0)", str'strings_equal(str'from_int(0), "0"))
-	test'test(C, "str'from_int(123123123)", str'strings_equal(str'from_int(123123123), "123123123"))
+	test'test(C, "str'from_int(1000)", str'compare(str'from_int(1000), "1000"))
+	test'test(C, "str'from_int(101)", str'compare(str'from_int(101), "101"))
+	test'test(C, "str'from_int(1234)", str'compare(str'from_int(1234), "1234"))
+	test'test(C, "str'from_int(1)", str'compare(str'from_int(1), "1"))
+	test'test(C, "str'from_int(0)", str'compare(str'from_int(0), "0"))
+	test'test(C, "str'from_int(123123123)", str'compare(str'from_int(123123123), "123123123"))
 
 	test'print_results(C)
 

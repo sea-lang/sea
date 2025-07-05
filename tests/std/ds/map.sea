@@ -22,9 +22,9 @@ fun main(): int {
 	io'print("name = ")
 	io'println((map'get(map, "name") as ^String)^)
 
-	test'test(C, "name == Gandalf", str'strings_equal((map'get(map, "name") as ^String)^, "Gandalf"))
+	test'test(C, "name == Gandalf", str'compare((map'get(map, "name") as ^String)^, "Gandalf"))
 	test'test(C, "age == 50000", (map'get(map, "age") as ^int)^ == 50_000)
-	test'test(C, "class == Wizard", str'strings_equal((map'get(map, "class") as ^String)^, "Wizard"))
+	test'test(C, "class == Wizard", str'compare((map'get(map, "class") as ^String)^, "Wizard"))
 
 	test'print_results(C)
 

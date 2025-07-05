@@ -16,9 +16,9 @@ pkg reef {
 			let str_value_view = str'slice(str, 1, str.len - 1)
 			let str_value = str'copy_string(str_value_view.len, str_value_view.str)
 			ret new reef'Val(reef'Val'Str, str_value)
-		} else if str'strings_equal(str, "true") {
+		} else if str'compare(str, "true") {
 			ret new reef'Val(reef'Val'Bool, true)
-		} else if str'strings_equal(str, "false") {
+		} else if str'compare(str, "false") {
 			ret new reef'Val(reef'Val'Bool, false)
 		} else if str'is_int(str) {
 			ret new reef'Val(reef'Val'Int, str'to_int(str))
@@ -38,7 +38,7 @@ pkg reef {
 			let p = str'trim_whitespace(line)
 			defer -> free(p)
 			// skip empty lines and comments
-			if str'strings_equal(p, "") or str'starts_with(p, "#") {
+			if str'compare(p, "") or str'starts_with(p, "#") {
 				continue
 			}
 

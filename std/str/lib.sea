@@ -12,7 +12,7 @@ pkg str {
 	 *  chars: ^char - Pointer to the first character.
 	**/
 	fun string_view(len: int, chars: ^char): String {
-		ret new String(false, len, hash'wyhash'hash_c_string(_strsecret, chars, len), chars)
+		ret new String(false, len, hash'wyhash'hash_c_string(_internal'strsecret, chars, len), chars)
 	}
 
 	/**
@@ -33,7 +33,7 @@ pkg str {
 	 *  chars: ^char - Pointer to the first character.
 	**/
 	fun take_string(len: int, chars: ^char): String {
-		ret new String(true, len, hash'wyhash'hash_c_string(_strsecret, chars, len), chars)
+		ret new String(true, len, hash'wyhash'hash_c_string(_internal'strsecret, chars, len), chars)
 	}
 
 	/**
@@ -57,7 +57,7 @@ pkg str {
 	fun copy_string(len: int, chars: ^char): String {
 		var str = new String(true, len, 0, malloc(sizeof(char) * len))
 		memcpy(str.str, chars, len)
-		str.hash = hash'wyhash'hash_string(_strsecret, str)
+		str.hash = hash'wyhash'hash_string(_internal'strsecret, str)
 		ret str
 	}
 
@@ -95,14 +95,13 @@ pkg str {
 		let len = a.len + b.len
 		var str: ^char = malloc(len * sizeof(char))
 		memcpy(str, a.str, a.len)
-		memcpy(str+b.len, b.str, b.len)
+		memcpy(str + b.len, b.str, b.len)
 		ret str'string_view(len, str)
 	}
 
 	/// Compares <'a> and <'b> character-by-character and returns true if the
 	/// strings are equal.
-	// TODO: Rename to compare
-	fun strings_equal(a: String, b: String): bool {
+	fun compare(a: String, b: String): bool {
 		if a.len != b.len -> ret false
 
 		for i in 0 to a.len {
@@ -114,9 +113,8 @@ pkg str {
 
 	/// Returns true if <'a> and <'b> are of the same length and have the
 	/// same hash.
-	// TODO: Rename to compare_hashes
 	#inline
-	fun compare(a: String, b: String): bool ->
+	fun compare_hashes(a: String, b: String): bool ->
 		ret a.len == b.len and a.hash == b.hash
 
 	/// Finds the first <'ch> in the provided <String> starting from <'from>,
@@ -136,7 +134,7 @@ pkg str {
 	/// Finds the last <'ch> in the provided <String> starting at <'from>,
 	/// returning the index of the first occurrence or -1 if not found.
 	fun rfind_from(a: String, ch: char, from: int): int {
-		for var i = from ; i > 0 ; inc(ref i) {
+		for var i = from ; i > 0 ; i = i + 1 {
 			if a.str[i] == ch -> ret i
 		}
 

@@ -37,7 +37,7 @@ pkg map {
 			var index: usize = bit'and_u64(key.hash, cap - 1) as usize
 
 			for not str'is_nil_str(data[index].key) {
-				if str'strings_equal(key, data[index].key) {
+				if str'compare(key, data[index].key) {
 					// update existing value
 					data[index].val = val
 					ret true
@@ -83,7 +83,7 @@ pkg map {
 		var index: usize = bit'and_u64(key.hash, map^.cap - 1) as usize
 
 		for not str'is_nil_str(map^.data[index].key) {
-			if str'strings_equal(key, map^.data[index].key) {
+			if str'compare(key, map^.data[index].key) {
 				ret map^.data[index].val
 			}
 			index = index + 1

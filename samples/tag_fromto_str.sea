@@ -32,15 +32,15 @@ pkg Suit {
 	}
 
 	fun from_str(it: String): Suit {
-		if str'strings_equal(it, "Clubs") -> ret Suit'Clubs
-		else if str'strings_equal(it, "Diamonds") -> ret Suit'Diamonds
-		else if str'strings_equal(it, "Hearts") -> ret Suit'Hearts
-		else if str'strings_equal(it, "Spades") -> ret Suit'Spades
+		if str'compare(it, "Clubs") -> ret Suit'Clubs
+		else if str'compare(it, "Diamonds") -> ret Suit'Diamonds
+		else if str'compare(it, "Hearts") -> ret Suit'Hearts
+		else if str'compare(it, "Spades") -> ret Suit'Spades
 		else -> ret Suit'Clubs // appease the C compiler
 	}
 }
 */
 
 fun main(): int {
-	io'println(p'Suit'to_str(p'Suit'Spades))
+	io'println(Suit'to_str(Suit'Spades))
 }

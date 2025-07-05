@@ -10,7 +10,7 @@
   - [ ] `--memtrace` flag to trace alloc/free calls to debug memory leaks
 - [x] tags and tagrec
 - [x] Namespaces?
-- [ ] Function overloading?
+- [ ] ~~Function overloading?~~
 - [ ] Reef implementation in Sea
 - [ ] Traits?
 - [ ] Polish or remove each/of

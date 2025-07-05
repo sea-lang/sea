@@ -570,7 +570,7 @@ impl<'a, 'b> CBackend<'a, 'b> {
         let make_if_cond_for = |entry: String, else_: NodeKind| NodeKind::StatIf {
             cond: Box::new(Node::of_kind(NodeKind::ExprInvoke {
                 left: Box::new(Node::of_kind(NodeKind::ExprIdentifier(
-                    "str'strings_equal".to_string(),
+                    "str'compare".to_string(),
                 ))),
                 params: vec![
                     Node::of_kind(NodeKind::ExprIdentifier("it".to_string())),
@@ -797,8 +797,9 @@ impl<'a, 'b> CBackend<'a, 'b> {
 
     pub fn expr_string(&mut self, string: String) {
         self.w(format_args!(
-            "(String){{false, {}, hash{}wyhash{}hash_c_string(_strsecret, \"{}\", {}), \"{}\"}}",
+            "(String){{false, {}, hash{}wyhash{}hash_c_string(_internal{}strsecret, \"{}\", {}), \"{}\"}}",
             string.len(),
+            Self::NAMESPACE_SEP,
             Self::NAMESPACE_SEP,
             Self::NAMESPACE_SEP,
             string,

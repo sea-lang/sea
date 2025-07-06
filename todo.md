@@ -11,9 +11,9 @@
 - [x] tags and tagrec
 - [x] Namespaces?
 - [ ] ~~Function overloading?~~
-- [ ] Reef implementation in Sea
+- [x] Reef implementation in Sea
 - [ ] Traits?
-- [ ] Polish or remove each/of
+- [x] ~~Polish or~~ remove each/of (`of` is staying for now since I may implement `for of`)
 - [ ] Multithreading
 - [/] Type ~~and generic~~ inference
 - [ ] Prevent common C vulnerabilities (buffer overflows, use-after-free, double-free, etc)

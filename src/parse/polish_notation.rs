@@ -80,6 +80,11 @@ impl PolishNodeTree {
                         OperatorKind::Mul => "*",
                         OperatorKind::Div => "/",
                         OperatorKind::Mod => "%",
+                        OperatorKind::Inc => "++",
+                        OperatorKind::Dec => "--",
+                        OperatorKind::Negate => "-",
+                        OperatorKind::Index => "index",
+                        OperatorKind::Invoke => "invoke",
                         _ => return None, // error
                     }
                     .to_string(),

@@ -2,7 +2,7 @@ use std::{fmt::Debug, path::PathBuf, process::exit, str::FromStr};
 
 use crate::{
     hashtags::{DefTags, FunTags, RecTags, TagRecTags, TagTags},
-    parse::operator::Associativity,
+    parse::operator::{Associativity, Precedence},
 };
 
 use super::{
@@ -458,7 +458,6 @@ impl<'a> Parser<'a> {
 
         let mut atom = node;
 
-        // Postfix operators
         loop {
             if self.accept(TokenKind::Pointer) {
                 atom = n(NodeKind::ExprUnaryOperator {
@@ -515,7 +514,7 @@ impl<'a> Parser<'a> {
         atom
     }
 
-    pub fn parse_expression_inner(&mut self, left_node: Node, min_prec: u8) -> Node {
+    pub fn parse_expression_inner(&mut self, left_node: Node, min_prec: Precedence) -> Node {
         // https://en.wikipedia.org/wiki/Operator-precedence_parser#Pseudocode
         let mut left_atom = left_node.clone();
         let mut lookahead = self.token.clone();
@@ -524,7 +523,6 @@ impl<'a> Parser<'a> {
         while lookahead.kind.is_operator() && lookahead_op.prec >= min_prec {
             let op = lookahead_op;
             self.advance();
-            // let mut right_atom = self.parse_atom();
             let mut right_atom = if op.kind == OperatorKind::As {
                 self.parse_type()
             } else {

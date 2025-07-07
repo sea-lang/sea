@@ -28,24 +28,27 @@ pub enum OperatorKind {
     Dec,
     Negate,
     Index,
+    Invoke,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Operator {
     pub kind: OperatorKind,
-    pub prec: u8,
+    pub prec: Precedence,
     pub pos: Position,
     pub assoc: Associativity,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+pub type Precedence = u32;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Position {
     Prefix,
     Infix,
     Postfix,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Associativity {
     Left,
     Right,
@@ -53,29 +56,29 @@ pub enum Associativity {
 
 pub const OPERATORS: LazyLock<HashMap<TokenKind, Operator>> = LazyLock::new(|| {
     HashMap::from([
+        // . as
+        TokenKind::OpDot.li(1000), // expr.expr
+        TokenKind::KwAs.ri(1000),  // expr as type
+        // and or
+        TokenKind::OpAnd.li(500), // expr and expr
+        TokenKind::OpOr.li(500),  // expr or expr
+        // > >= < <=
+        TokenKind::OpGt.li(400),   // expr > expr
+        TokenKind::OpGtEq.li(400), // expr >= expr
+        TokenKind::OpLt.li(400),   // expr < expr
+        TokenKind::OpLtEq.li(400), // expr <= expr
+        // == !=
+        TokenKind::OpEq.li(300),  // expr == expr
+        TokenKind::OpNeq.li(300), // expr != expr
+        // * / %
+        TokenKind::OpMul.li(200), // expr * expr
+        TokenKind::OpDiv.li(200), // expr / expr
+        TokenKind::OpMod.li(200), // expr % expr
+        // + -
+        TokenKind::OpAdd.ri(100), // expr + expr
+        TokenKind::OpSub.ri(100), // expr - expr
         // =
         TokenKind::Eq.ri(0), // expr = expr
-        // and or
-        TokenKind::OpAnd.li(1), // expr and expr
-        TokenKind::OpOr.li(1),  // expr or expr
-        // > >= < <=
-        TokenKind::OpGt.li(2),   // expr > expr
-        TokenKind::OpGtEq.li(2), // expr >= expr
-        TokenKind::OpLt.li(2),   // expr < expr
-        TokenKind::OpLtEq.li(2), // expr <= expr
-        // == !=
-        TokenKind::OpEq.li(3),  // expr == expr
-        TokenKind::OpNeq.li(3), // expr != expr
-        // + -
-        TokenKind::OpAdd.ri(4), // expr + expr
-        TokenKind::OpSub.ri(4), // expr - expr
-        // * / %
-        TokenKind::OpMul.li(5), // expr * expr
-        TokenKind::OpDiv.li(5), // expr / expr
-        TokenKind::OpMod.li(5), // expr % expr
-        // . as
-        TokenKind::OpDot.li(6), // expr.expr
-        TokenKind::KwAs.ri(6),  // expr as type
     ])
 });
 
@@ -110,12 +113,17 @@ impl TokenKind {
             TokenKind::OpNeq => OperatorKind::Neq,
             TokenKind::OpAnd => OperatorKind::And,
             TokenKind::OpOr => OperatorKind::Or,
+            TokenKind::OpNot => OperatorKind::Not,
+            // TokenKind::OpSub => OperatorKind::Negate,
+            TokenKind::KwRef => OperatorKind::Ref,
+            TokenKind::Pointer => OperatorKind::Deref,
+            TokenKind::OpenParen => OperatorKind::Invoke,
             _ => return None,
         })
     }
 
     // shorthand used to make `OPERATORS`
-    fn op(&self, prec: u8, pos: Position, assoc: Associativity) -> (TokenKind, Operator) {
+    fn op(&self, prec: Precedence, pos: Position, assoc: Associativity) -> (TokenKind, Operator) {
         (
             *self,
             Operator {
@@ -130,12 +138,12 @@ impl TokenKind {
     }
 
     // shorthand for left associative infix operators
-    fn li(&self, prec: u8) -> (TokenKind, Operator) {
+    fn li(&self, prec: Precedence) -> (TokenKind, Operator) {
         self.op(prec, Position::Infix, Associativity::Left)
     }
 
     // shorthand for right associative infix operators
-    fn ri(&self, prec: u8) -> (TokenKind, Operator) {
+    fn ri(&self, prec: Precedence) -> (TokenKind, Operator) {
         self.op(prec, Position::Infix, Associativity::Right)
     }
 }
